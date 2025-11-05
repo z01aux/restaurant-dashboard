@@ -36,7 +36,10 @@ const OrdersManager: React.FC = () => {
       ],
       status: 'pending',
       createdAt: new Date(),
-      total: 31.98
+      total: 31.98,
+      source: {
+        type: 'walk-in'
+      }
     }
   ];
 
@@ -47,8 +50,9 @@ const OrdersManager: React.FC = () => {
       ready: 'bg-green-100 text-green-800',
       served: 'bg-purple-100 text-purple-800',
       paid: 'bg-gray-100 text-gray-800',
+      delivered: 'bg-indigo-100 text-indigo-800',
     };
-    return colors[status];
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -79,6 +83,7 @@ const OrdersManager: React.FC = () => {
             <option value="ready">Listo</option>
             <option value="served">Servido</option>
             <option value="paid">Pagado</option>
+            <option value="delivered">Entregado</option>
           </select>
         </div>
       </div>
@@ -93,7 +98,7 @@ const OrdersManager: React.FC = () => {
                   Orden
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mesa
+                  Cliente
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Items
@@ -119,7 +124,8 @@ const OrdersManager: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">Mesa {order.tableNumber}</div>
+                    <div className="text-sm text-gray-900">{order.customerName}</div>
+                    <div className="text-sm text-gray-500">{order.phone}</div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
