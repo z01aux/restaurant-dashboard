@@ -469,13 +469,10 @@ const OrderReception: React.FC = () => {
       </div>
 
       {/* Ticket oculto para impresión */}
-      {lastOrder && (
-        <div className="hidden">
-          <OrderTicket order={lastOrder} />
-        </div>
-      )}
+      {lastOrder && <OrderTicket order={lastOrder} />}
     </div>
   );
 };
 
 export default OrderReception;
+
