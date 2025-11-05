@@ -1,3 +1,19 @@
+export interface MenuItem {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  description?: string;
+  available: boolean;
+  type: 'food' | 'drink';
+}
+
+export interface OrderItem {
+  menuItem: MenuItem;
+  quantity: number;
+  notes?: string;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -13,7 +29,7 @@ export interface OrderSource {
 
 export interface Order {
   id: string;
-  tableNumber?: number; // Opcional para pedidos por teléfono
+  tableNumber?: number;
   items: OrderItem[];
   status: 'pending' | 'preparing' | 'ready' | 'served' | 'paid' | 'delivered';
   createdAt: Date;
@@ -23,4 +39,10 @@ export interface Order {
   address?: string;
   source: OrderSource;
   notes?: string;
+}
+
+export interface Table {
+  number: number;
+  status: 'available' | 'occupied' | 'reserved';
+  orderId?: string;
 }
