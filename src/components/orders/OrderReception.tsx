@@ -121,10 +121,7 @@ const OrderReception: React.FC = () => {
   };
 
   const removeFromCart = (itemId: string) => {
-    setCart(prev => {
-      const itemToRemove = prev.find(item => item.menuItem.id === itemId);
-      return prev.filter(item => item.menuItem.id !== itemId);
-    });
+    setCart(prev => prev.filter(item => item.menuItem.id !== itemId));
   };
 
   const getTotal = () => {
