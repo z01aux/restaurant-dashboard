@@ -1,36 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Check, X } from 'lucide-react';
+import { Plus, Check, X, ShoppingBag, ArrowRight } from 'lucide-react';
 import { MenuItem, OrderItem, OrderSource, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 
-// Componente de Notificación Toast
+// Componente de Notificación Toast simplificado
 const ToastNotification: React.FC<{
   message: string;
-  type: 'success' | 'error' | 'info';
   onClose: () => void;
-}> = ({ message, type, onClose }) => {
+}> = ({ message, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 3000);
+    const timer = setTimeout(onClose, 2000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  const bgColor = {
-    success: 'bg-green-500',
-    error: 'bg-red-500',
-    info: 'bg-blue-500'
-  }[type];
-
   return (
-    <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform animate-in slide-in-from-right-full duration-300`}>
+    <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform animate-in slide-in-from-right-full duration-300">
       <div className="flex items-center space-x-2">
         <Check size={20} />
         <span className="font-medium">{message}</span>
-        <button
-          onClick={onClose}
-          className="ml-2 hover:bg-white/20 rounded-full p-1"
-        >
-          <X size={16} />
-        </button>
       </div>
     </div>
   );
@@ -48,7 +35,7 @@ const OrderReception: React.FC = () => {
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('🥗 Entradas');
   const [showCartDrawer, setShowCartDrawer] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   // Cargar pedidos desde localStorage al iniciar
   useEffect(() => {
@@ -88,8 +75,10 @@ const OrderReception: React.FC = () => {
     item.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ message, type });
+  const showToast = (message: string) => {
+    setToast(message);
+    // Limpiar toast anterior si existe
+    setTimeout(() => setToast(null), 100);
   };
 
   const addToCart = (menuItem: MenuItem) => {
@@ -99,9 +88,9 @@ const OrderReception: React.FC = () => {
       
       if (existing) {
         newQuantity = existing.quantity + 1;
-        showToast(`✅ ${menuItem.name} - Cantidad: ${newQuantity}`, 'success');
+        showToast(`✓ ${menuItem.name} (${newQuantity})`);
       } else {
-        showToast(`🛒 ${menuItem.name} añadido al pedido`, 'success');
+        showToast(`✓ ${menuItem.name} añadido`);
       }
 
       if (existing) {
@@ -113,9 +102,6 @@ const OrderReception: React.FC = () => {
       }
       return [...prev, { menuItem, quantity: 1, notes: '' }];
     });
-
-    // REMOVIDO: No abrir el carrito automáticamente
-    // El usuario puede ver las notificaciones y los badges actualizados
   };
 
   const updateQuantity = (itemId: string, quantity: number) => {
@@ -127,10 +113,6 @@ const OrderReception: React.FC = () => {
     setCart(prev =>
       prev.map(item => {
         if (item.menuItem.id === itemId) {
-          const menuItem = allMenuItems.find(mi => mi.id === itemId);
-          if (menuItem) {
-            showToast(`✏️ ${menuItem.name} - Cantidad: ${quantity}`, 'info');
-          }
           return { ...item, quantity };
         }
         return item;
@@ -141,9 +123,6 @@ const OrderReception: React.FC = () => {
   const removeFromCart = (itemId: string) => {
     setCart(prev => {
       const itemToRemove = prev.find(item => item.menuItem.id === itemId);
-      if (itemToRemove) {
-        showToast(`🗑️ ${itemToRemove.menuItem.name} eliminado`, 'error');
-      }
       return prev.filter(item => item.menuItem.id !== itemId);
     });
   };
@@ -162,7 +141,7 @@ const OrderReception: React.FC = () => {
 
   const createOrder = () => {
     if (cart.length === 0) {
-      showToast('❌ El pedido está vacío', 'error');
+      showToast('El pedido está vacío');
       return;
     }
 
@@ -192,7 +171,6 @@ const OrderReception: React.FC = () => {
   const confirmOrder = () => {
     if (lastOrder) {
       saveOrderToStorage(lastOrder);
-      showToast(`✅ Pedido ${lastOrder.id} confirmado`, 'success');
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -217,14 +195,14 @@ const OrderReception: React.FC = () => {
 
   const categories = Object.keys(menuDelDia);
   const currentItems = searchTerm ? filteredItems : menuDelDia[activeCategory] || [];
+  const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 pb-20 lg:pb-6">
-      {/* Notificación Toast */}
+      {/* Notificación Toast simplificada */}
       {toast && (
         <ToastNotification
-          message={toast.message}
-          type={toast.type}
+          message={toast}
           onClose={() => setToast(null)}
         />
       )}
@@ -246,17 +224,19 @@ const OrderReception: React.FC = () => {
                 </div>
               </div>
               
-              {/* Botón Carrito Móvil - Mejorado con indicador de cantidad */}
+              {/* Botón Carrito Móvil mejorado con mensaje */}
               <button
                 onClick={() => setShowCartDrawer(true)}
-                className="relative bg-orange-500 text-white p-3 rounded-xl shadow-lg hover:shadow-xl transition-all"
+                className="relative bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center space-x-2"
               >
-                <div className="w-5 h-5 flex items-center justify-center">
-                  <span className="text-sm font-bold">🛒</span>
+                <ShoppingBag size={20} />
+                <div className="text-left">
+                  <div className="text-xs font-medium">Ver pedido</div>
+                  <div className="text-xs opacity-90">{totalItems} items</div>
                 </div>
-                {cart.length > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold animate-pulse">
-                    {cart.reduce((total, item) => total + item.quantity, 0)}
+                {totalItems > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold border-2 border-white">
+                    {totalItems}
                   </span>
                 )}
               </button>
@@ -298,14 +278,17 @@ const OrderReception: React.FC = () => {
           </div>
         )}
 
-        {/* Drawer del Carrito Móvil */}
+        {/* Drawer del Carrito Móvil mejorado */}
         {showCartDrawer && (
           <div className="lg:hidden fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowCartDrawer(false)} />
             <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transform transition-transform">
               <div className="p-4 max-h-[80vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-gray-900">Pedido Actual</h3>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Tu Pedido</h3>
+                    <p className="text-sm text-gray-600">Revisa los productos agregados</p>
+                  </div>
                   <button
                     onClick={() => setShowCartDrawer(false)}
                     className="p-2 hover:bg-gray-100 rounded-lg"
@@ -316,13 +299,16 @@ const OrderReception: React.FC = () => {
 
                 {cart.length === 0 ? (
                   <div className="text-center py-8">
-                    <div className="text-4xl mb-3">🛒</div>
-                    <div className="text-gray-500 text-sm">No hay items en el pedido</div>
+                    <div className="bg-orange-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                      <ShoppingBag className="h-8 w-8 text-orange-500" />
+                    </div>
+                    <div className="text-gray-500 text-sm mb-2">Tu pedido está vacío</div>
+                    <div className="text-gray-400 text-xs">Agrega productos del menú</div>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {cart.map((item, index) => (
-                      <div key={index} className="bg-gray-50 rounded-lg p-3">
+                      <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="font-medium text-gray-900 text-sm">
@@ -332,29 +318,31 @@ const OrderReception: React.FC = () => {
                               S/ {item.menuItem.price.toFixed(2)} c/u
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
-                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100"
-                            >
-                              -
-                            </button>
-                            <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
-                            <button
-                              onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
-                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100"
-                            >
-                              +
-                            </button>
+                          <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
+                              <button
+                                onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
+                                className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+                              >
+                                -
+                              </button>
+                              <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
+                              <button
+                                onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
+                                className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+                              >
+                                +
+                              </button>
+                            </div>
                             <button
                               onClick={() => removeFromCart(item.menuItem.id)}
-                              className="text-red-500 hover:text-red-700 p-1 ml-2"
+                              className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg"
                             >
-                              🗑️
+                              <X size={16} />
                             </button>
                           </div>
                         </div>
-                        <div className="text-right text-sm font-semibold mt-2">
+                        <div className="text-right text-sm font-semibold text-orange-600 mt-2">
                           S/ {(item.menuItem.price * item.quantity).toFixed(2)}
                         </div>
                       </div>
@@ -371,20 +359,27 @@ const OrderReception: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-3">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-blue-800 text-sm text-center">
+                          📝 Completa los datos del cliente arriba para continuar
+                        </p>
+                      </div>
+                      
                       <button
                         onClick={() => setCart([])}
-                        className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
                       >
-                        Limpiar Pedido
+                        Vaciar Carrito
                       </button>
                       <button
                         onClick={createOrder}
                         disabled={!customerName || !phone}
-                        className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-4 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold text-lg"
                       >
-                        <Check size={18} />
-                        <span>Crear Pedido</span>
+                        <Check size={20} />
+                        <span>Confirmar Pedido</span>
+                        <ArrowRight size={18} />
                       </button>
                     </div>
                   </div>
@@ -539,9 +534,9 @@ const OrderReception: React.FC = () => {
                       className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200 cursor-pointer group relative"
                       onClick={() => addToCart(item)}
                     >
-                      {/* Badge de cantidad en carrito */}
+                      {/* Badge de cantidad en carrito - simplificado */}
                       {quantityInCart > 0 && (
-                        <div className="absolute -top-2 -right-2 bg-orange-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg animate-pulse">
+                        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
                           {quantityInCart}
                         </div>
                       )}
@@ -565,22 +560,11 @@ const OrderReception: React.FC = () => {
                             e.stopPropagation();
                             addToCart(item);
                           }}
-                          className={`ml-3 text-white p-2 rounded-lg transition-colors flex-shrink-0 ${
-                            quantityInCart > 0 
-                              ? 'bg-green-500 hover:bg-green-600' 
-                              : 'bg-orange-500 hover:bg-orange-600'
-                          }`}
+                          className="ml-3 bg-orange-500 text-white p-2 rounded-lg hover:bg-orange-600 transition-colors flex-shrink-0"
                         >
                           <Plus size={16} />
                         </button>
                       </div>
-                      
-                      {/* Indicador de cantidad agregada */}
-                      {quantityInCart > 0 && (
-                        <div className="mt-2 text-xs text-green-600 font-medium">
-                          {quantityInCart} en el pedido
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -597,30 +581,38 @@ const OrderReception: React.FC = () => {
             </div>
           </div>
 
-          {/* Panel del Carrito - Solo visible en desktop */}
+          {/* Panel del Carrito - Solo visible en desktop - Mejorado */}
           <div className="hidden xl:block xl:col-span-1">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Pedido Actual</h2>
-                {cart.length > 0 && (
-                  <span className="bg-orange-500 text-white text-sm px-2 py-1 rounded-full">
-                    {cart.reduce((total, item) => total + item.quantity, 0)}
-                  </span>
-                )}
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Tu Pedido</h2>
+                  <p className="text-sm text-gray-600">{totalItems} productos agregados</p>
+                </div>
+                <div className="bg-orange-500 text-white p-2 rounded-lg">
+                  <ShoppingBag size={20} />
+                </div>
               </div>
 
               {cart.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="text-4xl text-gray-300 mb-3">🛒</div>
-                  <div className="text-gray-500 text-sm mb-2">No hay items en el pedido</div>
-                  <div className="text-gray-300 text-xs">Selecciona productos del menú</div>
+                  <div className="bg-orange-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <ShoppingBag className="h-8 w-8 text-orange-500" />
+                  </div>
+                  <div className="text-gray-500 text-sm mb-2">Tu pedido está vacío</div>
+                  <div className="text-gray-400 text-xs">Agrega productos del menú</div>
+                  <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-blue-800 text-sm">
+                      👆 Haz clic en los productos para agregarlos
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {/* Lista de Items */}
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {cart.map((item, index) => (
-                      <div key={index} className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-gray-900 text-sm truncate">
@@ -630,25 +622,27 @@ const OrderReception: React.FC = () => {
                               S/ {item.menuItem.price.toFixed(2)} c/u
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2 flex-shrink-0">
-                            <button
-                              onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-xs"
-                            >
-                              -
-                            </button>
-                            <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
-                            <button
-                              onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-xs"
-                            >
-                              +
-                            </button>
+                          <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
+                              <button
+                                onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
+                                className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+                              >
+                                -
+                              </button>
+                              <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
+                              <button
+                                onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
+                                className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+                              >
+                                +
+                              </button>
+                            </div>
                             <button
                               onClick={() => removeFromCart(item.menuItem.id)}
-                              className="text-red-500 hover:text-red-700 p-1"
+                              className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg"
                             >
-                              🗑️
+                              <X size={16} />
                             </button>
                           </div>
                         </div>
@@ -668,20 +662,27 @@ const OrderReception: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-3">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-blue-800 text-sm text-center">
+                          ✅ Completa los datos del cliente para confirmar
+                        </p>
+                      </div>
+                      
                       <button
                         onClick={() => setCart([])}
-                        className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
                       >
-                        Limpiar Pedido
+                        Vaciar Carrito
                       </button>
                       <button
                         onClick={createOrder}
                         disabled={!customerName || !phone}
-                        className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
                       >
                         <Check size={18} />
-                        <span>Crear Pedido</span>
+                        <span>Confirmar Pedido</span>
+                        <ArrowRight size={16} />
                       </button>
                     </div>
                   </div>
