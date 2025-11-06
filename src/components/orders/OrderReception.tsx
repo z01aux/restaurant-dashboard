@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, Check, X, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Plus, Minus, X, ShoppingBag, ArrowRight } from 'lucide-react';
 import { MenuItem, OrderItem, OrderSource, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 
