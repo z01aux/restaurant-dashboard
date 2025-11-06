@@ -17,7 +17,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       
       const printWindow = window.open('', '_blank', windowFeatures);
       if (printWindow) {
-        const ticketContent = generateTicketContent(order, isMobile);
+        const ticketContent = generateTicketContent(order);
         printWindow.document.write(`
           <!DOCTYPE html>
           <html>
@@ -143,7 +143,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     return sourceMap[sourceType] || sourceType;
   };
 
-  const generateTicketContent = (order: Order, isMobile: boolean = false) => {
+  const generateTicketContent = (order: Order) => {
     const sourceText = getSourceText(order.source.type);
     
     return `
