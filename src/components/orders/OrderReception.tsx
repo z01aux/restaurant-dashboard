@@ -381,7 +381,7 @@ const OrderReception: React.FC = () => {
                     <div className="space-y-3">
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <p className="text-blue-800 text-sm text-center">
-                          Completa los datos del cliente arriba para continuar
+                          📝 Completa los datos del cliente arriba para continuar
                         </p>
                       </div>
                       
@@ -394,7 +394,7 @@ const OrderReception: React.FC = () => {
                       <button
                         onClick={createOrder}
                         disabled={!customerName || !phone}
-                        className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-4 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold text-lg"
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold text-lg"
                       >
                         <span>Confirmar Pedido</span>
                         <ArrowRight size={18} />
@@ -407,11 +407,11 @@ const OrderReception: React.FC = () => {
           </div>
         )}
 
-        {/* Layout Principal */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 lg:grid-cols-3 gap-4 lg:gap-6 pt-4 lg:pt-6">
+        {/* Layout Principal MEJORADO para escritorio */}
+        <div className="grid grid-cols-1 2xl:grid-cols-5 xl:grid-cols-4 lg:grid-cols-3 gap-4 lg:gap-6 pt-4 lg:pt-6">
           
-          {/* Panel de Información del Cliente */}
-          <div className="xl:col-span-1 lg:col-span-1">
+          {/* Panel de Información del Cliente - Ocupa menos espacio en escritorio grande */}
+          <div className="2xl:col-span-1 xl:col-span-1 lg:col-span-1">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20 sticky top-4">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Información del Pedido</h2>
               
@@ -504,8 +504,8 @@ const OrderReception: React.FC = () => {
             </div>
           </div>
 
-          {/* Panel del Menú - Botones siempre visibles */}
-          <div className="xl:col-span-2 lg:col-span-2">
+          {/* Panel del Menú - Ocupa más espacio en escritorio grande */}
+          <div className="2xl:col-span-3 xl:col-span-2 lg:col-span-2">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Menú del Día</h2>
@@ -540,8 +540,8 @@ const OrderReception: React.FC = () => {
                 </div>
               )}
 
-              {/* Grid de Productos - Botones siempre visibles */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+              {/* Grid de Productos MEJORADO - Más columnas en pantallas grandes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
                 {currentItems.map(item => {
                   const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
                   const quantityInCart = cartItem ? cartItem.quantity : 0;
@@ -549,7 +549,7 @@ const OrderReception: React.FC = () => {
                   return (
                     <div
                       key={item.id}
-                      className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200 cursor-pointer group relative"
+                      className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200 cursor-pointer group"
                       onClick={() => addToCart(item)}
                     >
                       {/* Badge de cantidad en carrito */}
@@ -561,7 +561,8 @@ const OrderReception: React.FC = () => {
                       
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1 truncate">
+                          {/* Nombre del producto con mejor manejo de texto */}
+                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1 break-words line-clamp-2 min-h-[2.5rem]">
                             {item.name}
                           </div>
                           {item.description && (
@@ -630,13 +631,13 @@ const OrderReception: React.FC = () => {
             </div>
           </div>
 
-          {/* Panel del Carrito - Solo visible en desktop */}
-          <div className="hidden xl:block xl:col-span-1">
+          {/* Panel del Carrito - Solo visible en desktop - MEJORADO */}
+          <div className="hidden 2xl:block 2xl:col-span-1">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Tu Pedido</h2>
-                  <p className="text-sm text-gray-600">{totalItems} productos agregados</p>
+                  <p className="text-sm text-gray-600">{totalItems} productos</p>
                 </div>
                 <div className="bg-orange-500 text-white p-2 rounded-lg">
                   <ShoppingBag size={20} />
@@ -652,26 +653,27 @@ const OrderReception: React.FC = () => {
                   <div className="text-gray-400 text-xs">Agrega productos del menú</div>
                   <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-blue-800 text-sm">
-                      Haz clic en los productos para agregarlos
+                      👆 Haz clic en los productos
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Lista de Items */}
+                  {/* Lista de Items - Mejorado para nombres largos */}
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {cart.map((item, index) => (
                       <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 text-sm truncate">
+                          <div className="flex-1 min-w-0 mr-3">
+                            {/* Nombre con mejor manejo de texto */}
+                            <div className="font-medium text-gray-900 text-sm break-words line-clamp-2">
                               {item.menuItem.name}
                             </div>
                             <div className="text-gray-600 text-xs">
                               S/ {item.menuItem.price.toFixed(2)} c/u
                             </div>
                           </div>
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-3 flex-shrink-0">
                             <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
                               <button
                                 onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
@@ -714,7 +716,7 @@ const OrderReception: React.FC = () => {
                     <div className="space-y-3">
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <p className="text-blue-800 text-sm text-center">
-                          Completa los datos del cliente para confirmar
+                          ✅ Completa los datos del cliente
                         </p>
                       </div>
                       
