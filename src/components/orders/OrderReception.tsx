@@ -114,10 +114,8 @@ const OrderReception: React.FC = () => {
       return [...prev, { menuItem, quantity: 1, notes: '' }];
     });
 
-    // Mostrar el carrito en móvil cuando se añade un producto
-    if (window.innerWidth < 1024) {
-      setShowCartDrawer(true);
-    }
+    // REMOVIDO: No abrir el carrito automáticamente
+    // El usuario puede ver las notificaciones y los badges actualizados
   };
 
   const updateQuantity = (itemId: string, quantity: number) => {
@@ -248,7 +246,7 @@ const OrderReception: React.FC = () => {
                 </div>
               </div>
               
-              {/* Botón Carrito Móvil */}
+              {/* Botón Carrito Móvil - Mejorado con indicador de cantidad */}
               <button
                 onClick={() => setShowCartDrawer(true)}
                 className="relative bg-orange-500 text-white p-3 rounded-xl shadow-lg hover:shadow-xl transition-all"
@@ -257,8 +255,8 @@ const OrderReception: React.FC = () => {
                   <span className="text-sm font-bold">🛒</span>
                 </div>
                 {cart.length > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {cart.length}
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold animate-pulse">
+                    {cart.reduce((total, item) => total + item.quantity, 0)}
                   </span>
                 )}
               </button>
@@ -569,7 +567,7 @@ const OrderReception: React.FC = () => {
                           }}
                           className={`ml-3 text-white p-2 rounded-lg transition-colors flex-shrink-0 ${
                             quantityInCart > 0 
-                              ? 'bg-green-500 hover:bg-green-600 animate-bounce' 
+                              ? 'bg-green-500 hover:bg-green-600' 
                               : 'bg-orange-500 hover:bg-orange-600'
                           }`}
                         >
@@ -606,7 +604,7 @@ const OrderReception: React.FC = () => {
                 <h2 className="text-xl font-bold text-gray-900">Pedido Actual</h2>
                 {cart.length > 0 && (
                   <span className="bg-orange-500 text-white text-sm px-2 py-1 rounded-full">
-                    {cart.length}
+                    {cart.reduce((total, item) => total + item.quantity, 0)}
                   </span>
                 )}
               </div>
