@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Check, X, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Plus, Minus, Check, X, ShoppingBag, ArrowRight } from 'lucide-react';
 import { MenuItem, OrderItem, OrderSource, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 
-// Componente de Notificación Toast simplificado
+// Componente de Notificación Toast mejorado con desvanecimiento
 const ToastNotification: React.FC<{
   message: string;
   onClose: () => void;
 }> = ({ message, onClose }) => {
+  const [isVisible, setIsVisible] = useState(true);
+
   useEffect(() => {
-    const timer = setTimeout(onClose, 2000);
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300); // Espera a que termine la animación
+    }, 2500); // Más tiempo visible
+
     return () => clearTimeout(timer);
   }, [onClose]);
 
   return (
-    <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform animate-in slide-in-from-right-full duration-300">
+    <div className={`fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
+      isVisible 
+        ? 'animate-in slide-in-from-right-full opacity-100' 
+        : 'animate-out slide-out-to-right-full opacity-0'
+    }`}>
       <div className="flex items-center space-x-2">
         <Check size={20} />
         <span className="font-medium">{message}</span>
@@ -77,8 +87,6 @@ const OrderReception: React.FC = () => {
 
   const showToast = (message: string) => {
     setToast(message);
-    // Limpiar toast anterior si existe
-    setTimeout(() => setToast(null), 100);
   };
 
   const addToCart = (menuItem: MenuItem) => {
@@ -104,6 +112,10 @@ const OrderReception: React.FC = () => {
     });
   };
 
+  const removeFromCart = (itemId: string) => {
+    setCart(prev => prev.filter(item => item.menuItem.id !== itemId));
+  };
+
   const updateQuantity = (itemId: string, quantity: number) => {
     if (quantity === 0) {
       removeFromCart(itemId);
@@ -118,10 +130,6 @@ const OrderReception: React.FC = () => {
         return item;
       })
     );
-  };
-
-  const removeFromCart = (itemId: string) => {
-    setCart(prev => prev.filter(item => item.menuItem.id !== itemId));
   };
 
   const getTotal = () => {
@@ -196,7 +204,7 @@ const OrderReception: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 pb-20 lg:pb-6">
-      {/* Notificación Toast simplificada */}
+      {/* Notificación Toast mejorada con desvanecimiento */}
       {toast && (
         <ToastNotification
           message={toast}
@@ -266,7 +274,7 @@ const OrderReception: React.FC = () => {
                     onClick={confirmOrder}
                     className="flex-1 px-3 sm:px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-1 sm:space-x-2 text-sm"
                   >
-                    <span>🖨️</span>
+                    <Check size={16} />
                     <span>Confirmar</span>
                   </button>
                 </div>
@@ -321,14 +329,14 @@ const OrderReception: React.FC = () => {
                                 onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
                                 className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
                               >
-                                -
+                                <Minus size={12} />
                               </button>
                               <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
                               <button
                                 onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
                                 className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
                               >
-                                +
+                                <Plus size={12} />
                               </button>
                             </div>
                             <button
@@ -519,7 +527,7 @@ const OrderReception: React.FC = () => {
                 </div>
               )}
 
-              {/* Grid de Productos */}
+              {/* Grid de Productos con botón de menos */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                 {currentItems.map(item => {
                   const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
@@ -529,16 +537,15 @@ const OrderReception: React.FC = () => {
                     <div
                       key={item.id}
                       className="bg-white rounded-xl p-3 sm:p-4 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200 cursor-pointer group relative"
-                      onClick={() => addToCart(item)}
                     >
-                      {/* Badge de cantidad en carrito - simplificado */}
+                      {/* Badge de cantidad en carrito */}
                       {quantityInCart > 0 && (
                         <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
                           {quantityInCart}
                         </div>
                       )}
                       
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1 truncate">
                             {item.name}
@@ -552,15 +559,46 @@ const OrderReception: React.FC = () => {
                             S/ {item.price.toFixed(2)}
                           </div>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(item);
-                          }}
-                          className="ml-3 bg-orange-500 text-white p-2 rounded-lg hover:bg-orange-600 transition-colors flex-shrink-0"
-                        >
-                          <Plus size={16} />
-                        </button>
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex items-center justify-between mt-3">
+                        {quantityInCart > 0 ? (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity(item.id, quantityInCart - 1);
+                              }}
+                              className="w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                            >
+                              <Minus size={14} />
+                            </button>
+                            <span className="text-sm font-medium w-6 text-center">
+                              {quantityInCart}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity(item.id, quantityInCart + 1);
+                              }}
+                              className="w-8 h-8 flex items-center justify-center bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(item);
+                            }}
+                            className="w-full bg-orange-500 text-white py-2 px-3 rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center space-x-1 text-sm font-medium"
+                          >
+                            <Plus size={14} />
+                            <span>Agregar</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -625,14 +663,14 @@ const OrderReception: React.FC = () => {
                                 onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
                                 className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
                               >
-                                -
+                                <Minus size={12} />
                               </button>
                               <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
                               <button
                                 onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
                                 className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
                               >
-                                +
+                                <Plus size={12} />
                               </button>
                             </div>
                             <button
