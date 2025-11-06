@@ -6,7 +6,7 @@ interface OrderTicketProps {
 }
 
 const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const printContent = document.getElementById(`ticket-${order.id}`);
     if (printContent) {
       // Para escritorio usar tamaño mayor, para móvil más pequeño
@@ -65,6 +65,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                   font-style: italic;
                   font-size: 10px;
                   margin-left: 10px;
+                }
+                .order-notes-list {
+                  margin: 5px 0;
+                  padding-left: 15px;
+                }
+                .order-notes-list div {
+                  margin-bottom: 2px;
                 }
                 table {
                   width: 100%;
@@ -132,9 +139,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 window.onload = function() {
                   setTimeout(function() {
                     window.print();
+                    // Guardar en Google Sheets después de imprimir
                     setTimeout(function() {
                       window.close();
-                    }, 500);
+                    }, 1000);
                   }, 100);
                 };
               </script>
@@ -142,7 +150,42 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           </html>
         `);
         printWindow.document.close();
+
+        // Guardar en Google Sheets después de abrir la ventana de impresión
+        await saveToGoogleSheets(order);
       }
+    }
+  };
+
+  // Función para guardar en Google Sheets
+  const saveToGoogleSheets = async (order: Order) => {
+    try {
+      // Aquí implementarás la conexión a Google Sheets
+      // Esto es un ejemplo de cómo podría estructurarse
+      const sheetData = {
+        orderId: order.id,
+        customerName: order.customerName,
+        phone: order.phone,
+        orderType: getSourceText(order.source.type),
+        total: order.total,
+        subtotal: (order.total / 1.18).toFixed(2),
+        igv: (order.total - (order.total / 1.18)).toFixed(2),
+        items: order.items.map(item => `${item.quantity}x ${item.menuItem.name}`).join(', '),
+        notes: order.notes || '',
+        printedAt: new Date().toISOString()
+      };
+
+      console.log('Datos para Google Sheets:', sheetData);
+      
+      // TODO: Implementar la llamada a tu API o Google Apps Script
+      // await fetch('TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(sheetData)
+      // });
+
+    } catch (error) {
+      console.error('Error guardando en Google Sheets:', error);
     }
   };
 
@@ -162,6 +205,26 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     // Cálculos del IGV
     const subtotal = order.total / 1.18;
     const igv = order.total - subtotal;
+
+    // Procesar notas del pedido para convertirlas en lista
+    const formatOrderNotes = (notes: string) => {
+      if (!notes) return '';
+      
+      // Dividir por puntos, comas o saltos de línea
+      const notesArray = notes.split(/[.,\n]/)
+        .map(note => note.trim())
+        .filter(note => note.length > 0);
+      
+      if (notesArray.length === 0) return '';
+      
+      return `
+        <div class="divider"></div>
+        <div class="bold">NOTAS DEL PEDIDO:</div>
+        <div class="order-notes-list">
+          ${notesArray.map(note => `<div>• ${note}</div>`).join('')}
+        </div>
+      `;
+    };
     
     return `
       <div class="ticket">
@@ -174,7 +237,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         
         <div class="item-row">
           <span class="bold">ORDEN:</span>
-          <span>${order.id}</span>
+          <span>${formatOrderId(order.id)}</span>
         </div>
         <div class="item-row">
           <span class="bold">TIPO:</span>
@@ -232,11 +295,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           </tbody>
         </table>
         
-        ${order.notes ? `
-          <div class="divider"></div>
-          <div class="bold">NOTAS DEL PEDIDO:</div>
-          <div>${order.notes}</div>
-        ` : ''}
+        ${formatOrderNotes(order.notes || '')}
         
         <div class="divider"></div>
         
@@ -267,9 +326,19 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     `;
   };
 
+  // Función para formatear el ID de la orden (empezando desde 0)
+  const formatOrderId = (orderId: string) => {
+    // Si el orderId es un número, formatearlo con ceros a la izquierda
+    const numericId = parseInt(orderId.replace(/\D/g, ''));
+    if (!isNaN(numericId)) {
+      return `ORD-${String(numericId).padStart(8, '0')}`;
+    }
+    return orderId;
+  };
+
   return (
     <>
-      {/* Botón para imprimir - ahora visible pero con estilos */}
+      {/* Botón para imprimir con el ID formateado */}
       <button
         onClick={handlePrint}
         data-order-id={order.id}
@@ -281,10 +350,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           border: 'none',
           borderRadius: '4px',
           cursor: 'pointer',
-          margin: '10px 0'
+          margin: '10px 0',
+          fontWeight: 'bold'
         }}
       >
-        Imprimir Ticket {order.id}
+        Imprimir Ticket {formatOrderId(order.id)}
       </button>
 
       {/* Contenido del ticket - Solo para referencia, oculto por defecto */}
