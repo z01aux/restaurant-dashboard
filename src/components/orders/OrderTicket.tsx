@@ -86,6 +86,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                   font-weight: bold;
                   text-transform: uppercase;
                 }
+                .quantity {
+                  font-weight: bold;
+                }
+                .calculation-row {
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 2px;
+                  font-size: 11px;
+                }
                 
                 /* Estilos para vista previa en escritorio */
                 @media screen and (min-width: 769px) {
@@ -150,6 +159,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   const generateTicketContent = (order: Order) => {
     const sourceText = getSourceText(order.source.type);
     
+    // Cálculos del IGV
+    const subtotal = order.total / 1.18;
+    const igv = order.total - subtotal;
+    
     return `
       <div class="ticket">
         <div class="center">
@@ -208,7 +221,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <tbody>
             ${order.items.map(item => `
               <tr>
-                <td>${item.quantity}x</td>
+                <td class="quantity">${item.quantity}x</td>
                 <td>
                   <div class="product-name">${item.menuItem.name}</div>
                   ${item.notes ? `<div class="notes">Nota: ${item.notes}</div>` : ''}
@@ -226,6 +239,17 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         ` : ''}
         
         <div class="divider"></div>
+        
+        <!-- Sección de cálculos con IGV -->
+        <div class="calculation-row">
+          <span>Subtotal:</span>
+          <span>S/ ${subtotal.toFixed(2)}</span>
+        </div>
+        <div class="calculation-row">
+          <span>IGV (18%):</span>
+          <span>S/ ${igv.toFixed(2)}</span>
+        </div>
+        
         <div class="item-row total bold">
           <span>TOTAL:</span>
           <span>S/ ${order.total.toFixed(2)}</span>
