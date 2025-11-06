@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Save, X } from 'lucide-react';
 import { MenuItem } from '../../types';
 
 const MenuManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('Todas');
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [editPrice, setEditPrice] = useState('');
 
   // Usar los mismos datos del menú que en OrderReception
-  const menuDelDia: { [key: string]: MenuItem[] } = {
+  const [menuItems, setMenuItems] = useState<{ [key: string]: MenuItem[] }>({
     '🥗 Entradas': [
       { id: 'E001', name: 'Papa a la Huancaina', category: 'Entradas', price: 18.00, type: 'food', available: true, description: 'Papa amarilla con salsa huancaina' },
       { id: 'E002', name: 'Causa Rellena', category: 'Entradas', price: 16.00, type: 'food', available: true, description: 'Causa de pollo o atún' },
@@ -26,11 +28,11 @@ const MenuManager: React.FC = () => {
       { id: 'B003', name: 'Chicha Morada', category: 'Bebidas', price: 8.00, type: 'drink', available: true },
       { id: 'B004', name: 'Limonada', category: 'Bebidas', price: 7.00, type: 'drink', available: true },
     ]
-  };
+  });
 
   // Todos los items para búsqueda
-  const allMenuItems = Object.values(menuDelDia).flat();
-  const categories = ['Todas', ...Object.keys(menuDelDia)];
+  const allMenuItems = Object.values(menuItems).flat();
+  const categories = ['Todas', ...Object.keys(menuItems)];
 
   // Filtrar items
   const filteredItems = allMenuItems.filter(item =>
@@ -38,6 +40,49 @@ const MenuManager: React.FC = () => {
     (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      item.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Función para editar precio
+  const startEditPrice = (item: MenuItem) => {
+    setEditingItem(item);
+    setEditPrice(item.price.toString());
+  };
+
+  const savePrice = () => {
+    if (editingItem && editPrice) {
+      const newPrice = parseFloat(editPrice);
+      if (!isNaN(newPrice)) {
+        // Actualizar el precio en el estado
+        setMenuItems(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(category => {
+            updated[category] = updated[category].map(item =>
+              item.id === editingItem.id ? { ...item, price: newPrice } : item
+            );
+          });
+          return updated;
+        });
+        setEditingItem(null);
+        setEditPrice('');
+      }
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingItem(null);
+    setEditPrice('');
+  };
+
+  const deleteItem = (id: string) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+      setMenuItems(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(category => {
+          updated[category] = updated[category].filter(item => item.id !== id);
+        });
+        return updated;
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-6">
@@ -97,10 +142,16 @@ const MenuManager: React.FC = () => {
                     <p className="text-sm text-gray-500">{item.category}</p>
                   </div>
                   <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => startEditPrice(item)}
+                      className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
                       <Edit size={16} />
                     </button>
-                    <button className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => deleteItem(item.id)}
+                      className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -112,9 +163,34 @@ const MenuManager: React.FC = () => {
                 
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className="text-2xl font-bold text-orange-600">
-                      S/ {item.price.toFixed(2)}
-                    </span>
+                    {editingItem?.id === item.id ? (
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="number"
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(e.target.value)}
+                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          step="0.01"
+                          min="0"
+                        />
+                        <button
+                          onClick={savePrice}
+                          className="text-green-600 hover:text-green-800 p-1 hover:bg-green-50 rounded transition-colors"
+                        >
+                          <Save size={14} />
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-2xl font-bold text-orange-600">
+                        S/ {item.price.toFixed(2)}
+                      </span>
+                    )}
                     <div className="text-xs text-gray-500 mt-1">
                       {item.type === 'food' ? '🍽️ Comida' : '🥤 Bebida'}
                     </div>
