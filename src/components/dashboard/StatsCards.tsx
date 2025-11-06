@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Coffee, Clock, DollarSign, TrendingUp } from 'lucide-react';
+import { Coffee, TrendingUp } from 'lucide-react';
 
 const StatsCards: React.FC = () => {
   const stats = [
@@ -10,7 +10,27 @@ const StatsCards: React.FC = () => {
       icon: Coffee,
       color: 'from-orange-500 to-red-500',
     },
-    // ... otros stats
+    {
+      title: 'Clientes Hoy',
+      value: '48',
+      change: '+8',
+      icon: Coffee,
+      color: 'from-amber-500 to-yellow-500',
+    },
+    {
+      title: 'Tiempo Promedio',
+      value: '18min',
+      change: '-2min',
+      icon: Coffee,
+      color: 'from-green-500 to-emerald-500',
+    },
+    {
+      title: 'Ingresos Hoy',
+      value: 'S/ 1,240',
+      change: '+15%',
+      icon: Coffee,
+      color: 'from-gray-600 to-gray-700',
+    },
   ];
 
   return (
