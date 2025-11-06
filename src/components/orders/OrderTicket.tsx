@@ -82,6 +82,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                   padding-top: 5px;
                   margin-top: 5px;
                 }
+                .product-name {
+                  font-weight: bold;
+                  text-transform: uppercase;
+                }
                 
                 /* Estilos para vista previa en escritorio */
                 @media screen and (min-width: 769px) {
@@ -206,7 +210,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               <tr>
                 <td>${item.quantity}x</td>
                 <td>
-                  ${item.menuItem.name}
+                  <div class="product-name">${item.menuItem.name}</div>
                   ${item.notes ? `<div class="notes">Nota: ${item.notes}</div>` : ''}
                 </td>
                 <td style="text-align: right;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
