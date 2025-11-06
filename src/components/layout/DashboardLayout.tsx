@@ -33,37 +33,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     <Sparkles className="h-1 w-1 sm:h-2 sm:w-2 text-white" />
                   </div>
                 </div>
-                <div className="hidden sm:block">
+                <div>
                   <h1 className="text-xl sm:text-2xl font-black bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">
                     Sabores & Sazón
                   </h1>
-                  <p className="text-gray-600 text-xs sm:text-sm font-medium">Dashboard Restaurant</p>
+                  <p className="text-gray-600 text-xs sm:text-sm font-medium hidden sm:block">
+                    Dashboard Restaurant
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Stats móviles */}
-            <div className="lg:hidden flex items-center space-x-4">
-              <div className="text-center">
-                <div className="font-semibold text-gray-900 text-sm">12</div>
-                <div className="text-gray-600 text-xs">Órdenes</div>
-              </div>
-            </div>
-
-            {/* Navegación desktop */}
-            <div className="hidden lg:flex items-center space-x-6">
-              {/* Stats rápidos */}
-              <div className="hidden md:flex items-center space-x-6 text-sm">
-                <div className="text-center">
-                  <div className="font-semibold text-gray-900">12</div>
-                  <div className="text-gray-600 text-xs">Órdenes Hoy</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-semibold text-green-600">S/ 1,240</div>
-                  <div className="text-gray-600 text-xs">Ingresos</div>
-                </div>
-              </div>
-
+            {/* Navegación desktop - SOLO iconos de acción */}
+            <div className="hidden lg:flex items-center space-x-4">
               {/* Iconos de acción */}
               <div className="flex items-center space-x-4">
                 <button className="relative p-2 text-gray-600 hover:text-orange-600 transition-colors duration-200">
@@ -73,7 +55,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <button className="p-2 text-gray-600 hover:text-orange-600 transition-colors duration-200">
                   <Settings size={20} />
                 </button>
-                <button className="hidden sm:flex items-center space-x-3 p-2 pl-4 rounded-xl bg-white/50 hover:bg-white/80 transition-all duration-200 border border-white/30">
+                <button className="flex items-center space-x-3 p-2 pl-4 rounded-xl bg-white/50 hover:bg-white/80 transition-all duration-200 border border-white/30">
                   <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
                     <User className="h-4 w-4 text-white" />
                   </div>
@@ -86,7 +68,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </div>
 
             {/* Perfil móvil */}
-            <div className="lg:hidden">
+            <div className="lg:hidden flex items-center space-x-2">
+              <button className="relative p-2 text-gray-600 hover:text-orange-600">
+                <Bell size={18} />
+              </button>
               <button className="w-8 h-8 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
                 <User className="h-4 w-4 text-white" />
               </button>
@@ -94,7 +79,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </div>
         </div>
 
-        {/* Menú móvil */}
+        {/* Menú móvil - SIN estadísticas */}
         {mobileMenuOpen && (
           <div className="lg:hidden bg-white/95 backdrop-blur-lg border-t border-white/30">
             <div className="px-4 py-3 space-y-3">
@@ -108,22 +93,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-center p-3 bg-orange-50 rounded-lg">
-                  <div className="font-semibold text-gray-900">12</div>
-                  <div className="text-gray-600 text-xs">Órdenes</div>
-                </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <div className="font-semibold text-green-600">S/ 1,240</div>
-                  <div className="text-gray-600 text-xs">Ingresos</div>
-                </div>
+              <div className="flex space-x-2">
+                <button className="flex-1 text-center p-3 bg-orange-50 rounded-lg text-sm font-medium text-orange-700">
+                  Configuración
+                </button>
+                <button className="flex-1 text-center p-3 bg-gray-50 rounded-lg text-sm font-medium text-gray-700">
+                  Cerrar Sesión
+                </button>
               </div>
             </div>
           </div>
         )}
       </header>
 
-      {/* Main Content con padding mejorado para móviles */}
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {children}
       </main>
