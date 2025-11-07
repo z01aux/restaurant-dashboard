@@ -71,8 +71,9 @@ function App() {
         </div>
       )}
 
-      {activeTab === 'orders' && <OrderReception />}
+      {/* ✅ CORREGIDO: Solo OrdersManager en la pestaña Órdenes */}
       {activeTab === 'orders' && <OrdersManager />}
+      
       {activeTab === 'menu' && <MenuManager />}
       {activeTab === 'customers' && <CustomersManager />}
     </DashboardLayout>
@@ -80,4 +81,3 @@ function App() {
 }
 
 export default App;
-
