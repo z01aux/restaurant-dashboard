@@ -32,3 +32,4 @@ export interface Order {
   notes?: string;
   tableNumber?: string;
 }
+
