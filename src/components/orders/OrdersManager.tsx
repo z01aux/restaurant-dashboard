@@ -25,16 +25,16 @@ const OrdersManager: React.FC = () => {
     order.phone?.includes(searchTerm)
   );
 
+  // CORREGIDO: Usar solo los estados definidos en el tipo Order
   const getStatusColor = (status: Order['status']) => {
     const colors = {
       pending: 'bg-yellow-100 text-yellow-800',
       preparing: 'bg-blue-100 text-blue-800',
       ready: 'bg-green-100 text-green-800',
-      served: 'bg-purple-100 text-purple-800',
-      paid: 'bg-gray-100 text-gray-800',
       delivered: 'bg-indigo-100 text-indigo-800',
+      cancelled: 'bg-red-100 text-red-800',
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status];
   };
 
   const getSourceText = (sourceType: Order['source']['type']) => {
@@ -42,7 +42,6 @@ const OrdersManager: React.FC = () => {
       'phone': 'Teléfono',
       'walk-in': 'Presencial',
       'delivery': 'Delivery',
-      'reservation': 'Reserva'
     };
     return sourceMap[sourceType] || sourceType;
   };
@@ -98,9 +97,8 @@ const OrdersManager: React.FC = () => {
             <option value="pending">Pendiente</option>
             <option value="preparing">Preparando</option>
             <option value="ready">Listo</option>
-            <option value="served">Servido</option>
-            <option value="paid">Pagado</option>
             <option value="delivered">Entregado</option>
+            <option value="cancelled">Cancelado</option>
           </select>
         </div>
       </div>
@@ -179,9 +177,8 @@ const OrdersManager: React.FC = () => {
                         <option value="pending">Pendiente</option>
                         <option value="preparing">Preparando</option>
                         <option value="ready">Listo</option>
-                        <option value="served">Servido</option>
-                        <option value="paid">Pagado</option>
                         <option value="delivered">Entregado</option>
+                        <option value="cancelled">Cancelado</option>
                       </select>
                     </td>
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
