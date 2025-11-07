@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, X, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Plus, Minus, X, ShoppingBag, ArrowRight, Search, Trash2 } from 'lucide-react';
 import { MenuItem, OrderItem, OrderSource, Order } from '../../types';
 import OrderTicket from './OrderTicket';
+import { useMenu } from '../../hooks/useMenu';
 
 // Componente de Notificación Toast mejorado sin íconos
 const ToastNotification: React.FC<{
@@ -47,6 +48,9 @@ const OrderReception: React.FC = () => {
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // ✅ USAR EL HOOK CENTRALIZADO DEL MENÚ
+  const { menuItems: menuDelDia, getCategories, getAllItems } = useMenu();
+
   // Cargar pedidos desde localStorage al iniciar
   useEffect(() => {
     const savedOrders = localStorage.getItem('restaurant-orders');
@@ -55,37 +59,15 @@ const OrderReception: React.FC = () => {
     }
   }, []);
 
-  // Menú del día organizado por categorías
-  const menuDelDia: { [key: string]: MenuItem[] } = {
-    '🥗 Entradas': [
-      { id: 'E001', name: 'Papa a la Huancaina', category: 'Entradas', price: 18.00, type: 'food', available: true, description: 'Papa amarilla con salsa huancaina' },
-      { id: 'E002', name: 'Causa Rellena', category: 'Entradas', price: 16.00, type: 'food', available: true, description: 'Causa de pollo o atún' },
-      { id: 'E003', name: 'Tequeños', category: 'Entradas', price: 15.00, type: 'food', available: true, description: '12 unidades con salsa de ají' },
-      { id: 'E004', name: 'Anticuchos', category: 'Entradas', price: 22.00, type: 'food', available: true, description: 'Brochetas de corazón' },
-    ],
-    '🍽️ Platos de Fondo': [
-      { id: 'P001', name: 'Lomo Saltado de Pollo', category: 'Platos de Fondo', price: 28.00, type: 'food', available: true, description: 'Salteado con cebolla, tomate' },
-      { id: 'P002', name: 'Lomo Saltado de Res', category: 'Platos de Fondo', price: 32.00, type: 'food', available: true, description: 'Salteado con cebolla, tomate' },
-      { id: 'P003', name: 'Arroz con Mariscos', category: 'Platos de Fondo', price: 35.00, type: 'food', available: true, description: 'Arroz verde con mix de mariscos' },
-      { id: 'P004', name: 'Aji de Gallina', category: 'Platos de Fondo', price: 25.00, type: 'food', available: true, description: 'Pollo en salsa de ají amarillo' },
-    ],
-    '🥤 Bebidas': [
-      { id: 'B001', name: 'Inca Kola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-      { id: 'B002', name: 'Coca Cola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-      { id: 'B003', name: 'Chicha Morada', category: 'Bebidas', price: 8.00, type: 'drink', available: true },
-      { id: 'B004', name: 'Limonada', category: 'Bebidas', price: 7.00, type: 'drink', available: true },
-    ]
-  };
+  // ✅ OBTENER ITEMS ACTUALIZADOS DEL MENÚ
+  const allMenuItems = getAllItems();
+  const categories = getCategories();
 
-  // Todos los items para búsqueda
-  const allMenuItems = Object.values(menuDelDia).flat();
-  const categories = Object.keys(menuDelDia);
-
-  // CORREGIDO: Función simplificada para obtener los items a mostrar
+  // ✅ FUNCIÓN CORREGIDA: Obtener items a mostrar
   const getItemsToShow = () => {
     // Si hay término de búsqueda, filtrar todos los items
     if (searchTerm) {
-      return allMenuItems.filter(item =>
+      return allMenuItems.filter((item: MenuItem) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -101,6 +83,7 @@ const OrderReception: React.FC = () => {
     setToast({ message, type });
   };
 
+  // ✅ FUNCIÓN CORREGIDA: Actualizar carrito con precios actualizados
   const addToCart = (menuItem: MenuItem) => {
     setCart(prev => {
       const existing = prev.find(item => item.menuItem.id === menuItem.id);
@@ -116,7 +99,7 @@ const OrderReception: React.FC = () => {
       if (existing) {
         return prev.map(item =>
           item.menuItem.id === menuItem.id
-            ? { ...item, quantity: newQuantity }
+            ? { ...item, quantity: newQuantity, menuItem } // ✅ ACTUALIZAR menuItem con precio nuevo
             : item
         );
       }
@@ -134,22 +117,26 @@ const OrderReception: React.FC = () => {
     });
   };
 
+  // ✅ FUNCIÓN CORREGIDA: Actualizar carrito con precios actualizados
   const updateQuantity = (itemId: string, quantity: number) => {
     if (quantity === 0) {
       removeFromCart(itemId);
       return;
     }
     
+    // ✅ OBTENER EL ITEM ACTUALIZADO DEL MENÚ
+    const updatedMenuItem = allMenuItems.find(item => item.id === itemId);
+    
     setCart(prev =>
       prev.map(item => {
         if (item.menuItem.id === itemId) {
-          const menuItem = allMenuItems.find(mi => mi.id === itemId);
+          const menuItem = updatedMenuItem || item.menuItem;
           if (menuItem && quantity < item.quantity) {
             showToast(`${menuItem.name} (${quantity})`, 'error');
           } else if (menuItem && quantity > item.quantity) {
             showToast(`${menuItem.name} (${quantity})`, 'success');
           }
-          return { ...item, quantity };
+          return { ...item, quantity, menuItem }; // ✅ ACTUALIZAR menuItem con precio nuevo
         }
         return item;
       })
@@ -367,7 +354,7 @@ const OrderReception: React.FC = () => {
                               onClick={() => removeFromCart(item.menuItem.id)}
                               className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg"
                             >
-                              <X size={16} />
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </div>
@@ -520,7 +507,7 @@ const OrderReception: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                   <h2 className="text-xl font-bold text-gray-900">Menú del Día</h2>
                   <div className="relative w-full sm:w-64">
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</div>
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                     <input
                       type="text"
                       value={searchTerm}
@@ -552,7 +539,7 @@ const OrderReception: React.FC = () => {
 
                 {/* Grid de Productos Compacto - AHORA MUESTRA LOS PRODUCTOS CORRECTOS */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {currentItems.map(item => {
+                  {currentItems.map((item: MenuItem) => {
                     const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
                     const quantityInCart = cartItem ? cartItem.quantity : 0;
                     
@@ -703,7 +690,7 @@ const OrderReception: React.FC = () => {
                                 onClick={() => removeFromCart(item.menuItem.id)}
                                 className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg"
                               >
-                                <X size={16} />
+                                <Trash2 size={16} />
                               </button>
                             </div>
                           </div>
