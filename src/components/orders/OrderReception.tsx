@@ -77,20 +77,10 @@ const OrderReception: React.FC = () => {
     ]
   };
 
-  // Función para obtener la categoría sin emojis
-  const getCategoryWithoutEmoji = (category: string): string => {
-    const categoryMap: { [key: string]: string } = {
-      '🥗 Entradas': 'Entradas',
-      '🍽️ Platos de Fondo': 'Platos de Fondo',
-      '🥤 Bebidas': 'Bebidas'
-    };
-    return categoryMap[category] || category.replace(/[🥗🍽️🥤]/g, '').trim();
-  };
-
   // Todos los items para búsqueda
   const allMenuItems = Object.values(menuDelDia).flat();
 
-  // Filtrar items CORREGIDO
+  // Filtrar items CORREGIDO - SIN función innecesaria
   const filteredItems = allMenuItems.filter(item => {
     const matchesCategory = activeCategory === '🥗 Entradas' ? item.category === 'Entradas' :
                            activeCategory === '🍽️ Platos de Fondo' ? item.category === 'Platos de Fondo' :
