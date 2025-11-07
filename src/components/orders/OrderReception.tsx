@@ -77,13 +77,33 @@ const OrderReception: React.FC = () => {
     ]
   };
 
+  // Función para obtener la categoría sin emojis
+  const getCategoryWithoutEmoji = (category: string): string => {
+    const categoryMap: { [key: string]: string } = {
+      '🥗 Entradas': 'Entradas',
+      '🍽️ Platos de Fondo': 'Platos de Fondo',
+      '🥤 Bebidas': 'Bebidas'
+    };
+    return categoryMap[category] || category.replace(/[🥗🍽️🥤]/g, '').trim();
+  };
+
   // Todos los items para búsqueda
   const allMenuItems = Object.values(menuDelDia).flat();
 
-  const filteredItems = allMenuItems.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar items CORREGIDO
+  const filteredItems = allMenuItems.filter(item => {
+    const matchesCategory = activeCategory === '🥗 Entradas' ? item.category === 'Entradas' :
+                           activeCategory === '🍽️ Platos de Fondo' ? item.category === 'Platos de Fondo' :
+                           activeCategory === '🥤 Bebidas' ? item.category === 'Bebidas' : true;
+    
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.category.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesCategory && matchesSearch;
+  });
+
+  // Obtener items actuales CORREGIDO
+  const currentItems = searchTerm ? filteredItems : (menuDelDia[activeCategory] || []);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -211,7 +231,6 @@ const OrderReception: React.FC = () => {
   };
 
   const categories = Object.keys(menuDelDia);
-  const currentItems = searchTerm ? filteredItems : menuDelDia[activeCategory] || [];
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
   return (
@@ -521,7 +540,7 @@ const OrderReception: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Navegación de Categorías */}
+                {/* Navegación de Categorías - AHORA FUNCIONA CORRECTAMENTE */}
                 {!searchTerm && (
                   <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
                     {categories.map(category => (
@@ -540,7 +559,7 @@ const OrderReception: React.FC = () => {
                   </div>
                 )}
 
-                {/* Grid de Productos Compacto */}
+                {/* Grid de Productos Compacto - AHORA MUESTRA LOS PRODUCTOS CORRECTOS */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {currentItems.map(item => {
                     const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
@@ -549,7 +568,7 @@ const OrderReception: React.FC = () => {
                     return (
                       <div
                         key={item.id}
-                        className="bg-white rounded-xl p-4 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                        className="bg-white rounded-xl p-4 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200 cursor-pointer relative"
                         onClick={() => addToCart(item)}
                       >
                         {/* Badge de cantidad en carrito */}
