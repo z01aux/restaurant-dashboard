@@ -9,9 +9,8 @@ const MenuManager: React.FC = () => {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [editPrice, setEditPrice] = useState('');
 
-  // Usar el hook centralizado del menú
+  // Usar el hook centralizado del menú - ✅ REMOVIDO menuItems que no se usa
   const { 
-    menuItems, 
     getAllItems, 
     getCategories, 
     updateItemPrice, 
@@ -22,7 +21,7 @@ const MenuManager: React.FC = () => {
   const categories = ['Todas', ...getCategories()];
 
   // Filtrar items
-  const filteredItems = allMenuItems.filter(item =>
+  const filteredItems = allMenuItems.filter((item: MenuItem) =>
     (activeCategory === 'Todas' || item.category === activeCategory.replace(/[🥗🍽️🥤]/g, '').trim()) &&
     (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      item.category.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -89,7 +88,7 @@ const MenuManager: React.FC = () => {
 
           {/* Navegación de Categorías */}
           <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
-            {categories.map(category => (
+            {categories.map((category: string) => (
               <button
                 key={category}
                 onClick={() => setActiveCategory(category)}
@@ -106,7 +105,7 @@ const MenuManager: React.FC = () => {
 
           {/* Grid de Productos */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredItems.map((item) => (
+            {filteredItems.map((item: MenuItem) => (
               <div key={item.id} className="bg-white rounded-xl p-6 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200 group">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1 min-w-0">
@@ -201,13 +200,13 @@ const MenuManager: React.FC = () => {
               </div>
               <div className="bg-green-50 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {allMenuItems.filter(item => item.available).length}
+                  {allMenuItems.filter((item: MenuItem) => item.available).length}
                 </div>
                 <div className="text-sm text-gray-600">Disponibles</div>
               </div>
               <div className="bg-blue-50 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {allMenuItems.filter(item => item.type === 'food').length}
+                  {allMenuItems.filter((item: MenuItem) => item.type === 'food').length}
                 </div>
                 <div className="text-sm text-gray-600">Platos de Comida</div>
               </div>
