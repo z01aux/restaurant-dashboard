@@ -1,76 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle, Clock, AlertCircle, ChefHat, Bell, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, Clock, AlertCircle, ChefHat } from 'lucide-react';
 import { Order } from '../../types';
 
-// Componente de notificación
-const KitchenNotification: React.FC<{
+// Componente Toast igual al de Recepción
+const ToastNotification: React.FC<{
   message: string;
-  order: Order;
+  type: 'success' | 'error';
   onClose: () => void;
-  onView: () => void;
-}> = ({ message, order, onClose, onView }) => {
+}> = ({ message, type, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(onClose, 300);
-    }, 8000); // 8 segundos de visibilidad
+    }, 4000); // 4 segundos para notificaciones de cocina
 
     return () => clearTimeout(timer);
   }, [onClose]);
 
+  const bgColor = type === 'success' ? 'bg-blue-500' : 'bg-red-500';
+
   return (
-    <div className={`fixed top-4 right-4 bg-white border-l-4 border-orange-500 shadow-lg rounded-lg p-4 max-w-sm z-50 transform transition-all duration-300 ${
+    <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
       isVisible 
         ? 'animate-in slide-in-from-right-full opacity-100' 
         : 'animate-out slide-out-to-right-full opacity-0'
     }`}>
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center space-x-2">
-          <div className="bg-orange-100 p-2 rounded-full">
-            <Bell className="h-4 w-4 text-orange-600" />
-          </div>
-          <span className="font-semibold text-gray-900">¡Nuevo Pedido!</span>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <X size={16} />
-        </button>
-      </div>
-      
-      <div className="text-sm text-gray-600 mb-3">
-        {message}
-      </div>
-      
-      <div className="bg-orange-50 rounded p-2 mb-3">
-        <div className="text-xs font-semibold text-orange-800">
-          Orden #{formatOrderId(order.id)}
-        </div>
-        <div className="text-xs text-orange-600">
-          Cliente: {order.customerName} • Mesa: {order.tableNumber || 'N/A'}
-        </div>
-        <div className="text-xs text-orange-600 mt-1">
-          {order.items.length} items • S/ {order.total.toFixed(2)}
-        </div>
-      </div>
-      
-      <div className="flex space-x-2">
-        <button
-          onClick={onView}
-          className="flex-1 bg-orange-500 text-white py-2 px-3 rounded text-sm font-medium hover:bg-orange-600 transition-colors"
-        >
-          Ver Pedido
-        </button>
-        <button
-          onClick={onClose}
-          className="flex-1 bg-gray-200 text-gray-700 py-2 px-3 rounded text-sm font-medium hover:bg-gray-300 transition-colors"
-        >
-          Cerrar
-        </button>
-      </div>
+      <div className="font-medium">{message}</div>
     </div>
   );
 };
@@ -78,11 +35,8 @@ const KitchenNotification: React.FC<{
 const KitchenManager: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<'pending' | 'preparing' | 'ready'>('pending');
-  const [notifications, setNotifications] = useState<{id: string; order: Order; message: string}[]>([]);
-  const [lastOrderCount, setLastOrderCount] = useState(0);
-  const [playSound, setPlaySound] = useState(false);
-  
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [processedOrders, setProcessedOrders] = useState<Set<string>>(new Set());
 
   // Cargar órdenes desde localStorage
   useEffect(() => {
@@ -93,74 +47,60 @@ const KitchenManager: React.FC = () => {
         createdAt: new Date(order.createdAt)
       }));
       setOrders(parsedOrders);
-      setLastOrderCount(parsedOrders.length);
+      
+      // Marcar todas las órdenes existentes como procesadas
+      const existingOrderIds = new Set(parsedOrders.map((order: Order) => order.id));
+      setProcessedOrders(existingOrderIds);
     }
 
-    // Configurar polling para nuevas órdenes
-    const interval = setInterval(checkForNewOrders, 3000); // Revisar cada 3 segundos
+    // Configurar polling para nuevas órdenes (cada 5 segundos)
+    const interval = setInterval(checkForNewOrders, 5000);
     
     return () => {
       clearInterval(interval);
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
     };
   }, []);
 
-  // Verificar nuevas órdenes
+  // Verificar nuevas órdenes - SOLO para pedidos NUEVOS
   const checkForNewOrders = () => {
     const savedOrders = localStorage.getItem('restaurant-orders');
     if (savedOrders) {
       const parsedOrders = JSON.parse(savedOrders);
-      
-      if (parsedOrders.length > lastOrderCount) {
-        // Hay nuevas órdenes
-        const newOrders = parsedOrders.slice(lastOrderCount);
-        
-        newOrders.forEach((orderData: any) => {
-          const newOrder: Order = {
-            ...orderData,
-            createdAt: new Date(orderData.createdAt)
-          };
-          
-          // Solo notificar órdenes pendientes (nuevas)
-          if (newOrder.status === 'pending') {
-            showNewOrderNotification(newOrder);
-          }
-        });
-        
-        setLastOrderCount(parsedOrders.length);
-        setOrders(parsedOrders.map((order: any) => ({
-          ...order,
-          createdAt: new Date(order.createdAt)
-        })));
-      }
+      const currentOrders = parsedOrders.map((order: any) => ({
+        ...order,
+        createdAt: new Date(order.createdAt)
+      }));
+
+      // Encontrar órdenes realmente NUEVAS (que no hemos procesado)
+      const newOrders = currentOrders.filter((order: Order) => 
+        !processedOrders.has(order.id) && order.status === 'pending'
+      );
+
+      // Mostrar notificación solo para órdenes nuevas pendientes
+      newOrders.forEach((order: Order) => {
+        showNewOrderNotification(order);
+        // Marcar como procesada inmediatamente
+        setProcessedOrders(prev => new Set([...prev, order.id]));
+      });
+
+      // Actualizar estado de órdenes
+      setOrders(currentOrders);
     }
   };
 
-  // Mostrar notificación de nueva orden
+  // Mostrar notificación de nueva orden - SOLO UNA por pedido
   const showNewOrderNotification = (order: Order) => {
-    const notificationId = `notif-${order.id}-${Date.now()}`;
-    const message = `Nuevo pedido de ${order.customerName} para ${getSourceText(order.source.type)}`;
+    const message = `📱 Nuevo pedido #${formatOrderId(order.id)} - ${order.customerName} (${getSourceText(order.source.type)})`;
+    setToast({ message, type: 'success' });
     
-    setNotifications(prev => [...prev, { id: notificationId, order, message }]);
-    
-    // Reproducir sonido de notificación (beep simple)
+    // Reproducir sonido simple
     playNotificationSound();
-    
-    // Vibrar si está en dispositivo móvil
-    if ('vibrate' in navigator) {
-      navigator.vibrate([200, 100, 200]);
-    }
   };
 
-  // Reproducir sonido de notificación
+  // Sonido de notificación simple
   const playNotificationSound = () => {
-    setPlaySound(true);
-    setTimeout(() => setPlaySound(false), 1000);
-    
-    // Crear un beep simple usando Web Audio API
     try {
+      // Beep simple usando Web Audio API
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -171,37 +111,34 @@ const KitchenManager: React.FC = () => {
       oscillator.frequency.value = 800;
       oscillator.type = 'sine';
       
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
       
       oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
+      oscillator.stop(audioContext.currentTime + 0.3);
     } catch (error) {
-      console.log('Audio no disponible:', error);
+      console.log('Audio no disponible');
     }
   };
 
-  // Cerrar notificación
-  const closeNotification = (notificationId: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-  };
+  // Actualizar estado de la orden
+  const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
+    const updatedOrders = orders.map(order =>
+      order.id === orderId ? { ...order, status: newStatus } : order
+    );
+    setOrders(updatedOrders);
+    localStorage.setItem('restaurant-orders', JSON.stringify(updatedOrders));
 
-  // Ver orden desde notificación
-  const viewOrderFromNotification = (orderId: string) => {
-    setActiveTab('pending');
-    closeNotification(`notif-${orderId}`);
-    
-    // Scroll al elemento de la orden (simulado)
-    setTimeout(() => {
-      const orderElement = document.getElementById(`order-${orderId}`);
-      if (orderElement) {
-        orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        orderElement.classList.add('bg-yellow-50');
-        setTimeout(() => {
-          orderElement.classList.remove('bg-yellow-50');
-        }, 2000);
+    // Mostrar confirmación cuando se marca como listo
+    if (newStatus === 'ready') {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        setToast({ 
+          message: `✅ Pedido #${formatOrderId(orderId)} marcado como LISTO`, 
+          type: 'success' 
+        });
       }
-    }, 100);
+    }
   };
 
   // Filtrar órdenes por estado
@@ -214,15 +151,6 @@ const KitchenManager: React.FC = () => {
       return order.status === 'ready';
     }
   });
-
-  // Actualizar estado de la orden
-  const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    const updatedOrders = orders.map(order =>
-      order.id === orderId ? { ...order, status: newStatus } : order
-    );
-    setOrders(updatedOrders);
-    localStorage.setItem('restaurant-orders', JSON.stringify(updatedOrders));
-  };
 
   // Obtener icono según el estado
   const getStatusIcon = (status: Order['status']) => {
@@ -268,48 +196,29 @@ const KitchenManager: React.FC = () => {
     const diffMs = now.getTime() - createdAt.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     
-    if (diffMins < 1) return 'Ahora';
-    if (diffMins === 1) return 'Hace 1 min';
-    return `Hace ${diffMins} mins`;
+    if (diffMins < 1) return 'Hace un momento';
+    if (diffMins === 1) return 'Hace 1 minuto';
+    return `Hace ${diffMins} minutos`;
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-6">
-      {/* Notificaciones */}
-      {notifications.map(notification => (
-        <KitchenNotification
-          key={notification.id}
-          message={notification.message}
-          order={notification.order}
-          onClose={() => closeNotification(notification.id)}
-          onView={() => viewOrderFromNotification(notification.order.id)}
+      {/* Notificación Toast simple */}
+      {toast && (
+        <ToastNotification
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
-      ))}
-      
-      {/* Indicador de sonido (oculto) */}
-      {playSound && (
-        <div style={{ display: 'none' }}>
-          🔔 Sonido de notificación
-        </div>
       )}
 
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
-          {/* Header con indicador de notificaciones */}
+          {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
-            <div className="flex items-center space-x-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">👨‍🍳 Gestión de Cocina</h1>
-                <p className="text-gray-600 mt-1">Control y seguimiento de pedidos en tiempo real</p>
-              </div>
-              
-              {notifications.length > 0 && (
-                <div className="relative">
-                  <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold animate-pulse">
-                    {notifications.length} nueva{notifications.length > 1 ? 's' : ''}
-                  </div>
-                </div>
-              )}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">👨‍🍳 Gestión de Cocina</h1>
+              <p className="text-gray-600 mt-1">Control y seguimiento de pedidos en tiempo real</p>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -540,7 +449,6 @@ const formatOrderId = (orderId: string) => {
   return orderId;
 };
 
-// ✅ FUNCIÓN CORREGIDA - Tipo específico para sourceType
 const getSourceText = (sourceType: 'phone' | 'walk-in' | 'delivery') => {
   const sourceMap = {
     'phone': 'Teléfono',
