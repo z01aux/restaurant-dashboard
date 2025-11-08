@@ -1,10 +1,88 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, Clock, AlertCircle, ChefHat } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { CheckCircle, Clock, AlertCircle, ChefHat, Bell, X } from 'lucide-react';
 import { Order } from '../../types';
+
+// Componente de notificación
+const KitchenNotification: React.FC<{
+  message: string;
+  order: Order;
+  onClose: () => void;
+  onView: () => void;
+}> = ({ message, order, onClose, onView }) => {
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300);
+    }, 8000); // 8 segundos de visibilidad
+
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`fixed top-4 right-4 bg-white border-l-4 border-orange-500 shadow-lg rounded-lg p-4 max-w-sm z-50 transform transition-all duration-300 ${
+      isVisible 
+        ? 'animate-in slide-in-from-right-full opacity-100' 
+        : 'animate-out slide-out-to-right-full opacity-0'
+    }`}>
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <div className="bg-orange-100 p-2 rounded-full">
+            <Bell className="h-4 w-4 text-orange-600" />
+          </div>
+          <span className="font-semibold text-gray-900">¡Nuevo Pedido!</span>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X size={16} />
+        </button>
+      </div>
+      
+      <div className="text-sm text-gray-600 mb-3">
+        {message}
+      </div>
+      
+      <div className="bg-orange-50 rounded p-2 mb-3">
+        <div className="text-xs font-semibold text-orange-800">
+          Orden #{formatOrderId(order.id)}
+        </div>
+        <div className="text-xs text-orange-600">
+          Cliente: {order.customerName} • Mesa: {order.tableNumber || 'N/A'}
+        </div>
+        <div className="text-xs text-orange-600 mt-1">
+          {order.items.length} items • S/ {order.total.toFixed(2)}
+        </div>
+      </div>
+      
+      <div className="flex space-x-2">
+        <button
+          onClick={onView}
+          className="flex-1 bg-orange-500 text-white py-2 px-3 rounded text-sm font-medium hover:bg-orange-600 transition-colors"
+        >
+          Ver Pedido
+        </button>
+        <button
+          onClick={onClose}
+          className="flex-1 bg-gray-200 text-gray-700 py-2 px-3 rounded text-sm font-medium hover:bg-gray-300 transition-colors"
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const KitchenManager: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<'pending' | 'preparing' | 'ready'>('pending');
+  const [notifications, setNotifications] = useState<{id: string; order: Order; message: string}[]>([]);
+  const [lastOrderCount, setLastOrderCount] = useState(0);
+  const [playSound, setPlaySound] = useState(false);
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Cargar órdenes desde localStorage
   useEffect(() => {
@@ -15,8 +93,116 @@ const KitchenManager: React.FC = () => {
         createdAt: new Date(order.createdAt)
       }));
       setOrders(parsedOrders);
+      setLastOrderCount(parsedOrders.length);
     }
+
+    // Configurar polling para nuevas órdenes
+    const interval = setInterval(checkForNewOrders, 3000); // Revisar cada 3 segundos
+    
+    return () => {
+      clearInterval(interval);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
   }, []);
+
+  // Verificar nuevas órdenes
+  const checkForNewOrders = () => {
+    const savedOrders = localStorage.getItem('restaurant-orders');
+    if (savedOrders) {
+      const parsedOrders = JSON.parse(savedOrders);
+      
+      if (parsedOrders.length > lastOrderCount) {
+        // Hay nuevas órdenes
+        const newOrders = parsedOrders.slice(lastOrderCount);
+        
+        newOrders.forEach((orderData: any) => {
+          const newOrder: Order = {
+            ...orderData,
+            createdAt: new Date(orderData.createdAt)
+          };
+          
+          // Solo notificar órdenes pendientes (nuevas)
+          if (newOrder.status === 'pending') {
+            showNewOrderNotification(newOrder);
+          }
+        });
+        
+        setLastOrderCount(parsedOrders.length);
+        setOrders(parsedOrders.map((order: any) => ({
+          ...order,
+          createdAt: new Date(order.createdAt)
+        })));
+      }
+    }
+  };
+
+  // Mostrar notificación de nueva orden
+  const showNewOrderNotification = (order: Order) => {
+    const notificationId = `notif-${order.id}-${Date.now()}`;
+    const message = `Nuevo pedido de ${order.customerName} para ${getSourceText(order.source.type)}`;
+    
+    setNotifications(prev => [...prev, { id: notificationId, order, message }]);
+    
+    // Reproducir sonido de notificación (beep simple)
+    playNotificationSound();
+    
+    // Vibrar si está en dispositivo móvil
+    if ('vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200]);
+    }
+  };
+
+  // Reproducir sonido de notificación
+  const playNotificationSound = () => {
+    setPlaySound(true);
+    setTimeout(() => setPlaySound(false), 1000);
+    
+    // Crear un beep simple usando Web Audio API
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.log('Audio no disponible:', error);
+    }
+  };
+
+  // Cerrar notificación
+  const closeNotification = (notificationId: string) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+  };
+
+  // Ver orden desde notificación
+  const viewOrderFromNotification = (orderId: string) => {
+    setActiveTab('pending');
+    closeNotification(`notif-${orderId}`);
+    
+    // Scroll al elemento de la orden (simulado)
+    setTimeout(() => {
+      const orderElement = document.getElementById(`order-${orderId}`);
+      if (orderElement) {
+        orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        orderElement.classList.add('bg-yellow-50');
+        setTimeout(() => {
+          orderElement.classList.remove('bg-yellow-50');
+        }, 2000);
+      }
+    }, 100);
+  };
 
   // Filtrar órdenes por estado
   const filteredOrders = orders.filter(order => {
@@ -89,13 +275,41 @@ const KitchenManager: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-6">
+      {/* Notificaciones */}
+      {notifications.map(notification => (
+        <KitchenNotification
+          key={notification.id}
+          message={notification.message}
+          order={notification.order}
+          onClose={() => closeNotification(notification.id)}
+          onView={() => viewOrderFromNotification(notification.order.id)}
+        />
+      ))}
+      
+      {/* Indicador de sonido (oculto) */}
+      {playSound && (
+        <div style={{ display: 'none' }}>
+          🔔 Sonido de notificación
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
-          {/* Header */}
+          {/* Header con indicador de notificaciones */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">👨‍🍳 Gestión de Cocina</h1>
-              <p className="text-gray-600 mt-1">Control y seguimiento de pedidos en tiempo real</p>
+            <div className="flex items-center space-x-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">👨‍🍳 Gestión de Cocina</h1>
+                <p className="text-gray-600 mt-1">Control y seguimiento de pedidos en tiempo real</p>
+              </div>
+              
+              {notifications.length > 0 && (
+                <div className="relative">
+                  <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold animate-pulse">
+                    {notifications.length} nueva{notifications.length > 1 ? 's' : ''}
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="flex items-center space-x-4">
@@ -157,7 +371,11 @@ const KitchenManager: React.FC = () => {
               </div>
             ) : (
               filteredOrders.map(order => (
-                <div key={order.id} className="bg-white rounded-xl p-6 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200">
+                <div 
+                  key={order.id} 
+                  id={`order-${order.id}`}
+                  className="bg-white rounded-xl p-6 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200"
+                >
                   {/* Header de la orden */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -228,7 +446,6 @@ const KitchenManager: React.FC = () => {
                         Total: S/ {order.total.toFixed(2)}
                       </div>
                       
-                      {/* Botones de acción según el estado */}
                       <div className="flex space-x-2">
                         {order.status === 'pending' && (
                           <button
@@ -260,7 +477,6 @@ const KitchenManager: React.FC = () => {
                           </button>
                         )}
                         
-                        {/* Botón para retroceder estado */}
                         {order.status !== 'pending' && (
                           <button
                             onClick={() => {
@@ -324,7 +540,8 @@ const formatOrderId = (orderId: string) => {
   return orderId;
 };
 
-const getSourceText = (sourceType: any) => {
+// ✅ FUNCIÓN CORREGIDA - Tipo específico para sourceType
+const getSourceText = (sourceType: 'phone' | 'walk-in' | 'delivery') => {
   const sourceMap = {
     'phone': 'Teléfono',
     'walk-in': 'Presencial',
