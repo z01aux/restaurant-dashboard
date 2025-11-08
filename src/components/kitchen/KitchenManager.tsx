@@ -49,7 +49,7 @@ const KitchenManager: React.FC = () => {
       setOrders(parsedOrders);
       
       // Marcar todas las órdenes existentes como procesadas
-      const existingOrderIds = new Set(parsedOrders.map((order: Order) => order.id));
+      const existingOrderIds = new Set(parsedOrders.map((order: any) => order.id as string));
       setProcessedOrders(existingOrderIds);
     }
 
