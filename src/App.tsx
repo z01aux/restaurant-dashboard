@@ -5,6 +5,7 @@ import OrdersManager from './components/orders/OrdersManager';
 import MenuManager from './components/menu/MenuManager';
 import OrderReception from './components/orders/OrderReception';
 import CustomersManager from './components/customers/CustomersManager';
+import KitchenManager from './components/kitchen/KitchenManager';
 
 function App() {
   const [activeTab, setActiveTab] = React.useState('reception');
@@ -16,6 +17,7 @@ function App() {
     { id: 'orders', name: '📋 Órdenes', shortName: '📋' },
     { id: 'menu', name: '🍽️ Menú', shortName: '🍽️' },
     { id: 'customers', name: '👥 Clientes', shortName: '👥' },
+    { id: 'kitchen', name: '👨‍🍳 Cocina', shortName: '👨‍🍳' },
   ];
 
   return (
@@ -76,8 +78,10 @@ function App() {
       
       {activeTab === 'menu' && <MenuManager />}
       {activeTab === 'customers' && <CustomersManager />}
+      {activeTab === 'kitchen' && <KitchenManager />}
     </DashboardLayout>
   );
 }
 
 export default App;
+
