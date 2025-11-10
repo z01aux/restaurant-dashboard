@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react';
-import { supabase, Employee } from '../lib/supabase';
-import { useMenu } from './useMenu';
+import { supabase } from '../lib/supabase';
+import type { Employee } from '../lib/supabase';
 
 export const useAuth = () => {
   const [user, setUser] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    // Verificar sesión al cargar
     checkSession();
 
-    // Escuchar cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
@@ -23,18 +20,7 @@ export const useAuth = () => {
       }
     );
 
-    // Escuchar cambios de conexión
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      subscription.unsubscribe();
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const checkSession = async () => {
@@ -42,10 +28,11 @@ export const useAuth = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         await fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error checking session:', error);
-    } finally {
       setLoading(false);
     }
   };
@@ -70,7 +57,7 @@ export const useAuth = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
 
@@ -104,7 +91,6 @@ export const useAuth = () => {
   return {
     user,
     loading,
-    isOnline,
     signIn,
     signOut,
     isAuthenticated: !!user,
