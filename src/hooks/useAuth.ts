@@ -10,7 +10,7 @@ export const useAuth = () => {
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         if (session?.user) {
           await fetchUserProfile(session.user.id);
         } else {
