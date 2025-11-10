@@ -25,7 +25,7 @@ export const useAuth = () => {
     }
   };
 
-  const signIn = async (username: string, password: string) => {
+  const signIn = async (username: string, _password: string) => { // ✅ Cambiado a _password
     try {
       setLoading(true);
       console.log('🔐 [DEBUG 1] Iniciando login para:', username);
