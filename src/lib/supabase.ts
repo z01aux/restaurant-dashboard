@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Solución temporal - usar any para evitar errores de TypeScript
-const supabaseUrl = (import.meta.env as any).VITE_SUPABASE_URL;
-const supabaseAnonKey = (import.meta.env as any).VITE_SUPABASE_ANON_KEY;
+// @ts-ignore - Ignorar errores de TypeScript temporalmente
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// @ts-ignore - Ignorar errores de TypeScript temporalmente  
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
@@ -10,7 +11,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Tipos de datos
+// Tipos de datos (mantener igual)
 export interface Customer {
   id: string;
   name: string;
