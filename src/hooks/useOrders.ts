@@ -81,9 +81,6 @@ export const useOrders = () => {
 
       if (itemsError) throw itemsError;
 
-      // Actualizar estadísticas del cliente
-      await updateCustomerStats(orderData.phone, orderData.customer_name, total);
-
       await fetchOrders();
       return { success: true, order };
     } catch (error: any) {
@@ -108,43 +105,6 @@ export const useOrders = () => {
       return { success: true, data };
     } catch (error: any) {
       return { success: false, error: error.message };
-    }
-  };
-
-  const updateCustomerStats = async (phone: string, name: string, orderTotal: number) => {
-    try {
-      // Buscar cliente existente
-      const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('phone', phone)
-        .single();
-
-      if (existingCustomer) {
-        // Actualizar cliente existente
-        await supabase
-          .from('customers')
-          .update({
-            orders_count: existingCustomer.orders_count + 1,
-            total_spent: existingCustomer.total_spent + orderTotal,
-            last_order: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existingCustomer.id);
-      } else {
-        // Crear nuevo cliente
-        await supabase
-          .from('customers')
-          .insert([{
-            name,
-            phone,
-            orders_count: 1,
-            total_spent: orderTotal,
-            last_order: new Date().toISOString(),
-          }]);
-      }
-    } catch (error) {
-      console.error('Error updating customer stats:', error);
     }
   };
 
