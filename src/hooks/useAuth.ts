@@ -53,11 +53,31 @@ export const useAuth = () => {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (username: string, password: string) => {
     try {
       setLoading(true);
+      
+      // Buscar el usuario por username
+      const { data: employee, error: employeeError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('username', username.trim().toLowerCase())
+        .single();
+
+      if (employeeError || !employee) {
+        throw new Error('Usuario no encontrado');
+      }
+
+      // ✅ Si el usuario NO tiene email, usar un sistema alternativo
+      if (!employee.email) {
+        // Para usuarios sin email, usar un sistema de autenticación simple
+        // Esto es temporal - podrías implementar tu propio sistema de auth
+        throw new Error('Este usuario requiere configuración especial. Contacta al administrador.');
+      }
+
+      // Si tiene email, hacer login normal con Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: employee.email,
         password,
       });
 
