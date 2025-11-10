@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase, Order, OrderItem } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import type { Order } from '../lib/supabase';
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
