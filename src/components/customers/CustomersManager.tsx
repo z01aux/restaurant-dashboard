@@ -229,7 +229,7 @@ const CustomersManager: React.FC = () => {
                     {/* Información del Cliente */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-3">
-                        <div>
+                        <div className="flex-1">
                           <h3 className="text-lg font-semibold text-gray-900">{customer.name}</h3>
                           <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
                             <div className="flex items-center space-x-1">
@@ -250,7 +250,8 @@ const CustomersManager: React.FC = () => {
                           )}
                         </div>
                         
-                        <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* BOTONES - CORREGIDOS: Mejor posicionamiento */}
+                        <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity ml-4 flex-shrink-0">
                           <button className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors">
                             <Edit size={16} />
                           </button>
