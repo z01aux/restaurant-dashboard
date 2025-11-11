@@ -207,7 +207,7 @@ const KitchenManager: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 p-6">
       {/* Notificación Toast simple */}
       {toast && (
         <ToastNotification
@@ -227,7 +227,7 @@ const KitchenManager: React.FC = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="bg-orange-500 text-white p-3 rounded-xl">
+              <div className="bg-red-500 text-white p-3 rounded-xl">
                 <ChefHat size={24} />
               </div>
               <div className="text-right">
@@ -251,13 +251,13 @@ const KitchenManager: React.FC = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition-all flex items-center space-x-2 ${
                   activeTab === tab.id
-                    ? 'bg-orange-500 text-white shadow-md'
+                    ? 'bg-red-500 text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 <span>{tab.name}</span>
                 <span className={`px-2 py-1 text-xs rounded-full ${
-                  activeTab === tab.id ? 'bg-white text-orange-500' : 'bg-gray-300 text-gray-700'
+                  activeTab === tab.id ? 'bg-white text-red-500' : 'bg-gray-300 text-gray-700'
                 }`}>
                   {tab.count}
                 </span>
@@ -288,7 +288,7 @@ const KitchenManager: React.FC = () => {
                 <div 
                   key={order.id} 
                   id={`order-${order.id}`}
-                  className="bg-white rounded-xl p-6 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200"
+                  className="bg-white rounded-xl p-6 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200"
                 >
                   {/* Header de la orden */}
                   <div className="flex items-start justify-between mb-4">
@@ -335,7 +335,7 @@ const KitchenManager: React.FC = () => {
                       {order.items.map((item, index) => (
                         <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
                           <div className="flex items-center space-x-3">
-                            <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm font-semibold">
+                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
                               {item.quantity}x
                             </span>
                             <div>
@@ -431,8 +431,8 @@ const KitchenManager: React.FC = () => {
                 </div>
                 <div className="text-sm text-gray-600">Listos</div>
               </div>
-              <div className="bg-orange-50 rounded-lg p-4 text-center border border-orange-200">
-                <div className="text-2xl font-bold text-orange-600">
+              <div className="bg-red-50 rounded-lg p-4 text-center border border-red-200">
+                <div className="text-2xl font-bold text-red-600">
                   {orders.filter(o => o.status === 'pending' || o.status === 'preparing').length}
                 </div>
                 <div className="text-sm text-gray-600">Total Activas</div>
