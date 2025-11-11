@@ -22,6 +22,7 @@ const Login: React.FC = () => {
     if (!result.success) {
       setError(result.error || 'Error al iniciar sesión');
     }
+    // ✅ NO necesitamos hacer nada más aquí porque ProtectedRoute se actualiza automáticamente
   };
 
   const handleDemoLogin = (demoUser: string, demoPass: string) => {
