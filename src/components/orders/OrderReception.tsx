@@ -212,7 +212,7 @@ const OrderReception: React.FC = () => {
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 pb-20 lg:pb-6">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 pb-20 lg:pb-6">
       {/* Notificación Toast sin íconos */}
       {toast && (
         <ToastNotification
@@ -224,7 +224,7 @@ const OrderReception: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
         {/* Header Móvil */}
-        <div className="lg:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-lg border-b border-orange-200">
+        <div className="lg:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-lg border-b border-red-200">
           <div className="px-3 py-3">
             <div className="flex items-center justify-between">
               <div>
@@ -242,7 +242,7 @@ const OrderReception: React.FC = () => {
               
               <button
                 onClick={() => setShowCartDrawer(true)}
-                className="relative bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center space-x-2"
+                className="relative bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center space-x-2"
               >
                 <ShoppingBag size={20} />
                 <div className="text-left">
@@ -264,8 +264,8 @@ const OrderReception: React.FC = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-md mx-auto">
               <div className="text-center">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShoppingBag className="h-8 w-8 text-orange-500" />
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ShoppingBag className="h-8 w-8 text-red-500" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">¿Confirmar Pedido?</h3>
                 <p className="text-gray-600 mb-3 sm:mb-4 text-sm">
@@ -284,7 +284,7 @@ const OrderReception: React.FC = () => {
                   </button>
                   <button
                     onClick={confirmOrder}
-                    className="flex-1 px-3 sm:px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                    className="flex-1 px-3 sm:px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
                   >
                     Confirmar
                   </button>
@@ -315,8 +315,8 @@ const OrderReception: React.FC = () => {
 
                 {cart.length === 0 ? (
                   <div className="text-center py-8">
-                    <div className="bg-orange-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                      <ShoppingBag className="h-8 w-8 text-orange-500" />
+                    <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                      <ShoppingBag className="h-8 w-8 text-red-500" />
                     </div>
                     <div className="text-gray-500 text-sm mb-2">Tu pedido está vacío</div>
                     <div className="text-gray-400 text-xs">Agrega productos del menú</div>
@@ -358,7 +358,7 @@ const OrderReception: React.FC = () => {
                             </button>
                           </div>
                         </div>
-                        <div className="text-right text-sm font-semibold text-orange-600 mt-2">
+                        <div className="text-right text-sm font-semibold text-red-600 mt-2">
                           S/ {(item.menuItem.price * item.quantity).toFixed(2)}
                         </div>
                       </div>
@@ -370,7 +370,7 @@ const OrderReception: React.FC = () => {
                   <div className="border-t border-gray-200 pt-4 mt-4">
                     <div className="flex justify-between items-center mb-4">
                       <span className="text-lg font-semibold">Total:</span>
-                      <span className="text-2xl font-bold text-orange-600">
+                      <span className="text-2xl font-bold text-red-600">
                         S/ {getTotal().toFixed(2)}
                       </span>
                     </div>
@@ -425,7 +425,7 @@ const OrderReception: React.FC = () => {
                       onClick={() => setActiveTab(type as any)}
                       className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
                         activeTab === type
-                          ? 'border-orange-500 bg-orange-50 shadow-sm'
+                          ? 'border-red-500 bg-red-50 shadow-sm'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -446,7 +446,7 @@ const OrderReception: React.FC = () => {
                       type="text"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                       placeholder="Ingresa el nombre"
                       required
                     />
@@ -460,7 +460,7 @@ const OrderReception: React.FC = () => {
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                       placeholder="Número de teléfono"
                       required
                     />
@@ -475,7 +475,7 @@ const OrderReception: React.FC = () => {
                         type="text"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                         placeholder="Dirección completa"
                         required
                       />
@@ -490,7 +490,7 @@ const OrderReception: React.FC = () => {
                       value={orderNotes}
                       onChange={(e) => setOrderNotes(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                       placeholder="Instrucciones especiales..."
                     />
                   </div>
@@ -512,7 +512,7 @@ const OrderReception: React.FC = () => {
                       type="text"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                       placeholder="Buscar productos..."
                     />
                   </div>
@@ -527,7 +527,7 @@ const OrderReception: React.FC = () => {
                         onClick={() => setActiveCategory(category)}
                         className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                           activeCategory === category
-                            ? 'bg-orange-500 text-white shadow-sm'
+                            ? 'bg-red-500 text-white shadow-sm'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -546,12 +546,12 @@ const OrderReception: React.FC = () => {
                     return (
                       <div
                         key={item.id}
-                        className="bg-white rounded-xl p-4 border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200 cursor-pointer relative"
+                        className="bg-white rounded-xl p-4 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200 cursor-pointer relative"
                         onClick={() => addToCart(item)}
                       >
                         {/* Badge de cantidad en carrito */}
                         {quantityInCart > 0 && (
-                          <div className="absolute -top-2 -right-2 bg-orange-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
+                          <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
                             {quantityInCart}
                           </div>
                         )}
@@ -565,7 +565,7 @@ const OrderReception: React.FC = () => {
                               {item.description}
                             </div>
                           )}
-                          <div className="font-bold text-orange-600 text-sm">
+                          <div className="font-bold text-red-600 text-sm">
                             S/ {item.price.toFixed(2)}
                           </div>
                         </div>
@@ -591,7 +591,7 @@ const OrderReception: React.FC = () => {
                                   e.stopPropagation();
                                   updateQuantity(item.id, quantityInCart + 1);
                                 }}
-                                className="w-8 h-8 flex items-center justify-center bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex-1"
+                                className="w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex-1"
                               >
                                 <Plus size={14} />
                               </button>
@@ -602,7 +602,7 @@ const OrderReception: React.FC = () => {
                                 e.stopPropagation();
                                 addToCart(item);
                               }}
-                              className="w-full bg-orange-500 text-white py-2 px-3 rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center space-x-1 text-sm font-medium"
+                              className="w-full bg-red-500 text-white py-2 px-3 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-1 text-sm font-medium"
                             >
                               <Plus size={14} />
                               <span>Agregar</span>
@@ -642,15 +642,15 @@ const OrderReception: React.FC = () => {
                     <h2 className="text-xl font-bold text-gray-900">Tu Pedido</h2>
                     <p className="text-sm text-gray-600">{totalItems} productos</p>
                   </div>
-                  <div className="bg-orange-500 text-white p-2 rounded-lg">
+                  <div className="bg-red-500 text-white p-2 rounded-lg">
                     <ShoppingBag size={20} />
                   </div>
                 </div>
 
                 {cart.length === 0 ? (
                   <div className="text-center py-8">
-                    <div className="bg-orange-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                      <ShoppingBag className="h-8 w-8 text-orange-500" />
+                    <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                      <ShoppingBag className="h-8 w-8 text-red-500" />
                     </div>
                     <div className="text-gray-500 text-sm mb-2">Tu pedido está vacío</div>
                     <div className="text-gray-400 text-xs">Agrega productos del menú</div>
@@ -694,7 +694,7 @@ const OrderReception: React.FC = () => {
                               </button>
                             </div>
                           </div>
-                          <div className="text-right text-sm font-semibold text-orange-600">
+                          <div className="text-right text-sm font-semibold text-red-600">
                             S/ {(item.menuItem.price * item.quantity).toFixed(2)}
                           </div>
                         </div>
@@ -705,7 +705,7 @@ const OrderReception: React.FC = () => {
                     <div className="border-t border-gray-200 pt-4">
                       <div className="flex justify-between items-center mb-4">
                         <span className="text-lg font-semibold">Total:</span>
-                        <span className="text-2xl font-bold text-orange-600">
+                        <span className="text-2xl font-bold text-red-600">
                           S/ {getTotal().toFixed(2)}
                         </span>
                       </div>
@@ -720,7 +720,7 @@ const OrderReception: React.FC = () => {
                         <button
                           onClick={createOrder}
                           disabled={!customerName || !phone}
-                          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
+                          className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
                         >
                           <span>Confirmar Pedido</span>
                           <ArrowRight size={16} />
