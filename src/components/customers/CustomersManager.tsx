@@ -203,7 +203,7 @@ const CustomersManager: React.FC = () => {
             </div>
           )}
 
-          {/* Lista de Clientes */}
+          {/* Lista de Clientes - DISEÑO CORREGIDO */}
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-12">
@@ -224,68 +224,72 @@ const CustomersManager: React.FC = () => {
               </div>
             ) : (
               filteredCustomers.map((customer) => (
-                <div key={customer.id} className="bg-white rounded-xl p-6 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200 group">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    {/* Información del Cliente */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900">{customer.name}</h3>
-                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                            <div className="flex items-center space-x-1">
-                              <Phone size={14} />
-                              <span>{customer.phone}</span>
-                            </div>
-                            {customer.address && (
-                              <div className="flex items-center space-x-1">
-                                <MapPin size={14} />
-                                <span>{customer.address}</span>
-                              </div>
-                            )}
-                          </div>
-                          {customer.email && (
-                            <div className="text-sm text-gray-600 mt-1">
-                              📧 {customer.email}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* BOTONES - CORREGIDOS: Mejor posicionamiento */}
-                        <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity ml-4 flex-shrink-0">
-                          <button className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors">
-                            <Edit size={16} />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteCustomer(customer.id, customer.name)}
-                            className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </div>
+                <div 
+                  key={customer.id} 
+                  className="bg-white rounded-xl p-6 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200 relative group"
+                >
+                  {/* Botones de acción - POSICIÓN ABSOLUTA CORRECTA */}
+                  <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button 
+                      className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200"
+                      title="Editar cliente"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteCustomer(customer.id, customer.name)}
+                      className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200"
+                      title="Eliminar cliente"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
 
-                      {/* Estadísticas del Cliente */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-red-600">{customer.orders_count}</div>
-                          <div className="text-xs text-gray-500">Pedidos</div>
+                  {/* Información del Cliente */}
+                  <div className="pr-16"> {/* Espacio para los botones */}
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{customer.name}</h3>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 space-y-2 sm:space-y-0 text-sm text-gray-600">
+                        <div className="flex items-center space-x-1">
+                          <Phone size={14} />
+                          <span>{customer.phone}</span>
                         </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">S/ {customer.total_spent.toFixed(2)}</div>
-                          <div className="text-xs text-gray-500">Total Gastado</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">
-                            S/ {customer.orders_count > 0 ? (customer.total_spent / customer.orders_count).toFixed(2) : '0.00'}
+                        {customer.address && (
+                          <div className="flex items-center space-x-1">
+                            <MapPin size={14} />
+                            <span className="max-w-xs truncate">{customer.address}</span>
                           </div>
-                          <div className="text-xs text-gray-500">Promedio por Pedido</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-semibold text-gray-700">
-                            {customer.last_order ? new Date(customer.last_order).toLocaleDateString() : 'Nunca'}
+                        )}
+                        {customer.email && (
+                          <div className="flex items-center space-x-1">
+                            <span>📧</span>
+                            <span className="max-w-xs truncate">{customer.email}</span>
                           </div>
-                          <div className="text-xs text-gray-500">Último Pedido</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Estadísticas del Cliente */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-red-600">{customer.orders_count}</div>
+                        <div className="text-xs text-gray-500">Pedidos</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-green-600">S/ {customer.total_spent.toFixed(2)}</div>
+                        <div className="text-xs text-gray-500">Total Gastado</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-blue-600">
+                          S/ {customer.orders_count > 0 ? (customer.total_spent / customer.orders_count).toFixed(2) : '0.00'}
                         </div>
+                        <div className="text-xs text-gray-500">Promedio</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm font-semibold text-gray-700">
+                          {customer.last_order ? new Date(customer.last_order).toLocaleDateString() : 'Nunca'}
+                        </div>
+                        <div className="text-xs text-gray-500">Último Pedido</div>
                       </div>
                     </div>
                   </div>
