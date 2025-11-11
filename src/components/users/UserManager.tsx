@@ -59,7 +59,7 @@ const UserManager: React.FC = () => {
     setFormLoading(true);
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('employees')
         .insert([{
           username: formData.username.toLowerCase().trim(),
