@@ -45,14 +45,14 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl shadow-lg mb-4">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-red-500 to-amber-500 rounded-2xl shadow-lg mb-4">
             <ChefHat className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-black bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-black bg-gradient-to-r from-red-500 to-amber-500 bg-clip-text text-transparent">
             MARY'S RESTAURANT
           </h1>
           <p className="text-gray-600 mt-2">Sistema de Gestión - Restaurante</p>
@@ -77,7 +77,7 @@ const Login: React.FC = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
                 placeholder="Ingresa tu usuario"
                 disabled={isLoggingIn}
               />
@@ -94,7 +94,7 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors pr-12"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors pr-12"
                   placeholder="••••••••"
                   disabled={isLoggingIn}
                 />
@@ -112,7 +112,7 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3 px-4 rounded-lg hover:shadow-md transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-3 px-4 rounded-lg hover:shadow-md transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               {isLoggingIn ? (
                 <>
@@ -138,7 +138,7 @@ const Login: React.FC = () => {
                 type="button"
                 onClick={() => handleDemoLogin('admin', 'admin123')}
                 disabled={isLoggingIn}
-                className="text-xs bg-orange-100 text-orange-700 px-3 py-2 rounded-lg hover:bg-orange-200 transition-colors disabled:opacity-50"
+                className="text-xs bg-red-100 text-red-700 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
               >
                 Admin
               </button>
