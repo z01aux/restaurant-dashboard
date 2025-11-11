@@ -34,8 +34,8 @@ function App() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 sm:flex-none px-2 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
-                      : 'text-gray-600 hover:text-orange-600 hover:bg-white/50'
+                      ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
+                      : 'text-gray-600 hover:text-red-600 hover:bg-white/50'
                   }`}
                 >
                   <span className="hidden sm:inline">{tab.name}</span>
