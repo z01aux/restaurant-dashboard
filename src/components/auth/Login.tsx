@@ -38,11 +38,6 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = (demoUser: string, demoPass: string) => {
-    setUsername(demoUser);
-    setPassword(demoPass);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-red-100 to-amber-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
@@ -107,7 +102,7 @@ const Login: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors pr-12"
-                  placeholder="••••••••"
+                  placeholder="Ingresa tu contraseña"
                   disabled={isLoggingIn}
                 />
                 <button
@@ -142,47 +137,6 @@ const Login: React.FC = () => {
               )}
             </button>
           </form>
-
-          {/* Demo Accounts */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 text-center">
-              Cuentas de Demo
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('admin', 'admin123')}
-                disabled={isLoggingIn}
-                className="text-xs bg-red-100 text-red-700 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 border border-red-200"
-              >
-                Admin (admin123)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('cajero01', 'cajero123')}
-                disabled={isLoggingIn}
-                className="text-xs bg-blue-100 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50 border border-blue-200"
-              >
-                Cajero 01 (cajero123)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('mesero01', 'mesero123')}
-                disabled={isLoggingIn}
-                className="text-xs bg-green-100 text-green-700 px-3 py-2 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 border border-green-200"
-              >
-                Mesero 01 (mesero123)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('cocina01', 'cocina123')}
-                disabled={isLoggingIn}
-                className="text-xs bg-purple-100 text-purple-700 px-3 py-2 rounded-lg hover:bg-purple-200 transition-colors disabled:opacity-50 border border-purple-200"
-              >
-                Cocina 01 (cocina123)
-              </button>
-            </div>
-          </div>
 
           {/* Información adicional */}
           <div className="mt-6 pt-6 border-t border-gray-200">
