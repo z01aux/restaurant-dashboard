@@ -65,7 +65,7 @@ const OrdersManager: React.FC = () => {
         </div>
         <button 
           onClick={() => window.location.hash = 'reception'}
-          className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+          className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
         >
           <Plus size={20} />
           <span>Nueva Orden</span>
@@ -82,7 +82,7 @@ const OrdersManager: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar órdenes por cliente o ID..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
             />
           </div>
           <select 
@@ -91,7 +91,7 @@ const OrdersManager: React.FC = () => {
                 setSearchTerm(e.target.value);
               }
             }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
             <option value="">Todos los estados</option>
             <option value="pending">Pendiente</option>
