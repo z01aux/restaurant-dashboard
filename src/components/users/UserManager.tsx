@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Save, X, Trash2, User, Shield } from 'lucide-react';
+import { Plus, Save, X, Trash2, User, Shield, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -11,6 +11,7 @@ interface Employee {
   display_role: string;
   is_active: boolean;
   created_at: string;
+  password_hash?: string;
 }
 
 const UserManager: React.FC = () => {
@@ -19,9 +20,11 @@ const UserManager: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     name: '',
+    password: '',
     role: 'employee',
     display_role: 'CAJERO 01'
   });
@@ -44,7 +47,14 @@ const UserManager: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEmployees(data || []);
+      
+      // No mostrar las contraseñas por seguridad
+      const employeesWithoutPasswords = data?.map(emp => {
+        const { password_hash, ...empWithoutPassword } = emp;
+        return empWithoutPassword;
+      }) || [];
+      
+      setEmployees(employeesWithoutPasswords);
     } catch (error: any) {
       console.error('Error loading employees:', error);
       alert('Error al cargar usuarios: ' + error.message);
@@ -59,23 +69,40 @@ const UserManager: React.FC = () => {
     setFormLoading(true);
 
     try {
+      // Validaciones
+      if (formData.username.length < 3) {
+        throw new Error('El username debe tener al menos 3 caracteres');
+      }
+
+      if (formData.password.length < 4) {
+        throw new Error('La contraseña debe tener al menos 4 caracteres');
+      }
+
+      const userData: any = {
+        username: formData.username.toLowerCase().trim(),
+        name: formData.name.trim(),
+        role: formData.role,
+        display_role: formData.display_role,
+        is_active: true,
+        password_hash: formData.password // Guardar la contraseña directamente
+      };
+
       const { error } = await supabase
         .from('employees')
-        .insert([{
-          username: formData.username.toLowerCase().trim(),
-          name: formData.name.trim(),
-          role: formData.role,
-          display_role: formData.display_role,
-          is_active: true
-        }])
-        .select()
-        .single();
+        .insert([userData]);
 
       if (error) throw error;
       
       alert('✅ Usuario creado exitosamente');
       setShowForm(false);
-      setFormData({ username: '', name: '', role: 'employee', display_role: 'CAJERO 01' });
+      setFormData({ 
+        username: '', 
+        name: '', 
+        password: '', 
+        role: 'employee', 
+        display_role: 'CAJERO 01' 
+      });
+      setShowPassword(false);
       await loadEmployees();
       
     } catch (error: any) {
@@ -170,7 +197,10 @@ const UserManager: React.FC = () => {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Crear Nuevo Usuario</h3>
                   <button 
-                    onClick={() => setShowForm(false)} 
+                    onClick={() => {
+                      setShowForm(false);
+                      setShowPassword(false);
+                    }} 
                     className="text-gray-400 hover:text-gray-600 transition-colors"
                     disabled={formLoading}
                   >
@@ -208,6 +238,33 @@ const UserManager: React.FC = () => {
                       required
                       disabled={formLoading}
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Contraseña *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors pr-10"
+                        placeholder="Mínimo 4 caracteres"
+                        required
+                        disabled={formLoading}
+                        minLength={4}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        disabled={formLoading}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Mínimo 4 caracteres</p>
                   </div>
 
                   <div>
@@ -250,7 +307,10 @@ const UserManager: React.FC = () => {
                   <div className="flex space-x-3 pt-4">
                     <button
                       type="button"
-                      onClick={() => setShowForm(false)}
+                      onClick={() => {
+                        setShowForm(false);
+                        setShowPassword(false);
+                      }}
                       disabled={formLoading}
                       className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                     >
