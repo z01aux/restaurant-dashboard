@@ -16,6 +16,7 @@ export const useAuth = () => {
       if (savedUser) {
         const userData = JSON.parse(savedUser);
         setUser(userData);
+        console.log('✅ Sesión recuperada:', userData.name);
       }
     } catch (error) {
       console.error('Error checking session:', error);
@@ -25,7 +26,7 @@ export const useAuth = () => {
     }
   };
 
-  const signIn = async (username: string, _password: string) => {
+  const signIn = async (username: string, password: string) => {
     try {
       setLoading(true);
       console.log('🔐 Iniciando login para:', username);
@@ -74,6 +75,9 @@ export const useAuth = () => {
       localStorage.removeItem('restaurant-session-time');
       setUser(null);
       console.log('✅ Sesión cerrada correctamente');
+      
+      // Forzar recarga para limpiar estado completo
+      window.location.reload();
     } catch (error: any) {
       console.error('Error signing out:', error);
     } finally {
