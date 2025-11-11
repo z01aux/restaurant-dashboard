@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import Login from '../auth/Login';
 import { Loader } from 'lucide-react';
@@ -8,23 +8,33 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+
+  useEffect(() => {
+    console.log('🛡️ ProtectedRoute - Estado:', {
+      loading,
+      isAuthenticated,
+      user: user?.name
+    });
+  }, [loading, isAuthenticated, user]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
         <div className="text-center">
           <Loader className="h-8 w-8 animate-spin text-orange-500 mx-auto mb-4" />
-          <p className="text-gray-600">Cargando...</p>
+          <p className="text-gray-600">Verificando autenticación...</p>
         </div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
+    console.log('🚫 Usuario no autenticado, mostrando Login');
     return <Login />;
   }
 
+  console.log('✅ Usuario autenticado, mostrando contenido protegido');
   return <>{children}</>;
 };
 
