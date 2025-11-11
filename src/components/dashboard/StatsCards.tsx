@@ -8,7 +8,7 @@ const StatsCards: React.FC = () => {
       value: '12',
       change: '+2',
       icon: Coffee,
-      color: 'from-orange-500 to-red-500',
+      color: 'from-red-500 to-red-600',
     },
     {
       title: 'Clientes Hoy',
