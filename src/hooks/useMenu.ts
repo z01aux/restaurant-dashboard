@@ -2,8 +2,16 @@ import { useState, useEffect } from 'react';
 import { MenuItem } from '../types';
 import { supabaseService } from '../lib/supabase';
 
-// Datos de fallback para el menú del día
-const dailyMenuOptions = {
+// Función helper para convertir tipos de string a los literales esperados
+const normalizeMenuItem = (item: any): MenuItem => {
+  return {
+    ...item,
+    type: item.type === 'food' || item.type === 'drink' ? item.type : 'food'
+  };
+};
+
+// Datos de fallback para el menú del día con tipos correctos
+const dailyMenuOptions: { [key: number]: { [key: string]: MenuItem[] } } = {
   0: {
     '🥗 Entradas': [
       { id: 'E001', name: 'Papa a la Huancaina', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Papa amarilla con salsa huancaina' },
@@ -34,11 +42,19 @@ const dailyMenuOptions = {
   }
 };
 
+// Datos de bebidas constantes
+const bebidasConstant: MenuItem[] = [
+  { id: 'B001', name: 'Inca Kola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
+  { id: 'B002', name: 'Coca Cola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
+  { id: 'B003', name: 'Chicha Morada', category: 'Bebidas', price: 8.00, type: 'drink', available: true },
+  { id: 'B004', name: 'Limonada', category: 'Bebidas', price: 7.00, type: 'drink', available: true },
+];
+
 export const useMenu = () => {
   const [menuItems, setMenuItems] = useState<{ [key: string]: MenuItem[] }>({});
   const [currentDailyMenu, setCurrentDailyMenu] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [bebidas, setBebidas] = useState<MenuItem[]>([]);
+  const [bebidas, setBebidas] = useState<MenuItem[]>(bebidasConstant);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -53,14 +69,23 @@ export const useMenu = () => {
       const savedMenuIndex = await supabaseService.getCurrentDailyMenu();
       setCurrentDailyMenu(savedMenuIndex);
 
-      // Cargar bebidas desde Supabase
-      const bebidasData = await supabaseService.getMenuItemsByCategory('Bebidas');
-      setBebidas(bebidasData);
+      // Intentar cargar bebidas desde Supabase
+      let bebidasFromSupabase: MenuItem[] = bebidasConstant;
+      try {
+        const bebidasData = await supabaseService.getMenuItemsByCategory('Bebidas');
+        if (bebidasData && bebidasData.length > 0) {
+          bebidasFromSupabase = bebidasData.map(normalizeMenuItem);
+        }
+      } catch (error) {
+        console.warn('No se pudieron cargar las bebidas de Supabase, usando datos locales');
+      }
+
+      setBebidas(bebidasFromSupabase);
 
       // Combinar menú del día con bebidas
       const combinedMenu = {
-        ...dailyMenuOptions[savedMenuIndex as keyof typeof dailyMenuOptions],
-        '🥤 Bebidas': bebidasData
+        ...dailyMenuOptions[savedMenuIndex],
+        '🥤 Bebidas': bebidasFromSupabase
       };
 
       setMenuItems(combinedMenu);
@@ -77,12 +102,7 @@ export const useMenu = () => {
   const loadFallbackData = () => {
     const fallbackMenu = {
       ...dailyMenuOptions[0],
-      '🥤 Bebidas': [
-        { id: 'B001', name: 'Inca Kola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-        { id: 'B002', name: 'Coca Cola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-        { id: 'B003', name: 'Chicha Morada', category: 'Bebidas', price: 8.00, type: 'drink', available: true },
-        { id: 'B004', name: 'Limonada', category: 'Bebidas', price: 7.00, type: 'drink', available: true },
-      ]
+      '🥤 Bebidas': bebidasConstant
     };
     
     setMenuItems(fallbackMenu);
@@ -96,7 +116,7 @@ export const useMenu = () => {
       
       // Combinar nuevo menú del día con bebidas existentes
       const combinedMenu = {
-        ...dailyMenuOptions[menuIndex as keyof typeof dailyMenuOptions],
+        ...dailyMenuOptions[menuIndex],
         '🥤 Bebidas': bebidas
       };
 
