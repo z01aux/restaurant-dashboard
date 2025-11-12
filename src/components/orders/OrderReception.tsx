@@ -71,7 +71,7 @@ const OrderReception: React.FC = () => {
 
   // Hooks
   const { customers, loading: customersLoading } = useCustomers();
-  const { menuItems: menuDelDia, getCategories, getAllItems } = useMenu();
+  const { getDailySpecialsByCategory, getCategories, getAllDailySpecials } = useMenu();
 
   // Efecto para cerrar sugerencias al hacer click fuera
   useEffect(() => {
@@ -168,12 +168,12 @@ const OrderReception: React.FC = () => {
 
   const getItemsToShow = () => {
     if (searchTerm) {
-      return allMenuItems.filter((item: MenuItem) =>
+      return getAllDailySpecials().filter((item: MenuItem) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    return menuDelDia[activeCategory] || [];
+    return getDailySpecialsByCategory(activeCategory) || [];
   };
 
   const currentItems = getItemsToShow();
@@ -1181,3 +1181,4 @@ const OrderReception: React.FC = () => {
 };
 
 export default OrderReception;
+
