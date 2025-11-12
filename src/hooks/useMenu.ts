@@ -1,164 +1,333 @@
 import { useState, useEffect } from 'react';
-import { MenuItem } from '../types';
+import { supabase } from '../lib/supabase';
 
-// Definir el tipo para menuData
-type MenuDataType = {
-  [key: number]: {
-    [key: string]: MenuItem[];
-  };
-};
+export interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category_id: string;
+  category_name?: string;
+  category_emoji?: string;
+  type: 'food' | 'drink';
+  available: boolean;
+  image_url?: string;
+  sort_order: number;
+  is_daily_special: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-// Datos del menú local
-const menuData: MenuDataType = {
-  0: {
-    '🥗 Entradas': [
-      { id: 'E001', name: 'Papa a la Huancaina', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Papa amarilla con salsa huancaina' },
-      { id: 'E002', name: 'Causa Rellena', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Causa de pollo o atún' },
-      { id: 'E003', name: 'Tequeños', category: 'Entradas', price: 4.00, type: 'food', available: true, description: '12 unidades con salsa de ají' },
-      { id: 'E004', name: 'Anticuchos', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Brochetas de corazón' },
-    ],
-    '🍽️ Platos de Fondo': [
-      { id: 'P001', name: 'Lomo Saltado de Pollo', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Salteado con cebolla, tomate' },
-      { id: 'P002', name: 'Lomo Saltado de Res', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Salteado con cebolla, tomate' },
-      { id: 'P003', name: 'Arroz con Mariscos', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Arroz verde con mix de mariscos' },
-      { id: 'P004', name: 'Aji de Gallina', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Pollo en salsa de ají amarillo' },
-    ],
-    '🥤 Bebidas': [
-      { id: 'B001', name: 'Inca Kola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-      { id: 'B002', name: 'Coca Cola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-      { id: 'B003', name: 'Chicha Morada', category: 'Bebidas', price: 8.00, type: 'drink', available: true },
-      { id: 'B004', name: 'Limonada', category: 'Bebidas', price: 7.00, type: 'drink', available: true },
-    ]
-  },
-  1: {
-    '🥗 Entradas': [
-      { id: 'E005', name: 'Ceviche Clásico', category: 'Entradas', price: 5.00, type: 'food', available: true, description: 'Pescado marinado en limón' },
-      { id: 'E006', name: 'Choros a la Chalaca', category: 'Entradas', price: 4.50, type: 'food', available: true, description: 'Mejillones con cebolla y maíz' },
-      { id: 'E007', name: 'Tamal Verde', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Tamal relleno de cerdo' },
-      { id: 'E008', name: 'Chicharrón de Calamar', category: 'Entradas', price: 5.50, type: 'food', available: true, description: 'Calamares fritos crujientes' },
-    ],
-    '🍽️ Platos de Fondo': [
-      { id: 'P005', name: 'Pescado a la Chorrillana', category: 'Platos de Fondo', price: 9.00, type: 'food', available: true, description: 'Filete de pescado en salsa' },
-      { id: 'P006', name: 'Tallarín Saltado', category: 'Platos de Fondo', price: 8.50, type: 'food', available: true, description: 'Tallarines salteados con carne' },
-      { id: 'P007', name: 'Seco de Cordero', category: 'Platos de Fondo', price: 9.50, type: 'food', available: true, description: 'Cordero en salsa de cilantro' },
-      { id: 'P008', name: 'Rocoto Relleno', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Rocoto relleno de carne' },
-    ],
-    '🥤 Bebidas': [
-      { id: 'B001', name: 'Inca Kola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-      { id: 'B002', name: 'Coca Cola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-      { id: 'B003', name: 'Chicha Morada', category: 'Bebidas', price: 8.00, type: 'drink', available: true },
-      { id: 'B004', name: 'Limonada', category: 'Bebidas', price: 7.00, type: 'drink', available: true },
-    ]
-  }
-};
+export interface Category {
+  id: string;
+  name: string;
+  emoji?: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export const useMenu = () => {
-  const [menuItems, setMenuItems] = useState<{ [key: string]: MenuItem[] }>({});
-  const [currentDailyMenu, setCurrentDailyMenu] = useState<number>(0);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [dailyMenu, setDailyMenu] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Cargar datos iniciales
-  useEffect(() => {
-    const savedMenuIndex = localStorage.getItem('current-daily-menu');
-    const menuIndex = savedMenuIndex ? parseInt(savedMenuIndex) : 0;
-    setCurrentDailyMenu(menuIndex);
-    const currentMenuData = menuData[menuIndex as keyof typeof menuData];
-    setMenuItems(currentMenuData);
-  }, []);
+  // Cargar categorías
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
 
-  // Cambiar el menú del día
-  const changeDailyMenu = (menuIndex: number) => {
-    localStorage.setItem('current-daily-menu', menuIndex.toString());
-    setCurrentDailyMenu(menuIndex);
-    const newMenuData = menuData[menuIndex as keyof typeof menuData];
-    setMenuItems(newMenuData);
-  };
-
-  // Función para actualizar el precio de un item
-  const updateItemPrice = (itemId: string, newPrice: number) => {
-    setMenuItems(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(category => {
-        updated[category] = updated[category].map(item =>
-          item.id === itemId ? { ...item, price: newPrice } : item
-        );
-      });
-      return updated;
-    });
-  };
-
-  // Función para eliminar un item
-  const deleteItem = (itemId: string) => {
-    setMenuItems(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(category => {
-        updated[category] = updated[category].filter(item => item.id !== itemId);
-      });
-      return updated;
-    });
-  };
-
-  // Función para crear un nuevo item
-  const createItem = async (itemData: Omit<MenuItem, 'id'>) => {
-    const newItem: MenuItem = {
-      ...itemData,
-      id: `NEW-${Date.now()}`
-    };
-
-    // Agregar al estado local
-    setMenuItems(prev => {
-      const updated = { ...prev };
-      const categoryKey = getCategoryKey(itemData.category);
-      if (!updated[categoryKey]) {
-        updated[categoryKey] = [];
-      }
-      updated[categoryKey].push(newItem);
-      return updated;
-    });
-
-    return newItem;
-  };
-
-  // Función helper para obtener la clave de categoría con emoji
-  const getCategoryKey = (category: string): string => {
-    switch (category) {
-      case 'Entradas': return '🥗 Entradas';
-      case 'Platos de Fondo': return '🍽️ Platos de Fondo';
-      case 'Bebidas': return '🥤 Bebidas';
-      default: return category;
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
     }
   };
 
-  // Obtener todos los items del menú
-  const getAllItems = (): MenuItem[] => {
-    return Object.values(menuItems).flat();
+  // Cargar todos los productos del menú
+  const fetchMenuItems = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select(`
+          *,
+          categories:category_id (
+            name,
+            emoji
+          )
+        `)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+
+      const itemsWithCategory = (data || []).map(item => ({
+        ...item,
+        category_name: item.categories?.name,
+        category_emoji: item.categories?.emoji
+      }));
+
+      setMenuItems(itemsWithCategory);
+    } catch (error) {
+      console.error('Error fetching menu items:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Obtener items por categoría
-  const getItemsByCategory = (category: string): MenuItem[] => {
-    return menuItems[category] || [];
+  // Cargar menú del día (productos marcados como is_daily_special)
+  const fetchDailyMenu = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select(`
+          *,
+          categories:category_id (
+            name,
+            emoji
+          )
+        `)
+        .eq('is_daily_special', true)
+        .eq('available', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+
+      const dailyItems = (data || []).map(item => ({
+        ...item,
+        category_name: item.categories?.name,
+        category_emoji: item.categories?.emoji
+      }));
+
+      setDailyMenu(dailyItems);
+    } catch (error) {
+      console.error('Error fetching daily menu:', error);
+    }
   };
 
-  // Obtener todas las categorías
-  const getCategories = (): string[] => {
-    return Object.keys(menuItems);
+  // Crear nueva categoría
+  const createCategory = async (categoryData: {
+    name: string;
+    emoji?: string;
+    sort_order?: number;
+  }) => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{
+          name: categoryData.name,
+          emoji: categoryData.emoji,
+          sort_order: categoryData.sort_order || 0,
+          is_active: true
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      setCategories(prev => [...prev, data]);
+      return { success: true, data };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   };
 
-  // Obtener opciones de menú del día
-  const getDailyMenuOptions = (): MenuDataType => {
-    return menuData;
+  // Crear nuevo producto
+  const createMenuItem = async (menuItemData: {
+    name: string;
+    description?: string;
+    price: number;
+    category_id: string;
+    type: 'food' | 'drink';
+    available?: boolean;
+  }) => {
+    try {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .insert([{
+          name: menuItemData.name,
+          description: menuItemData.description,
+          price: menuItemData.price,
+          category_id: menuItemData.category_id,
+          type: menuItemData.type,
+          available: menuItemData.available ?? true,
+          is_daily_special: false,
+          sort_order: 0
+        }])
+        .select(`
+          *,
+          categories:category_id (
+            name,
+            emoji
+          )
+        `)
+        .single();
+
+      if (error) throw error;
+
+      const itemWithCategory = {
+        ...data,
+        category_name: data.categories?.name,
+        category_emoji: data.categories?.emoji
+      };
+
+      setMenuItems(prev => [...prev, itemWithCategory]);
+      return { success: true, data: itemWithCategory };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   };
+
+  // Actualizar producto
+  const updateMenuItem = async (id: string, updates: Partial<MenuItem>) => {
+    try {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .update({ 
+          ...updates, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', id)
+        .select(`
+          *,
+          categories:category_id (
+            name,
+            emoji
+          )
+        `)
+        .single();
+
+      if (error) throw error;
+
+      const itemWithCategory = {
+        ...data,
+        category_name: data.categories?.name,
+        category_emoji: data.categories?.emoji
+      };
+
+      setMenuItems(prev => prev.map(item => 
+        item.id === id ? itemWithCategory : item
+      ));
+
+      // Si se actualiza el estado de is_daily_special, actualizar dailyMenu
+      if (updates.is_daily_special !== undefined) {
+        if (updates.is_daily_special) {
+          setDailyMenu(prev => [...prev, itemWithCategory]);
+        } else {
+          setDailyMenu(prev => prev.filter(item => item.id !== id));
+        }
+      }
+
+      return { success: true, data: itemWithCategory };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Eliminar producto
+  const deleteMenuItem = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('menu_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setMenuItems(prev => prev.filter(item => item.id !== id));
+      setDailyMenu(prev => prev.filter(item => item.id !== id));
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Marcar/desmarcar como plato del día
+  const toggleDailySpecial = async (id: string, isDaily: boolean) => {
+    return await updateMenuItem(id, { is_daily_special: isDaily });
+  };
+
+  // Obtener productos por categoría
+  const getItemsByCategory = (categoryId: string) => {
+    return menuItems.filter(item => item.category_id === categoryId);
+  };
+
+  // Obtener productos del día por categoría (máximo 4 por categoría)
+  const getDailyItemsByCategory = (categoryId: string) => {
+    return dailyMenu
+      .filter(item => item.category_id === categoryId)
+      .slice(0, 4); // Limitar a 4 productos por categoría
+  };
+
+  // Verificar si una categoría ya tiene 4 platos del día
+  const hasMaxDailyItems = (categoryId: string) => {
+    return getDailyItemsByCategory(categoryId).length >= 4;
+  };
+
+  // Obtener categorías con información de platos del día
+  const getCategoriesWithDailyCount = () => {
+    return categories.map(category => ({
+      ...category,
+      daily_items_count: getDailyItemsByCategory(category.id).length,
+      max_daily_items: 4
+    }));
+  };
+
+  // Formatear menú para OrderReception (compatibilidad con versión anterior)
+  const getMenuForReception = () => {
+    const grouped: { [key: string]: MenuItem[] } = {};
+    
+    categories.forEach(category => {
+      const dailyItems = getDailyItemsByCategory(category.id);
+      if (dailyItems.length > 0) {
+        grouped[category.name] = dailyItems;
+      }
+    });
+
+    return grouped;
+  };
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    fetchCategories();
+    fetchMenuItems();
+    fetchDailyMenu();
+  }, []);
 
   return {
+    // Estados
     menuItems,
-    getAllItems,
+    categories,
+    dailyMenu,
+    loading,
+
+    // Funciones de categorías
+    fetchCategories,
+    createCategory,
+
+    // Funciones de productos
+    fetchMenuItems,
+    createMenuItem,
+    updateMenuItem,
+    deleteMenuItem,
+
+    // Funciones del menú del día
+    fetchDailyMenu,
+    toggleDailySpecial,
     getItemsByCategory,
-    getCategories,
-    updateItemPrice,
-    deleteItem,
-    createItem,
-    currentDailyMenu,
-    changeDailyMenu,
-    getDailyMenuOptions,
-    loading: false
+    getDailyItemsByCategory,
+    hasMaxDailyItems,
+    getCategoriesWithDailyCount,
+    getMenuForReception,
+
+    // Funciones de utilidad (compatibilidad)
+    getAllItems: () => menuItems,
+    getCategories: () => categories,
   };
 };
