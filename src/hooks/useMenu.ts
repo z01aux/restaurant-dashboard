@@ -10,6 +10,16 @@ const normalizeMenuItem = (item: any): MenuItem => {
   };
 };
 
+// Función helper para obtener la clave de categoría con emoji
+const getCategoryKey = (category: string) => {
+  switch (category) {
+    case 'Entradas': return '🥗 Entradas';
+    case 'Platos de Fondo': return '🍽️ Platos de Fondo';
+    case 'Bebidas': return '🥤 Bebidas';
+    default: return category;
+  }
+};
+
 // Datos de fallback para el menú del día con tipos correctos
 const dailyMenuOptions: { [key: number]: { [key: string]: MenuItem[] } } = {
   0: {
@@ -171,6 +181,63 @@ export const useMenu = () => {
     }
   };
 
+  // Función para crear un nuevo item
+  const createItem = async (item: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      // Si estás usando Supabase:
+      const newItem = await supabaseService.createMenuItem(item);
+      
+      // Recargar el menú para incluir el nuevo item
+      await loadInitialData();
+      
+      return newItem;
+    } catch (error) {
+      console.error('Error creating item:', error);
+      
+      // Fallback local (para desarrollo)
+      const newItem: MenuItem = {
+        ...item,
+        id: `NEW-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Agregar al estado local
+      setMenuItems(prev => {
+        const updated = { ...prev };
+        const categoryKey = getCategoryKey(item.category);
+        if (!updated[categoryKey]) {
+          updated[categoryKey] = [];
+        }
+        updated[categoryKey].push(newItem);
+        return updated;
+      });
+      
+      return newItem;
+    }
+  };
+
+  // Función para actualizar disponibilidad
+  const updateItemAvailability = async (itemId: string, available: boolean) => {
+    try {
+      await supabaseService.updateMenuItemAvailability(itemId, available);
+      
+      // Actualizar estado local
+      setMenuItems(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(category => {
+          updated[category] = updated[category].map(item =>
+            item.id === itemId ? { ...item, available } : item
+          );
+        });
+        return updated;
+      });
+    } catch (error) {
+      console.error('Error updating item availability:', error);
+      throw error;
+    }
+  };
+
   // Obtener todos los items del menú
   const getAllItems = () => {
     return Object.values(menuItems).flat();
@@ -191,6 +258,20 @@ export const useMenu = () => {
     return dailyMenuOptions;
   };
 
+  // Obtener items por tipo
+  const getItemsByType = (type: 'food' | 'drink') => {
+    return getAllItems().filter(item => item.type === type);
+  };
+
+  // Buscar items por término
+  const searchItems = (searchTerm: string) => {
+    return getAllItems().filter(item =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+
   return {
     menuItems,
     getAllItems,
@@ -198,9 +279,13 @@ export const useMenu = () => {
     getCategories,
     updateItemPrice,
     deleteItem,
+    createItem,
+    updateItemAvailability,
     currentDailyMenu,
     changeDailyMenu,
     getDailyMenuOptions,
+    getItemsByType,
+    searchItems,
     loading
   };
 };
