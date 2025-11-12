@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Search, Save, X, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Save, X } from 'lucide-react';
 import { MenuItem } from '../../types';
 import { useMenu } from '../../hooks/useMenu';
 
 const MenuManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('Todas');
-  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -21,10 +20,11 @@ const MenuManager: React.FC = () => {
     available: true
   });
 
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+
   // Usar el hook del menú
   const { 
     menuItems, 
-    categories,
     loading, 
     getAllItems, 
     getCategories, 
