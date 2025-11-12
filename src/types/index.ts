@@ -6,6 +6,7 @@ export interface MenuItem {
   type: 'food' | 'drink';
   available: boolean;
   description?: string;
+  isDailySpecial?: boolean; // Nuevo campo agregado
 }
 
 export interface OrderItem {
@@ -32,4 +33,3 @@ export interface Order {
   notes?: string;
   tableNumber?: string;
 }
-
