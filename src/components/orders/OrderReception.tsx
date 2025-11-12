@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Minus, X, ShoppingBag, ArrowRight, Search, Trash2, User } from 'lucide-react';
 import { MenuItem, OrderItem, OrderSource, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
-import { useCustomers } from '../../hooks/useCustomers'; // ✅ IMPORTAR HOOK DE CLIENTES
+import { useCustomers } from '../../hooks/useCustomers';
 
 // Componente de Notificación Toast mejorado sin íconos
 const ToastNotification: React.FC<{
@@ -54,9 +54,26 @@ const OrderReception: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
+  // ✅ REF PARA MANEJAR CLICKS FUERA DEL AUTOCOMPLETADO
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
   // ✅ USAR HOOK DE CLIENTES
   const { customers, loading: customersLoading } = useCustomers();
   const { menuItems: menuDelDia, getCategories, getAllItems } = useMenu();
+
+  // ✅ EFECTO PARA CERRAR SUGERENCIAS AL HACER CLIC FUERA
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // ✅ EFECTO PARA FILTRAR SUGERENCIAS CUANDO ESCRIBE EL NOMBRE
   useEffect(() => {
@@ -82,13 +99,13 @@ const OrderReception: React.FC = () => {
     }
   }, []);
 
-  // ✅ FUNCIÓN PARA SELECCIONAR UN CLIENTE
+  // ✅ FUNCIÓN PARA SELECCIONAR UN CLIENTE (CORREGIDA)
   const selectCustomer = (customer: any) => {
     setCustomerName(customer.name);
     setPhone(customer.phone || '');
     setAddress(customer.address || '');
     setSelectedCustomer(customer);
-    setShowSuggestions(false);
+    setShowSuggestions(false); // ✅ CERRAR INMEDIATAMENTE
     
     showToast(`Cliente ${customer.name} seleccionado`, 'success');
   };
@@ -96,6 +113,7 @@ const OrderReception: React.FC = () => {
   // ✅ FUNCIÓN PARA LIMPIAR SELECCIÓN DE CLIENTE
   const clearCustomerSelection = () => {
     setSelectedCustomer(null);
+    setCustomerName('');
     setPhone('');
     setAddress('');
     setShowSuggestions(false);
@@ -141,7 +159,7 @@ const OrderReception: React.FC = () => {
       if (existing) {
         return prev.map(item =>
           item.menuItem.id === menuItem.id
-            ? { ...item, quantity: newQuantity, menuItem } // ✅ ACTUALIZAR menuItem con precio nuevo
+            ? { ...item, quantity: newQuantity, menuItem }
             : item
         );
       }
@@ -166,7 +184,6 @@ const OrderReception: React.FC = () => {
       return;
     }
     
-    // ✅ OBTENER EL ITEM ACTUALIZADO DEL MENÚ
     const updatedMenuItem = allMenuItems.find(item => item.id === itemId);
     
     setCart(prev =>
@@ -178,7 +195,7 @@ const OrderReception: React.FC = () => {
           } else if (menuItem && quantity > item.quantity) {
             showToast(`${menuItem.name} (${quantity})`, 'success');
           }
-          return { ...item, quantity, menuItem }; // ✅ ACTUALIZAR menuItem con precio nuevo
+          return { ...item, quantity, menuItem };
         }
         return item;
       })
@@ -236,7 +253,7 @@ const OrderReception: React.FC = () => {
       setOrderNotes('');
       setShowConfirmation(false);
       setShowCartDrawer(false);
-      setSelectedCustomer(null); // ✅ LIMPIAR CLIENTE SELECCIONADO
+      setSelectedCustomer(null);
       
       setTimeout(() => {
         const printButton = document.querySelector(`[data-order-id="${lastOrder.id}"]`) as HTMLButtonElement;
@@ -501,7 +518,12 @@ const OrderReception: React.FC = () => {
                       <input
                         type="text"
                         value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
+                        onChange={(e) => {
+                          setCustomerName(e.target.value);
+                          if (e.target.value.length > 1) {
+                            setShowSuggestions(true);
+                          }
+                        }}
                         onFocus={() => customerName.length > 1 && setShowSuggestions(true)}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 pr-10"
                         placeholder="Buscar cliente..."
@@ -514,13 +536,20 @@ const OrderReception: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Lista de Sugerencias */}
+                    {/* Lista de Sugerencias - CON REF PARA MANEJAR CLICKS */}
                     {showSuggestions && customerSuggestions.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div 
+                        ref={suggestionsRef}
+                        className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                      >
                         {customerSuggestions.map((customer) => (
                           <div
                             key={customer.id}
-                            onClick={() => selectCustomer(customer)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              selectCustomer(customer);
+                            }}
                             className="p-3 hover:bg-red-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                           >
                             <div className="flex items-center space-x-3">
