@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react';
 import { MenuItem } from '../types';
 
+// Definir el tipo para menuData
+type MenuData = {
+  [key: number]: {
+    [key: string]: MenuItem[];
+  };
+};
+
 // Datos del menú local (como fallback)
-const menuData = {
+const menuData: MenuData = {
   0: {
     '🥗 Entradas': [
       { id: 'E001', name: 'Papa a la Huancaina', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Papa amarilla con salsa huancaina' },
@@ -89,12 +96,10 @@ export const useMenu = () => {
   };
 
   // Función para crear un nuevo item
-  const createItem = async (item: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>) => {
+  const createItem = async (item: Omit<MenuItem, 'id'>) => {
     const newItem: MenuItem = {
       ...item,
-      id: `NEW-${Date.now()}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      id: `NEW-${Date.now()}`
     };
 
     // Agregar al estado local
@@ -148,7 +153,7 @@ export const useMenu = () => {
     getCategories,
     updateItemPrice,
     deleteItem,
-    createItem, // ✅ Ahora está incluido
+    createItem,
     currentDailyMenu,
     changeDailyMenu,
     getDailyMenuOptions,
