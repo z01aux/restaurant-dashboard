@@ -22,9 +22,8 @@ const MenuManager: React.FC = () => {
 
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
-  // Usar el hook del menú
+  // Usar el hook del menú - ✅ CORREGIDO: removida la variable menuItems que no se usa
   const { 
-    menuItems, 
     loading, 
     getAllItems, 
     getCategories, 
