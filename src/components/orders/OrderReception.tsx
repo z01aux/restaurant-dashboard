@@ -56,7 +56,7 @@ const OrderReception: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string>('🥗 Entradas');
+  const [activeCategory, setActiveCategory] = useState<string>('');
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
@@ -71,7 +71,12 @@ const OrderReception: React.FC = () => {
 
   // Hooks
   const { customers, loading: customersLoading } = useCustomers();
-  const { menuItems: menuDelDia, getCategories, getAllItems } = useMenu();
+  const { 
+    getMenuForReception, 
+    getCategories, 
+    getAllItems,
+    dailyMenu 
+  } = useMenu();
 
   // Efecto para cerrar sugerencias al hacer click fuera
   useEffect(() => {
@@ -110,6 +115,14 @@ const OrderReception: React.FC = () => {
       console.log('Pedidos cargados desde localStorage:', JSON.parse(savedOrders).length);
     }
   }, []);
+
+  // Inicializar categoría activa
+  useEffect(() => {
+    const categories = getCategories();
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0].name);
+    }
+  }, [getCategories]);
 
   // Función para seleccionar un cliente (CORREGIDA PARA MÓVIL)
   const selectCustomer = (customer: any) => {
@@ -162,18 +175,25 @@ const OrderReception: React.FC = () => {
     }, 300);
   };
 
-  // Obtener items del menú
-  const allMenuItems = getAllItems();
+  // Obtener items del menú usando el nuevo hook
+  const menuDelDia = getMenuForReception();
   const categories = getCategories();
+  const allMenuItems = getAllItems();
 
   const getItemsToShow = () => {
     if (searchTerm) {
       return allMenuItems.filter((item: MenuItem) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase())
+        item.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    return menuDelDia[activeCategory] || [];
+    
+    // Mostrar productos del menú del día agrupados por categoría
+    if (activeCategory && menuDelDia[activeCategory]) {
+      return menuDelDia[activeCategory];
+    }
+    
+    return [];
   };
 
   const currentItems = getItemsToShow();
@@ -640,19 +660,19 @@ const OrderReception: React.FC = () => {
               </div>
 
               {/* Categorías */}
-              {!searchTerm && (
+              {!searchTerm && categories.length > 0 && (
                 <div className="flex space-x-2 mb-4 overflow-x-auto pb-2 hide-scrollbar">
                   {categories.map(category => (
                     <button
-                      key={category}
-                      onClick={() => setActiveCategory(category)}
+                      key={category.id}
+                      onClick={() => setActiveCategory(category.name)}
                       className={`px-3 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-colors ${
-                        activeCategory === category
+                        activeCategory === category.name
                           ? 'bg-red-500 text-white'
                           : 'bg-gray-100 text-gray-700'
                       }`}
                     >
-                      {category}
+                      {category.emoji} {category.name}
                     </button>
                   ))}
                 </div>
@@ -728,7 +748,14 @@ const OrderReception: React.FC = () => {
               {currentItems.length === 0 && (
                 <div className="text-center py-8">
                   <div className="text-3xl text-gray-300 mb-2">🔍</div>
-                  <div className="text-gray-500 text-sm">No se encontraron productos</div>
+                  <div className="text-gray-500 text-sm">
+                    {searchTerm ? 'No se encontraron productos' : 'No hay productos en esta categoría'}
+                  </div>
+                  {!searchTerm && (
+                    <div className="text-gray-400 text-xs mt-1">
+                      Los productos del menú del día se configuran en la pestaña "Menú"
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -957,19 +984,19 @@ const OrderReception: React.FC = () => {
                   </div>
 
                   {/* Navegación de Categorías */}
-                  {!searchTerm && (
+                  {!searchTerm && categories.length > 0 && (
                     <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
                       {categories.map(category => (
                         <button
-                          key={category}
-                          onClick={() => setActiveCategory(category)}
+                          key={category.id}
+                          onClick={() => setActiveCategory(category.name)}
                           className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
-                            activeCategory === category
+                            activeCategory === category.name
                               ? 'bg-red-500 text-white shadow-sm'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                         >
-                          {category}
+                          {category.emoji} {category.name}
                         </button>
                       ))}
                     </div>
@@ -1066,7 +1093,9 @@ const OrderReception: React.FC = () => {
                     <div className="text-center py-8">
                       <div className="text-4xl text-gray-300 mb-3">🍽️</div>
                       <div className="text-gray-500 text-sm">No hay productos en esta categoría</div>
-                      <div className="text-gray-400 text-xs">Selecciona otra categoría</div>
+                      <div className="text-gray-400 text-xs">
+                        Los productos del menú del día se configuran en la pestaña "Menú"
+                      </div>
                     </div>
                   )}
                 </div>
