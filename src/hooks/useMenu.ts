@@ -1,22 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
-export interface MenuItem {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  category_id: string;
-  category_name?: string;
-  category_emoji?: string;
-  type: 'food' | 'drink';
-  available: boolean;
-  image_url?: string;
-  sort_order: number;
-  is_daily_special: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { MenuItem } from '../types';
 
 export interface Category {
   id: string;
@@ -31,22 +15,126 @@ export interface Category {
 // Menú inicial por defecto (para compatibilidad)
 const initialMenuData: { [key: string]: MenuItem[] } = {
   '🥗 Entradas': [
-    { id: 'E001', name: 'Papa a la Huancaina', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Papa amarilla con salsa huancaina', is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
-    { id: 'E002', name: 'Causa Rellena', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Causa de pollo o atún', is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
-    { id: 'E003', name: 'Tequeños', category: 'Entradas', price: 4.00, type: 'food', available: true, description: '12 unidades con salsa de ají', is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
-    { id: 'E004', name: 'Anticuchos', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Brochetas de corazón', is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
+    { 
+      id: 'E001', 
+      name: 'Papa a la Huancaina', 
+      category: '🥗 Entradas', 
+      price: 4.00, 
+      type: 'food', 
+      available: true, 
+      description: 'Papa amarilla con salsa huancaina', 
+      is_daily_special: true 
+    },
+    { 
+      id: 'E002', 
+      name: 'Causa Rellena', 
+      category: '🥗 Entradas', 
+      price: 4.00, 
+      type: 'food', 
+      available: true, 
+      description: 'Causa de pollo o atún', 
+      is_daily_special: true 
+    },
+    { 
+      id: 'E003', 
+      name: 'Tequeños', 
+      category: '🥗 Entradas', 
+      price: 4.00, 
+      type: 'food', 
+      available: true, 
+      description: '12 unidades con salsa de ají', 
+      is_daily_special: true 
+    },
+    { 
+      id: 'E004', 
+      name: 'Anticuchos', 
+      category: '🥗 Entradas', 
+      price: 4.00, 
+      type: 'food', 
+      available: true, 
+      description: 'Brochetas de corazón', 
+      is_daily_special: true 
+    },
   ],
   '🍽️ Platos de Fondo': [
-    { id: 'P001', name: 'Lomo Saltado de Pollo', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Salteado con cebolla, tomate', is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
-    { id: 'P002', name: 'Lomo Saltado de Res', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Salteado con cebolla, tomate', is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
-    { id: 'P003', name: 'Arroz con Mariscos', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Arroz verde con mix de mariscos', is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
-    { id: 'P004', name: 'Aji de Gallina', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Pollo en salsa de ají amarillo', is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
+    { 
+      id: 'P001', 
+      name: 'Lomo Saltado de Pollo', 
+      category: '🍽️ Platos de Fondo', 
+      price: 8.00, 
+      type: 'food', 
+      available: true, 
+      description: 'Salteado con cebolla, tomate', 
+      is_daily_special: true 
+    },
+    { 
+      id: 'P002', 
+      name: 'Lomo Saltado de Res', 
+      category: '🍽️ Platos de Fondo', 
+      price: 8.00, 
+      type: 'food', 
+      available: true, 
+      description: 'Salteado con cebolla, tomate', 
+      is_daily_special: true 
+    },
+    { 
+      id: 'P003', 
+      name: 'Arroz con Mariscos', 
+      category: '🍽️ Platos de Fondo', 
+      price: 8.00, 
+      type: 'food', 
+      available: true, 
+      description: 'Arroz verde con mix de mariscos', 
+      is_daily_special: true 
+    },
+    { 
+      id: 'P004', 
+      name: 'Aji de Gallina', 
+      category: '🍽️ Platos de Fondo', 
+      price: 8.00, 
+      type: 'food', 
+      available: true, 
+      description: 'Pollo en salsa de ají amarillo', 
+      is_daily_special: true 
+    },
   ],
   '🥤 Bebidas': [
-    { id: 'B001', name: 'Inca Kola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true, is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
-    { id: 'B002', name: 'Coca Cola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true, is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
-    { id: 'B003', name: 'Chicha Morada', category: 'Bebidas', price: 8.00, type: 'drink', available: true, is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
-    { id: 'B004', name: 'Limonada', category: 'Bebidas', price: 7.00, type: 'drink', available: true, is_daily_special: true, category_id: '', sort_order: 0, created_at: '', updated_at: '' },
+    { 
+      id: 'B001', 
+      name: 'Inca Kola 500ml', 
+      category: '🥤 Bebidas', 
+      price: 6.00, 
+      type: 'drink', 
+      available: true, 
+      is_daily_special: true 
+    },
+    { 
+      id: 'B002', 
+      name: 'Coca Cola 500ml', 
+      category: '🥤 Bebidas', 
+      price: 6.00, 
+      type: 'drink', 
+      available: true, 
+      is_daily_special: true 
+    },
+    { 
+      id: 'B003', 
+      name: 'Chicha Morada', 
+      category: '🥤 Bebidas', 
+      price: 8.00, 
+      type: 'drink', 
+      available: true, 
+      is_daily_special: true 
+    },
+    { 
+      id: 'B004', 
+      name: 'Limonada', 
+      category: '🥤 Bebidas', 
+      price: 7.00, 
+      type: 'drink', 
+      available: true, 
+      is_daily_special: true 
+    },
   ]
 };
 
@@ -125,17 +213,17 @@ export const useMenu = () => {
   };
 
   // Obtener todos los items del menú (compatibilidad)
-  const getAllItems = () => {
+  const getAllItems = (): MenuItem[] => {
     return Object.values(menuItems).flat();
   };
 
   // Obtener items por categoría (compatibilidad)
-  const getItemsByCategory = (category: string) => {
+  const getItemsByCategory = (category: string): MenuItem[] => {
     return menuItems[category] || [];
   };
 
   // Obtener todas las categorías (compatibilidad)
-  const getCategories = () => {
+  const getCategories = (): string[] => {
     return Object.keys(menuItems);
   };
 
@@ -189,15 +277,13 @@ export const useMenu = () => {
           name: menuItemData.name,
           description: menuItemData.description,
           price: menuItemData.price,
+          category: category.name, // Para compatibilidad
           category_id: menuItemData.category_id,
           category_name: category.name,
           category_emoji: category.emoji,
           type: menuItemData.type,
           available: menuItemData.available ?? true,
-          is_daily_special: false,
-          sort_order: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          is_daily_special: false
         };
 
         setMenuItems(prev => ({
@@ -228,16 +314,15 @@ export const useMenu = () => {
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating menu item:', error);
+        // Si hay error en Supabase, al menos mantener en localStorage
+        return { success: true, data: null };
+      }
 
-      const itemWithCategory = {
-        ...data,
-        category_name: data.categories?.name,
-        category_emoji: data.categories?.emoji
-      };
-
-      return { success: true, data: itemWithCategory };
+      return { success: true, data };
     } catch (error: any) {
+      console.error('Error in createMenuItem:', error);
       return { success: false, error: error.message };
     }
   };
@@ -268,22 +353,20 @@ export const useMenu = () => {
 
       if (error) throw error;
 
-      const itemWithCategory = {
-        ...data,
-        category_name: data.categories?.name,
-        category_emoji: data.categories?.emoji
-      };
-
       // Si se actualiza el estado de is_daily_special, actualizar dailyMenu
       if (updates.is_daily_special !== undefined) {
-        if (updates.is_daily_special) {
-          setDailyMenu(prev => [...prev, itemWithCategory]);
-        } else {
-          setDailyMenu(prev => prev.filter(item => item.id !== id));
+        const allItems = getAllItems();
+        const item = allItems.find(item => item.id === id);
+        if (item) {
+          if (updates.is_daily_special) {
+            setDailyMenu(prev => [...prev, { ...item, ...updates }]);
+          } else {
+            setDailyMenu(prev => prev.filter(item => item.id !== id));
+          }
         }
       }
 
-      return { success: true, data: itemWithCategory };
+      return { success: true, data };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
