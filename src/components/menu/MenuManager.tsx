@@ -35,12 +35,15 @@ const MenuManager: React.FC = () => {
     createCategory,
     toggleDailySpecial,
     hasMaxDailyItems,
-    getCategoriesWithDailyCount
+    getCategoriesWithDailyCount,
+    updateItemPrice, // Mantener para compatibilidad pero no usar
+    deleteItem // Mantener para compatibilidad pero no usar
   } = useMenu();
 
   // Filtrar items
-  const filteredItems = menuItems.filter(item =>
-    (activeCategory === 'all' || item.category_id === activeCategory) &&
+  const allItems = Object.values(menuItems).flat();
+  const filteredItems = allItems.filter(item =>
+    (activeCategory === 'all' || item.category === activeCategory) &&
     (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      item.description?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -211,23 +214,23 @@ const MenuManager: React.FC = () => {
               Todos los Productos
             </button>
             
-            {categoriesWithCount.map((category) => (
+            {Object.keys(menuItems).map((categoryName) => (
               <button
-                key={category.id}
-                onClick={() => setActiveCategory(category.id)}
+                key={categoryName}
+                onClick={() => setActiveCategory(categoryName)}
                 className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors flex items-center space-x-2 ${
-                  activeCategory === category.id
+                  activeCategory === categoryName
                     ? 'bg-red-500 text-white shadow-sm'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <span>{category.emoji} {category.name}</span>
+                <span>{categoryName}</span>
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  activeCategory === category.id 
+                  activeCategory === categoryName 
                     ? 'bg-white text-red-500' 
                     : 'bg-red-500 text-white'
                 }`}>
-                  {category.daily_items_count}/{category.max_daily_items}
+                  {menuItems[categoryName]?.length || 0}
                 </span>
               </button>
             ))}
@@ -451,7 +454,7 @@ const MenuManager: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-semibold text-gray-900 truncate">{item.name}</h3>
                       <p className="text-sm text-gray-500">
-                        {item.category_emoji} {item.category_name}
+                        {item.category}
                       </p>
                     </div>
                     <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -556,24 +559,24 @@ const MenuManager: React.FC = () => {
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="bg-red-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-red-600">{menuItems.length}</div>
+                <div className="text-2xl font-bold text-red-600">{allItems.length}</div>
                 <div className="text-sm text-gray-600">Total de Productos</div>
               </div>
               <div className="bg-green-50 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {menuItems.filter(item => item.available).length}
+                  {allItems.filter(item => item.available).length}
                 </div>
                 <div className="text-sm text-gray-600">Disponibles</div>
               </div>
               <div className="bg-blue-50 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {menuItems.filter(item => item.is_daily_special).length}
+                  {allItems.filter(item => item.is_daily_special).length}
                 </div>
                 <div className="text-sm text-gray-600">En Menú del Día</div>
               </div>
               <div className="bg-yellow-50 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-yellow-600">
-                  {categories.length}
+                  {Object.keys(menuItems).length}
                 </div>
                 <div className="text-sm text-gray-600">Categorías</div>
               </div>
