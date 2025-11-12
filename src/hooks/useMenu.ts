@@ -1,72 +1,177 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { MenuItem } from '../types';
-
-// Menú inicial por defecto
-const initialMenuData: { [key: string]: MenuItem[] } = {
-  '🥗 Entradas': [
-    { id: 'E001', name: 'Papa a la Huancaina', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Papa amarilla con salsa huancaina' },
-    { id: 'E002', name: 'Causa Rellena', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Causa de pollo o atún' },
-    { id: 'E003', name: 'Tequeños', category: 'Entradas', price: 4.00, type: 'food', available: true, description: '12 unidades con salsa de ají' },
-    { id: 'E004', name: 'Anticuchos', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Brochetas de corazón' },
-  ],
-  '🍽️ Platos de Fondo': [
-    { id: 'P001', name: 'Lomo Saltado de Pollo', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Salteado con cebolla, tomate' },
-    { id: 'P002', name: 'Lomo Saltado de Res', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Salteado con cebolla, tomate' },
-    { id: 'P003', name: 'Arroz con Mariscos', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Arroz verde con mix de mariscos' },
-    { id: 'P004', name: 'Aji de Gallina', category: 'Platos de Fondo', price: 8.00, type: 'food', available: true, description: 'Pollo en salsa de ají amarillo' },
-  ],
-  '🥤 Bebidas': [
-    { id: 'B001', name: 'Inca Kola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-    { id: 'B002', name: 'Coca Cola 500ml', category: 'Bebidas', price: 6.00, type: 'drink', available: true },
-    { id: 'B003', name: 'Chicha Morada', category: 'Bebidas', price: 8.00, type: 'drink', available: true },
-    { id: 'B004', name: 'Limonada', category: 'Bebidas', price: 7.00, type: 'drink', available: true },
-  ]
-};
 
 export const useMenu = () => {
   const [menuItems, setMenuItems] = useState<{ [key: string]: MenuItem[] }>({});
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
 
-  // Cargar menú desde localStorage al iniciar
-  useEffect(() => {
-    const savedMenu = localStorage.getItem('restaurant-menu');
-    if (savedMenu) {
-      setMenuItems(JSON.parse(savedMenu));
-    } else {
-      // Si no hay menú guardado, usar el inicial
-      setMenuItems(initialMenuData);
-      localStorage.setItem('restaurant-menu', JSON.stringify(initialMenuData));
-    }
-  }, []);
+  // Cargar categorías y productos
+  const loadMenuData = async () => {
+    try {
+      setLoading(true);
+      
+      // Cargar categorías
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
 
-  // Actualizar menú en localStorage cuando cambie
-  useEffect(() => {
-    if (Object.keys(menuItems).length > 0) {
-      localStorage.setItem('restaurant-menu', JSON.stringify(menuItems));
-    }
-  }, [menuItems]);
+      if (categoriesError) throw categoriesError;
 
-  // Función para actualizar el precio de un item
-  const updateItemPrice = (itemId: string, newPrice: number) => {
-    setMenuItems(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(category => {
-        updated[category] = updated[category].map(item =>
-          item.id === itemId ? { ...item, price: newPrice } : item
-        );
+      // Cargar productos
+      const { data: menuItemsData, error: menuItemsError } = await supabase
+        .from('menu_items')
+        .select('*, categories(name)')
+        .order('sort_order', { ascending: true });
+
+      if (menuItemsError) throw menuItemsError;
+
+      // Organizar productos por categoría
+      const organizedMenu: { [key: string]: MenuItem[] } = {};
+      
+      categoriesData?.forEach(category => {
+        organizedMenu[category.name] = menuItemsData
+          ?.filter(item => item.categories.name === category.name)
+          .map(item => ({
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            price: parseFloat(item.price),
+            category: item.categories.name,
+            type: item.type,
+            available: item.available
+          })) || [];
       });
-      return updated;
-    });
+
+      setCategories(categoriesData || []);
+      setMenuItems(organizedMenu);
+      
+    } catch (error) {
+      console.error('Error loading menu data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Función para eliminar un item
-  const deleteItem = (itemId: string) => {
-    setMenuItems(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(category => {
-        updated[category] = updated[category].filter(item => item.id !== itemId);
-      });
-      return updated;
-    });
+  // Crear nuevo producto
+  const createItem = async (itemData: {
+    name: string;
+    description?: string;
+    price: number;
+    category: string;
+    type: 'food' | 'drink';
+    available?: boolean;
+  }) => {
+    try {
+      // Encontrar el ID de la categoría
+      const category = categories.find(cat => cat.name === itemData.category);
+      if (!category) {
+        throw new Error('Categoría no encontrada');
+      }
+
+      const { data, error } = await supabase
+        .from('menu_items')
+        .insert([{
+          name: itemData.name.trim(),
+          description: itemData.description?.trim(),
+          price: itemData.price,
+          category_id: category.id,
+          type: itemData.type,
+          available: itemData.available ?? true
+        }])
+        .select('*, categories(name)')
+        .single();
+
+      if (error) throw error;
+
+      // Actualizar estado local
+      const newItem: MenuItem = {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        price: parseFloat(data.price),
+        category: data.categories.name,
+        type: data.type,
+        available: data.available
+      };
+
+      setMenuItems(prev => ({
+        ...prev,
+        [itemData.category]: [...(prev[itemData.category] || []), newItem]
+      }));
+
+      return { success: true, data: newItem };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Actualizar producto
+  const updateItem = async (itemId: string, updates: Partial<{
+    name: string;
+    description?: string;
+    price: number;
+    category: string;
+    type: 'food' | 'drink';
+    available: boolean;
+  }>) => {
+    try {
+      // Si cambia la categoría, necesitamos el nuevo category_id
+      let categoryId: string | undefined;
+      if (updates.category) {
+        const category = categories.find(cat => cat.name === updates.category);
+        if (!category) {
+          throw new Error('Categoría no encontrada');
+        }
+        categoryId = category.id;
+      }
+
+      const updateData: any = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+
+      if (categoryId) {
+        updateData.category_id = categoryId;
+        delete updateData.category;
+      }
+
+      const { data, error } = await supabase
+        .from('menu_items')
+        .update(updateData)
+        .eq('id', itemId)
+        .select('*, categories(name)')
+        .single();
+
+      if (error) throw error;
+
+      // Recargar el menú completo para reflejar cambios de categoría
+      await loadMenuData();
+
+      return { success: true, data };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Eliminar producto
+  const deleteItem = async (itemId: string) => {
+    try {
+      const { error } = await supabase
+        .from('menu_items')
+        .delete()
+        .eq('id', itemId);
+
+      if (error) throw error;
+
+      // Recargar el menú
+      await loadMenuData();
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   };
 
   // Obtener todos los items del menú
@@ -81,16 +186,24 @@ export const useMenu = () => {
 
   // Obtener todas las categorías
   const getCategories = () => {
-    return Object.keys(menuItems);
+    return categories.map(cat => cat.name);
   };
+
+  // Cargar datos al iniciar
+  useEffect(() => {
+    loadMenuData();
+  }, []);
 
   return {
     menuItems,
+    categories,
+    loading,
     getAllItems,
     getItemsByCategory,
     getCategories,
-    updateItemPrice,
+    createItem,
+    updateItem,
     deleteItem,
-    setMenuItems
+    refreshMenu: loadMenuData
   };
 };
