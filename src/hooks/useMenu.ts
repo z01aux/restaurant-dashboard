@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { MenuItem } from '../types';
 
 // Definir el tipo para menuData
-type MenuData = {
+type MenuDataType = {
   [key: number]: {
     [key: string]: MenuItem[];
   };
 };
 
-// Datos del menú local (como fallback)
-const menuData: MenuData = {
+// Datos del menú local
+const menuData: MenuDataType = {
   0: {
     '🥗 Entradas': [
       { id: 'E001', name: 'Papa a la Huancaina', category: 'Entradas', price: 4.00, type: 'food', available: true, description: 'Papa amarilla con salsa huancaina' },
@@ -61,14 +61,16 @@ export const useMenu = () => {
     const savedMenuIndex = localStorage.getItem('current-daily-menu');
     const menuIndex = savedMenuIndex ? parseInt(savedMenuIndex) : 0;
     setCurrentDailyMenu(menuIndex);
-    setMenuItems(menuData[menuIndex]);
+    const currentMenuData = menuData[menuIndex as keyof typeof menuData];
+    setMenuItems(currentMenuData);
   }, []);
 
   // Cambiar el menú del día
   const changeDailyMenu = (menuIndex: number) => {
     localStorage.setItem('current-daily-menu', menuIndex.toString());
     setCurrentDailyMenu(menuIndex);
-    setMenuItems(menuData[menuIndex]);
+    const newMenuData = menuData[menuIndex as keyof typeof menuData];
+    setMenuItems(newMenuData);
   };
 
   // Función para actualizar el precio de un item
@@ -96,16 +98,16 @@ export const useMenu = () => {
   };
 
   // Función para crear un nuevo item
-  const createItem = async (item: Omit<MenuItem, 'id'>) => {
+  const createItem = async (itemData: Omit<MenuItem, 'id'>) => {
     const newItem: MenuItem = {
-      ...item,
+      ...itemData,
       id: `NEW-${Date.now()}`
     };
 
     // Agregar al estado local
     setMenuItems(prev => {
       const updated = { ...prev };
-      const categoryKey = getCategoryKey(item.category);
+      const categoryKey = getCategoryKey(itemData.category);
       if (!updated[categoryKey]) {
         updated[categoryKey] = [];
       }
@@ -117,7 +119,7 @@ export const useMenu = () => {
   };
 
   // Función helper para obtener la clave de categoría con emoji
-  const getCategoryKey = (category: string) => {
+  const getCategoryKey = (category: string): string => {
     switch (category) {
       case 'Entradas': return '🥗 Entradas';
       case 'Platos de Fondo': return '🍽️ Platos de Fondo';
@@ -127,22 +129,22 @@ export const useMenu = () => {
   };
 
   // Obtener todos los items del menú
-  const getAllItems = () => {
+  const getAllItems = (): MenuItem[] => {
     return Object.values(menuItems).flat();
   };
 
   // Obtener items por categoría
-  const getItemsByCategory = (category: string) => {
+  const getItemsByCategory = (category: string): MenuItem[] => {
     return menuItems[category] || [];
   };
 
   // Obtener todas las categorías
-  const getCategories = () => {
+  const getCategories = (): string[] => {
     return Object.keys(menuItems);
   };
 
   // Obtener opciones de menú del día
-  const getDailyMenuOptions = () => {
+  const getDailyMenuOptions = (): MenuDataType => {
     return menuData;
   };
 
