@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Minus, X, ShoppingBag, ArrowRight, Search, Trash2, User } from 'lucide-react';
+import { Plus, Minus, X, ShoppingBag, ArrowRight, Search, Trash2 } from 'lucide-react'; // ✅ REMOVIDO User que no se usa
 import { MenuItem, OrderItem, OrderSource, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
@@ -63,15 +63,15 @@ const OrderReception: React.FC = () => {
   // Estado para autocompletado
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  // ✅ REMOVIDO: selectedCustomer ya no se usa en la versión móvil
 
   // Refs para manejar clicks
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Hooks - ✅ CORREGIDO: agregada getAllItems para búsqueda
-  const { customers, loading: customersLoading } = useCustomers();
-  const { getDailySpecialsByCategory, getAllDailySpecials, getAllItems } = useMenu();
+  // Hooks - ✅ CORREGIDO: removidas variables que no se usan
+  const { customers } = useCustomers(); // ✅ REMOVIDO customersLoading
+  const { getDailySpecialsByCategory, getAllItems } = useMenu();
 
   // Efecto para cerrar sugerencias al hacer click fuera
   useEffect(() => {
@@ -116,7 +116,6 @@ const OrderReception: React.FC = () => {
     setCustomerName(customer.name);
     setPhone(customer.phone || '');
     setAddress(customer.address || '');
-    setSelectedCustomer(customer);
     setShowSuggestions(false);
     
     // Blur del input para cerrar el teclado en móvil
@@ -127,20 +126,12 @@ const OrderReception: React.FC = () => {
     showToast(`Cliente ${customer.name} seleccionado`, 'success');
   };
 
-  // Función para limpiar selección de cliente
-  const clearCustomerSelection = () => {
-    setSelectedCustomer(null);
-    setCustomerName('');
-    setPhone('');
-    setAddress('');
-    setShowSuggestions(false);
-  };
+  // ✅ REMOVIDO: clearCustomerSelection no se usa en la versión móvil
 
   // Manejadores para el input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomerName(value);
-    setSelectedCustomer(null);
     
     if (value.length > 1) {
       setShowSuggestions(true);
@@ -162,9 +153,6 @@ const OrderReception: React.FC = () => {
     }, 300);
   };
 
-  // Obtener items del menú - ✅ CORREGIDO: usando las funciones correctas
-  const allMenuItems = getAllDailySpecials();
-  
   // ✅ CORREGIDO: Definir categorías en el orden deseado
   const categories = ['Entradas', 'Platos de Fondo', 'Bebidas'];
 
@@ -301,7 +289,6 @@ const OrderReception: React.FC = () => {
       setOrderNotes('');
       setShowConfirmation(false);
       setShowCartDrawer(false);
-      setSelectedCustomer(null);
       
       setTimeout(() => {
         const printButton = document.querySelector(`[data-order-id="${lastOrder.id}"]`) as HTMLButtonElement;
@@ -773,7 +760,7 @@ const OrderReception: React.FC = () => {
             </div>
           </div>
 
-          {/* El resto del componente permanece igual... */}
+          {/* LAYOUT COMPACTO PARA ESCRITORIO - Mantener código existente */}
           {/* ... (mantén el código existente para la versión desktop) */}
         </div>
 
