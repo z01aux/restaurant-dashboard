@@ -5,7 +5,7 @@ import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
 import { useCustomers } from '../../hooks/useCustomers';
 
-// Componente de Notificación Toast mejorado sin íconos
+// Componente de Notificación Toast
 const ToastNotification: React.FC<{
   message: string;
   type: 'success' | 'error';
@@ -49,20 +49,20 @@ const OrderReception: React.FC = () => {
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
-  // ✅ NUEVO ESTADO PARA AUTOCOMPLETADO
+  // Estado para autocompletado
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
-  // ✅ REFS PARA MANEJAR CLICKS
+  // Refs para manejar clicks
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ USAR HOOK DE CLIENTES
+  // Hooks
   const { customers, loading: customersLoading } = useCustomers();
   const { menuItems: menuDelDia, getCategories, getAllItems } = useMenu();
 
-  // ✅ EFECTO PARA CERRAR SUGERENCIAS AL HACER CLIC FUERA (SIMPLIFICADO)
+  // Efecto para cerrar sugerencias al hacer click fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
@@ -76,7 +76,7 @@ const OrderReception: React.FC = () => {
     };
   }, []);
 
-  // ✅ EFECTO PARA FILTRAR SUGERENCIAS CUANDO ESCRIBE EL NOMBRE
+  // Efecto para filtrar sugerencias
   useEffect(() => {
     if (customerName.trim().length > 1) {
       const filtered = customers.filter(customer =>
@@ -92,7 +92,7 @@ const OrderReception: React.FC = () => {
     }
   }, [customerName, customers]);
 
-  // Cargar pedidos desde localStorage al iniciar
+  // Cargar pedidos desde localStorage
   useEffect(() => {
     const savedOrders = localStorage.getItem('restaurant-orders');
     if (savedOrders) {
@@ -100,7 +100,7 @@ const OrderReception: React.FC = () => {
     }
   }, []);
 
-  // ✅ FUNCIÓN PARA SELECCIONAR UN CLIENTE (MEJORADA - SIN PROPAGACIÓN)
+  // Función para seleccionar un cliente
   const selectCustomer = (customer: any, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -114,7 +114,7 @@ const OrderReception: React.FC = () => {
     showToast(`Cliente ${customer.name} seleccionado`, 'success');
   };
 
-  // ✅ FUNCIÓN PARA LIMPIAR SELECCIÓN DE CLIENTE
+  // Función para limpiar selección de cliente
   const clearCustomerSelection = () => {
     setSelectedCustomer(null);
     setCustomerName('');
@@ -123,7 +123,7 @@ const OrderReception: React.FC = () => {
     setShowSuggestions(false);
   };
 
-  // ✅ MANEJADOR PARA EL INPUT (MEJORADO)
+  // Manejadores para el input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomerName(value);
@@ -136,26 +136,22 @@ const OrderReception: React.FC = () => {
     }
   };
 
-  // ✅ MANEJADOR PARA EL FOCO DEL INPUT
   const handleInputFocus = () => {
     if (customerName.length > 1 && customerSuggestions.length > 0) {
       setShowSuggestions(true);
     }
   };
 
-  // ✅ MANEJADOR PARA EL BLUR DEL INPUT (NUEVO)
   const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    // Pequeño delay para permitir que el click en las sugerencias se procese primero
     setTimeout(() => {
       setShowSuggestions(false);
     }, 200);
   };
 
-  // ✅ OBTENER ITEMS ACTUALIZADOS DEL MENÚ
+  // Obtener items del menú
   const allMenuItems = getAllItems();
   const categories = getCategories();
 
-  // ✅ FUNCIÓN CORREGIDA: Obtener items a mostrar
   const getItemsToShow = () => {
     if (searchTerm) {
       return allMenuItems.filter((item: MenuItem) =>
@@ -172,7 +168,7 @@ const OrderReception: React.FC = () => {
     setToast({ message, type });
   };
 
-  // ✅ FUNCIÓN CORREGIDA: Actualizar carrito con precios actualizados
+  // Funciones del carrito
   const addToCart = (menuItem: MenuItem) => {
     setCart(prev => {
       const existing = prev.find(item => item.menuItem.id === menuItem.id);
@@ -234,6 +230,7 @@ const OrderReception: React.FC = () => {
     return cart.reduce((total, item) => total + (item.menuItem.price * item.quantity), 0);
   };
 
+  // Funciones de órdenes
   const saveOrderToStorage = (order: Order) => {
     const existingOrders = localStorage.getItem('restaurant-orders');
     const orders = existingOrders ? JSON.parse(existingOrders) : [];
@@ -301,7 +298,7 @@ const OrderReception: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 pb-20 lg:pb-6">
-      {/* Notificación Toast sin íconos */}
+      {/* Notificación Toast */}
       {toast && (
         <ToastNotification
           message={toast.message}
@@ -494,7 +491,7 @@ const OrderReception: React.FC = () => {
 
         {/* LAYOUT COMPACTO PARA ESCRITORIO */}
         <div className="hidden lg:block">
-          {/* Información del Cliente - CON AUTOCOMPLETADO CORREGIDO */}
+          {/* Información del Cliente con Autocompletado */}
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 mb-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">Información del Pedido</h2>
@@ -534,10 +531,10 @@ const OrderReception: React.FC = () => {
                 </div>
               </div>
 
-              {/* Formulario del Cliente - CON AUTOCOMPLETADO CORREGIDO */}
+              {/* Formulario del Cliente */}
               <div className="md:col-span-3">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Campo de Nombre con Autocompletado - CORREGIDO DEFINITIVAMENTE */}
+                  {/* Campo de Nombre con Autocompletado */}
                   <div className="relative md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Nombre del Cliente *
@@ -561,17 +558,17 @@ const OrderReception: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Lista de Sugerencias - CORREGIDA DEFINITIVAMENTE */}
+                    {/* Lista de Sugerencias */}
                     {showSuggestions && customerSuggestions.length > 0 && (
                       <div 
                         ref={suggestionsRef}
                         className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
-                        onMouseDown={(e) => e.preventDefault()} // ✅ PREVIENE EL BLUR DEL INPUT
+                        onMouseDown={(e) => e.preventDefault()}
                       >
                         {customerSuggestions.map((customer) => (
                           <div
                             key={customer.id}
-                            onMouseDown={(e) => e.preventDefault()} // ✅ PREVIENE EL BLUR
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={(event) => selectCustomer(customer, event)}
                             className="p-3 hover:bg-red-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                           >
@@ -690,7 +687,239 @@ const OrderReception: React.FC = () => {
             </div>
           </div>
 
-          {/* ... (resto del código del menú y carrito se mantiene igual) */}
+          {/* Menú y Carrito - LADO A LADO */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Menú del Día - Ocupa 2/3 del espacio */}
+            <div className="xl:col-span-2">
+              <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                  <h2 className="text-xl font-bold text-gray-900">Menú del Día</h2>
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="Buscar productos..."
+                    />
+                  </div>
+                </div>
+
+                {/* Navegación de Categorías */}
+                {!searchTerm && (
+                  <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
+                    {categories.map(category => (
+                      <button
+                        key={category}
+                        onClick={() => setActiveCategory(category)}
+                        className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
+                          activeCategory === category
+                            ? 'bg-red-500 text-white shadow-sm'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Grid de Productos */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {currentItems.map((item: MenuItem) => {
+                    const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
+                    const quantityInCart = cartItem ? cartItem.quantity : 0;
+                    
+                    return (
+                      <div
+                        key={item.id}
+                        className="bg-white rounded-xl p-4 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200 cursor-pointer relative"
+                        onClick={() => addToCart(item)}
+                      >
+                        {/* Badge de cantidad en carrito */}
+                        {quantityInCart > 0 && (
+                          <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
+                            {quantityInCart}
+                          </div>
+                        )}
+                        
+                        <div className="mb-3">
+                          <div className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2 min-h-[2.5rem]">
+                            {item.name}
+                          </div>
+                          {item.description && (
+                            <div className="text-gray-600 text-xs mb-2 line-clamp-2">
+                              {item.description}
+                            </div>
+                          )}
+                          <div className="font-bold text-red-600 text-sm">
+                            S/ {item.price.toFixed(2)}
+                          </div>
+                        </div>
+
+                        {/* Botones de cantidad */}
+                        <div className="flex items-center justify-between">
+                          {quantityInCart > 0 ? (
+                            <div className="flex items-center space-x-2 w-full">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateQuantity(item.id, quantityInCart - 1);
+                                }}
+                                className="w-8 h-8 flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex-1"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <span className="text-sm font-medium w-8 text-center">
+                                {quantityInCart}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateQuantity(item.id, quantityInCart + 1);
+                                }}
+                                className="w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex-1"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addToCart(item);
+                              }}
+                              className="w-full bg-red-500 text-white py-2 px-3 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-1 text-sm font-medium"
+                            >
+                              <Plus size={14} />
+                              <span>Agregar</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Resultados de Búsqueda */}
+                {searchTerm && currentItems.length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-4xl text-gray-300 mb-3">🔍</div>
+                    <div className="text-gray-500 text-sm">No se encontraron productos</div>
+                    <div className="text-gray-400 text-xs">Intenta con otros términos</div>
+                  </div>
+                )}
+
+                {/* Estado vacío cuando no hay productos en la categoría */}
+                {!searchTerm && currentItems.length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-4xl text-gray-300 mb-3">🍽️</div>
+                    <div className="text-gray-500 text-sm">No hay productos en esta categoría</div>
+                    <div className="text-gray-400 text-xs">Selecciona otra categoría</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Carrito - Ocupa 1/3 del espacio */}
+            <div className="xl:col-span-1">
+              <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Tu Pedido</h2>
+                    <p className="text-sm text-gray-600">{totalItems} productos</p>
+                  </div>
+                  <div className="bg-red-500 text-white p-2 rounded-lg">
+                    <ShoppingBag size={20} />
+                  </div>
+                </div>
+
+                {cart.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                      <ShoppingBag className="h-8 w-8 text-red-500" />
+                    </div>
+                    <div className="text-gray-500 text-sm mb-2">Tu pedido está vacío</div>
+                    <div className="text-gray-400 text-xs">Agrega productos del menú</div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Lista de Items */}
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {cart.map((item, index) => (
+                        <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1 min-w-0 mr-3">
+                              <div className="font-medium text-gray-900 text-sm break-words">
+                                {item.menuItem.name}
+                              </div>
+                              <div className="text-gray-600 text-xs mt-1">
+                                S/ {item.menuItem.price.toFixed(2)} c/u
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 flex-shrink-0">
+                              <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
+                                <button
+                                  onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
+                                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+                                >
+                                  <Minus size={12} />
+                                </button>
+                                <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
+                                <button
+                                  onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
+                                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+                                >
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                              <button
+                                onClick={() => removeFromCart(item.menuItem.id)}
+                                className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="text-right text-sm font-semibold text-red-600">
+                            S/ {(item.menuItem.price * item.quantity).toFixed(2)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Total y Acciones */}
+                    <div className="border-t border-gray-200 pt-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-lg font-semibold">Total:</span>
+                        <span className="text-2xl font-bold text-red-600">
+                          S/ {getTotal().toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => setCart([])}
+                          className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                        >
+                          Vaciar Carrito
+                        </button>
+                        <button
+                          onClick={createOrder}
+                          disabled={!customerName || !phone}
+                          className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
+                        >
+                          <span>Confirmar Pedido</span>
+                          <ArrowRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
