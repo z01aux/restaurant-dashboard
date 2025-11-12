@@ -112,20 +112,20 @@ const OrderReception: React.FC = () => {
   }, []);
 
   // Función para seleccionar un cliente (CORREGIDA PARA MÓVIL)
-const selectCustomer = (customer: any) => {
-  setCustomerName(customer.name);
-  setPhone(customer.phone || '');
-  setAddress(customer.address || '');
-  setSelectedCustomer(customer);
-  setShowSuggestions(false);
-  
-  // Blur del input para cerrar el teclado en móvil
-  if (inputRef.current) {
-    inputRef.current.blur();
-  }
-  
-  showToast(`Cliente ${customer.name} seleccionado`, 'success');
-};
+  const selectCustomer = (customer: any) => {
+    setCustomerName(customer.name);
+    setPhone(customer.phone || '');
+    setAddress(customer.address || '');
+    setSelectedCustomer(customer);
+    setShowSuggestions(false);
+    
+    // Blur del input para cerrar el teclado en móvil
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
+    
+    showToast(`Cliente ${customer.name} seleccionado`, 'success');
+  };
 
   // Función para limpiar selección de cliente
   const clearCustomerSelection = () => {
@@ -156,11 +156,11 @@ const selectCustomer = (customer: any) => {
   };
 
   // CORREGIDO: Aumentado el delay para móvil
-const handleInputBlur = () => {
-  setTimeout(() => {
-    setShowSuggestions(false);
-  }, 300); // Cambiar de 200 a 300
-};
+  const handleInputBlur = () => {
+    setTimeout(() => {
+      setShowSuggestions(false);
+    }, 300);
+  };
 
   // Obtener items del menú
   const allMenuItems = getAllItems();
@@ -534,7 +534,7 @@ const handleInputBlur = () => {
                   ))}
                 </div>
 
-                {/* Nombre */}
+                {/* Nombre con Autocompletado CORREGIDO */}
                 <div className="relative">
                   <input
                     ref={inputRef}
@@ -548,19 +548,24 @@ const handleInputBlur = () => {
                     required
                   />
                   
-                  {/* Lista de Sugerencias Móvil */}
+                  {/* Lista de Sugerencias Móvil CORREGIDA */}
                   {showSuggestions && customerSuggestions.length > 0 && (
                     <div 
                       ref={suggestionsRef}
                       className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
-                      onMouseDown={(e) => e.preventDefault()}
                     >
                       {customerSuggestions.map((customer) => (
                         <div
                           key={customer.id}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={(event) => selectCustomer(customer, event)}
-                          className="p-3 hover:bg-red-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            selectCustomer(customer);
+                          }}
+                          onTouchStart={(e) => {
+                            e.preventDefault();
+                            selectCustomer(customer);
+                          }}
+                          className="p-3 hover:bg-red-50 active:bg-red-100 cursor-pointer border-b border-gray-100 last:border-b-0"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
@@ -774,7 +779,7 @@ const handleInputBlur = () => {
                 {/* Formulario del Cliente */}
                 <div className="md:col-span-3">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Campo de Nombre con Autocompletado */}
+                    {/* Campo de Nombre con Autocompletado CORREGIDO */}
                     <div className="relative md:col-span-1">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Nombre del Cliente *
@@ -798,19 +803,24 @@ const handleInputBlur = () => {
                         )}
                       </div>
 
-                      {/* Lista de Sugerencias */}
+                      {/* Lista de Sugerencias Desktop CORREGIDA */}
                       {showSuggestions && customerSuggestions.length > 0 && (
                         <div 
                           ref={suggestionsRef}
                           className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
-                          onMouseDown={(e) => e.preventDefault()}
                         >
                           {customerSuggestions.map((customer) => (
                             <div
                               key={customer.id}
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={(event) => selectCustomer(customer, event)}
-                              className="p-3 hover:bg-red-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                selectCustomer(customer);
+                              }}
+                              onTouchStart={(e) => {
+                                e.preventDefault();
+                                selectCustomer(customer);
+                              }}
+                              className="p-3 hover:bg-red-50 active:bg-red-100 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                             >
                               <div className="flex items-center space-x-3">
                                 <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-amber-500 rounded-full flex items-center justify-center">
@@ -1171,4 +1181,3 @@ const handleInputBlur = () => {
 };
 
 export default OrderReception;
-
