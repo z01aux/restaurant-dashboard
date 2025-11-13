@@ -8,9 +8,9 @@ interface OrderTicketProps {
 
 // Constantes para información del restaurante
 const RESTAURANT_INFO = {
-  name: "MARY'S RESTAURANT", // Cambiar según necesidad
-  address: "Av Isabel La Católica 1254", // Cambiar según necesidad
-  phone: "+51 941 778 599" // Cambiar según necesidad
+  name: "MARY'S RESTAURANT",
+  address: "Av Isabel La Católica 1254",
+  phone: "+51 941 778 599"
 };
 
 const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
@@ -103,7 +103,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   // Función para formatear el ID de la orden de manera segura
   const formatOrderId = (orderId: string): string => {
     try {
-      // Extraer números del orderId
       const numericId = parseInt(orderId.replace(/\D/g, ''));
       if (!isNaN(numericId)) {
         return `ORD-${String(numericId).padStart(8, '0')}`;
@@ -279,7 +278,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       
-      // Generar nombre del archivo con el formato: ORD-numero-de-orden-nombre-cliente-fecha.pdf
       const fileName = generateFileName(order);
       
       link.href = url;
@@ -294,7 +292,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar nombre del archivo con formato: ORD-numero-de-orden-nombre-cliente-fecha.pdf
+  // Generar nombre del archivo
   const generateFileName = (order: Order) => {
     const orderNumber = formatOrderId(order.id)
       .replace(/[^a-zA-Z0-9-]/g, '')
@@ -302,8 +300,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     
     const customerName = order.customerName
       .toLowerCase()
-      .normalize('NFD') // Normalizar para eliminar acentos
-      .replace(/[\u0300-\u036f]/g, '') // Eliminar diacríticos
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
@@ -315,153 +313,238 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 
   const handlePrint = async () => {
     try {
-      const printContent = document.getElementById(`ticket-${order.id}`);
-      if (printContent) {
-        const isMobile = window.innerWidth <= 768;
-        const windowFeatures = isMobile 
-          ? 'width=320,height=600,scrollbars=no,toolbar=no,location=no'
-          : 'width=800,height=600,scrollbars=no,toolbar=no,location=no';
-        
-        const printWindow = window.open('', '_blank', windowFeatures);
-        if (printWindow) {
-          const ticketContent = generateTicketContent(order);
-          printWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>Ticket ${order.id}</title>
-                <style>
-                  @media print {
-                    @page {
-                      margin: 0;
-                      size: 80mm auto;
-                    }
-                  }
-                  body {
-                    font-family: 'Courier New', monospace;
-                    font-size: 12px;
-                    line-height: 1.2;
-                    width: 80mm;
-                    margin: 0 auto;
-                    padding: 10px;
-                    background: white;
-                    color: black;
-                    box-sizing: border-box;
-                  }
-                  .ticket {
-                    width: 100%;
-                    max-width: 80mm;
-                    margin: 0 auto;
-                  }
-                  .center {
-                    text-align: center;
-                  }
-                  .bold {
-                    font-weight: bold;
-                  }
-                  .divider {
-                    border-top: 1px dashed #000;
-                    margin: 5px 0;
-                  }
-                  .item-row {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 3px;
-                  }
-                  .notes {
-                    font-style: italic;
-                    font-size: 10px;
-                    margin-left: 10px;
-                  }
-                  .order-notes-list {
-                    margin: 5px 0;
-                    padding-left: 15px;
-                  }
-                  .order-notes-list div {
-                    margin-bottom: 2px;
-                  }
-                  table {
-                    width: 100%;
-                    border-collapse: collapse;
-                  }
-                  th, td {
-                    padding: 2px 0;
-                    text-align: left;
-                  }
-                  th {
-                    border-bottom: 1px solid #000;
-                  }
-                  .total {
-                    border-top: 2px solid #000;
-                    padding-top: 5px;
-                    margin-top: 5px;
-                  }
-                  .product-name {
-                    font-weight: bold;
-                    text-transform: uppercase;
-                  }
-                  .quantity {
-                    font-weight: bold;
-                  }
-                  .calculation-row {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 2px;
-                    font-size: 11px;
-                  }
-                  
-                  /* Estilos para vista previa en escritorio */
-                  @media screen and (min-width: 769px) {
-                    body {
-                      width: 100%;
-                      max-width: 400px;
-                      background: #f5f5f5;
-                      display: flex;
-                      justify-content: center;
-                      align-items: center;
-                      min-height: 100vh;
-                    }
-                    .ticket {
-                      background: white;
-                      padding: 20px;
-                      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                      border-radius: 8px;
-                    }
-                  }
-                  
-                  /* Estilos para vista previa en móvil */
-                  @media screen and (max-width: 768px) {
-                    body {
-                      width: 100%;
-                      max-width: 300px;
-                      margin: 0 auto;
-                    }
-                  }
-                </style>
-              </head>
-              <body>
-                ${ticketContent}
-                <script>
-                  window.onload = function() {
-                    setTimeout(function() {
-                      window.print();
-                      setTimeout(function() {
-                        window.close();
-                      }, 1000);
-                    }, 100);
-                  };
-                </script>
-              </body>
-            </html>
-          `);
-          printWindow.document.close();
-        } else {
-          alert('No se pudo abrir la ventana de impresión. Por favor, desbloquee los popups.');
+      const isMobile = window.innerWidth <= 768;
+      const windowFeatures = isMobile 
+        ? 'width=320,height=600,scrollbars=no,toolbar=no,location=no'
+        : 'width=600,height=800,scrollbars=yes,toolbar=no,location=no';
+      
+      const printWindow = window.open('', '_blank', windowFeatures);
+      if (printWindow) {
+        const ticketContent = generateTicketContent(order);
+        printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Ticket ${order.id}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      /* Estilos para IMPRESIÓN (ticket real) */
+      @media print {
+        @page {
+          margin: 0;
+          size: 80mm auto;
         }
+        body {
+          width: 80mm !important;
+          margin: 0 auto !important;
+          padding: 10px !important;
+          font-size: 12px !important;
+          transform: scale(1) !important;
+        }
+        .ticket {
+          width: 100% !important;
+          max-width: 80mm !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+      }
+
+      /* Estilos para VISTA PREVIA en pantalla */
+      @media screen {
+        body {
+          font-family: 'Courier New', monospace, sans-serif;
+          font-size: 14px;
+          line-height: 1.3;
+          margin: 0;
+          padding: 20px;
+          background: #f5f5f5;
+          color: #000;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          min-height: 100vh;
+          box-sizing: border-box;
+        }
+        .ticket {
+          background: white;
+          padding: 25px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+          border-radius: 12px;
+          border: 1px solid #ddd;
+          max-width: 400px;
+          width: 100%;
+          transform: scale(1);
+        }
+        
+        /* Aviso para vista previa */
+        .print-notice {
+          background: #fff3cd;
+          border: 1px solid #ffeaa7;
+          border-radius: 6px;
+          padding: 12px;
+          margin-bottom: 15px;
+          text-align: center;
+          font-size: 13px;
+          color: #856404;
+        }
+        
+        /* Botones de control */
+        .print-controls {
+          text-align: center;
+          margin: 20px 0;
+          padding: 15px;
+          background: #e9ecef;
+          border-radius: 8px;
+        }
+        
+        .print-btn {
+          background: #007bff;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 14px;
+          margin: 0 5px;
+          font-weight: bold;
+        }
+        
+        .print-btn:hover {
+          background: #0056b3;
+        }
+        
+        .cancel-btn {
+          background: #6c757d;
+        }
+        
+        .cancel-btn:hover {
+          background: #545b62;
+        }
+      }
+
+      /* Estilos comunes para ticket */
+      .center {
+        text-align: center;
+      }
+      .bold {
+        font-weight: bold;
+      }
+      .divider {
+        border-top: 1px dashed #000;
+        margin: 8px 0;
+      }
+      .item-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .notes {
+        font-style: italic;
+        font-size: 11px;
+        margin-left: 10px;
+        color: #555;
+      }
+      .order-notes-list {
+        margin: 8px 0;
+        padding-left: 18px;
+      }
+      .order-notes-list div {
+        margin-bottom: 3px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+      }
+      th, td {
+        padding: 3px 0;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        border-bottom: 2px solid #000;
+        font-weight: bold;
+      }
+      .total {
+        border-top: 2px solid #000;
+        padding-top: 8px;
+        margin-top: 8px;
+      }
+      .product-name {
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 13px;
+      }
+      .quantity {
+        font-weight: bold;
+        font-size: 13px;
+      }
+      .calculation-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 3px;
+        font-size: 12px;
+      }
+      
+      /* Estilos específicos para móvil en vista previa */
+      @media screen and (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+        .ticket {
+          padding: 15px;
+          max-width: 100%;
+        }
+        .print-controls {
+          padding: 10px;
+        }
+        .print-btn {
+          padding: 8px 16px;
+          font-size: 13px;
+          display: block;
+          width: 100%;
+          margin: 5px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="print-notice no-print">
+      <strong>VISTA PREVIA DEL TICKET</strong><br>
+      El ticket se imprimirá en tamaño 80mm (ticket térmico)
+    </div>
+    
+    ${ticketContent}
+    
+    <div class="print-controls no-print">
+      <button class="print-btn" onclick="window.print()">🖨️ Imprimir Ticket</button>
+      <button class="print-btn cancel-btn" onclick="window.close()">❌ Cerrar</button>
+    </div>
+
+    <script>
+      window.onload = function() {
+        console.log('Vista previa del ticket cargada correctamente');
+        
+        window.addEventListener('afterprint', function() {
+          setTimeout(function() {
+            window.close();
+          }, 1000);
+        });
+      };
+    </script>
+  </body>
+</html>
+        `);
+        printWindow.document.close();
+        
+        printWindow.focus();
+      } else {
+        alert('No se pudo abrir la ventana de impresión. Por favor, desbloquee los popups para esta página.');
       }
     } catch (error) {
       console.error('Error al imprimir:', error);
-      alert('Error al imprimir. Por favor, intente nuevamente.');
+      alert('Error al generar la vista previa. Por favor, intente nuevamente.');
     }
   };
 
@@ -469,7 +552,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     const sourceText = getSourceText(order.source.type);
     const { subtotal, igv } = calculateTaxes(order.total);
 
-    // Procesar notas del pedido para convertirlas en lista
     const formatOrderNotesHTML = (notes: string | null | undefined) => {
       if (!notes) return '';
       
@@ -478,7 +560,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       
       return `
         <div class="divider"></div>
-        <div class="bold">NOTAS DEL PEDIDO:</div>
+        <div class="bold" style="margin-bottom: 5px;">NOTAS DEL PEDIDO:</div>
         <div class="order-notes-list">
           ${notesArray.map(note => `<div>• ${note}</div>`).join('')}
         </div>
@@ -488,7 +570,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     return `
       <div class="ticket">
         <div class="center">
-          <div class="bold">${RESTAURANT_INFO.name}</div>
+          <div class="bold" style="font-size: 16px; margin-bottom: 5px;">${RESTAURANT_INFO.name}</div>
           <div>${RESTAURANT_INFO.address}</div>
           <div>Tel: ${RESTAURANT_INFO.phone}</div>
           <div class="divider"></div>
@@ -508,7 +590,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         </div>
         <div class="item-row">
           <span class="bold">HORA:</span>
-          <span>${order.createdAt.toLocaleTimeString()}</span>
+          <span>${order.createdAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
         </div>
         
         <div class="divider"></div>
@@ -535,9 +617,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         <table>
           <thead>
             <tr>
-              <th>Cant</th>
-              <th>Descripción</th>
-              <th style="text-align: right;">Precio</th>
+              <th style="width: 15%">Cant</th>
+              <th style="width: 55%">Descripción</th>
+              <th style="width: 30%; text-align: right;">Precio</th>
             </tr>
           </thead>
           <tbody>
@@ -568,17 +650,17 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <span>S/ ${igv.toFixed(2)}</span>
         </div>
         
-        <div class="item-row total bold">
+        <div class="item-row total bold" style="font-size: 15px;">
           <span>TOTAL:</span>
           <span>S/ ${order.total.toFixed(2)}</span>
         </div>
         
         <div class="divider"></div>
         <div class="center">
-          <div class="bold">¡GRACIAS POR SU PEDIDO!</div>
-          <div>*** ${sourceText} ***</div>
-          <div style="margin-top: 10px; font-size: 10px;">
-            ${new Date().toLocaleString()}
+          <div class="bold" style="font-size: 14px; margin: 8px 0;">¡GRACIAS POR SU PEDIDO!</div>
+          <div style="font-weight: bold; margin: 5px 0;">*** ${sourceText} ***</div>
+          <div style="margin-top: 10px; font-size: 11px; color: #666;">
+            Generado: ${new Date().toLocaleString()}
           </div>
         </div>
       </div>
