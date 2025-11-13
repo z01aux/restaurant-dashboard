@@ -7,19 +7,27 @@ import { useAuth } from '../../hooks/useAuth';
 
 const OrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>(''); // Nuevo estado para filtro de estado
   const { user } = useAuth();
   const { 
     orders, 
     loading, 
     updateOrderStatus, 
-    deleteOrder
+    deleteOrder,
+    fetchOrders 
   } = useOrders();
 
-  const filteredOrders = orders.filter(order =>
-    order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.phone?.includes(searchTerm)
-  );
+  // Filtrar órdenes por búsqueda Y por estado
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = 
+      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.phone?.includes(searchTerm);
+    
+    const matchesStatus = statusFilter === '' || order.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const getStatusColor = (status: Order['status']) => {
     const colors = {
@@ -30,6 +38,17 @@ const OrdersManager: React.FC = () => {
       cancelled: 'bg-red-100 text-red-800',
     };
     return colors[status];
+  };
+
+  const getStatusText = (status: Order['status']) => {
+    const statusMap = {
+      pending: 'Pendiente',
+      preparing: 'Preparando',
+      ready: 'Listo',
+      delivered: 'Entregado',
+      cancelled: 'Cancelado'
+    };
+    return statusMap[status];
   };
 
   const getSourceText = (sourceType: Order['source']['type']) => {
@@ -64,13 +83,18 @@ const OrdersManager: React.FC = () => {
     return `ORD-${orderId.slice(-8).toUpperCase()}`;
   };
 
+  // Función para manejar cambio en el filtro de estado
+  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setStatusFilter(e.target.value);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Órdenes</h2>
           <p className="text-gray-600">
-            {orders.length} {orders.length === 1 ? 'orden' : 'órdenes'} en total
+            {filteredOrders.length} de {orders.length} {orders.length === 1 ? 'orden' : 'órdenes'}
           </p>
         </div>
         <button 
@@ -96,11 +120,8 @@ const OrdersManager: React.FC = () => {
             />
           </div>
           <select 
-            onChange={(e) => {
-              if (e.target.value) {
-                setSearchTerm(e.target.value);
-              }
-            }}
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
             <option value="">Todos los estados</option>
@@ -111,6 +132,22 @@ const OrdersManager: React.FC = () => {
             <option value="cancelled">Cancelado</option>
           </select>
         </div>
+        
+        {/* Mostrar filtro activo */}
+        {statusFilter && (
+          <div className="mt-3 flex items-center space-x-2">
+            <span className="text-sm text-gray-600">Filtro activo:</span>
+            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(statusFilter as Order['status'])}`}>
+              {getStatusText(statusFilter as Order['status'])}
+            </span>
+            <button
+              onClick={() => setStatusFilter('')}
+              className="text-xs text-red-500 hover:text-red-700"
+            >
+              ✕ Limpiar
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Lista de órdenes */}
@@ -123,14 +160,29 @@ const OrdersManager: React.FC = () => {
         ) : filteredOrders.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg mb-2">
-              {searchTerm ? 'No se encontraron órdenes' : 'No hay órdenes registradas'}
+              {searchTerm || statusFilter ? 'No se encontraron órdenes' : 'No hay órdenes registradas'}
             </div>
             <div className="text-gray-400 text-sm">
-              {searchTerm 
-                ? 'Intenta con otros términos de búsqueda' 
+              {searchTerm && statusFilter 
+                ? 'Intenta con otros términos de búsqueda o cambia el filtro de estado' 
+                : searchTerm
+                ? 'Intenta con otros términos de búsqueda'
+                : statusFilter
+                ? `No hay órdenes con estado "${getStatusText(statusFilter as Order['status'])}"`
                 : 'Las órdenes aparecerán aquí cuando las crees en Recepción'
               }
             </div>
+            {(searchTerm || statusFilter) && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('');
+                }}
+                className="mt-4 text-red-500 hover:text-red-700 text-sm font-medium"
+              >
+                Limpiar todos los filtros
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -214,6 +266,38 @@ const OrdersManager: React.FC = () => {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Estadísticas rápidas */}
+      <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen de Estados</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          {[
+            { status: 'pending', label: 'Pendientes' },
+            { status: 'preparing', label: 'Preparando' },
+            { status: 'ready', label: 'Listos' },
+            { status: 'delivered', label: 'Entregados' },
+            { status: 'cancelled', label: 'Cancelados' }
+          ].map(({ status, label }) => {
+            const count = orders.filter(order => order.status === status).length;
+            return (
+              <div 
+                key={status}
+                className={`text-center p-3 rounded-lg cursor-pointer transition-all ${
+                  statusFilter === status 
+                    ? 'ring-2 ring-red-500 bg-white shadow-md' 
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
+                onClick={() => setStatusFilter(statusFilter === status ? '' : status)}
+              >
+                <div className={`text-2xl font-bold ${getStatusColor(status as Order['status']).split(' ')[1]}`}>
+                  {count}
+                </div>
+                <div className="text-sm text-gray-600">{label}</div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
