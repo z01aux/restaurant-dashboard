@@ -7,48 +7,58 @@ interface OrderTicketProps {
 }
 
 const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
-  // Estilos para el PDF
+  // Estilos para el PDF - unificados con el diseño del ticket de impresión
   const styles = StyleSheet.create({
     page: {
-      flexDirection: 'column',
+      fontFamily: 'Courier',
+      fontSize: 12,
+      lineHeight: 1.2,
+      padding: 10,
+      width: '80mm',
       backgroundColor: '#FFFFFF',
-      padding: 20,
-      fontSize: 10,
-      fontFamily: 'Helvetica',
     },
-    header: {
+    ticket: {
+      width: '100%',
+      maxWidth: '80mm',
+    },
+    center: {
       textAlign: 'center',
-      marginBottom: 10,
-    },
-    title: {
-      fontSize: 14,
-      fontWeight: 'bold',
       marginBottom: 5,
     },
-    subtitle: {
-      fontSize: 10,
-      marginBottom: 2,
+    bold: {
+      fontWeight: 'bold',
+      fontFamily: 'Courier-Bold',
     },
     divider: {
-      borderBottom: '1pt solid #000000',
+      borderBottom: '1pt dashed #000000',
       marginVertical: 5,
     },
-    row: {
+    itemRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       marginBottom: 3,
     },
-    bold: {
-      fontWeight: 'bold',
+    notes: {
+      fontStyle: 'italic',
+      fontSize: 10,
+      marginLeft: 10,
     },
-    section: {
-      marginBottom: 10,
+    orderNotesList: {
+      marginVertical: 5,
+      paddingLeft: 15,
+    },
+    orderNoteItem: {
+      marginBottom: 2,
+    },
+    table: {
+      width: '100%',
+      marginVertical: 5,
     },
     tableHeader: {
       flexDirection: 'row',
       borderBottom: '1pt solid #000000',
-      paddingBottom: 3,
-      marginBottom: 3,
+      paddingBottom: 2,
+      marginBottom: 2,
     },
     tableRow: {
       flexDirection: 'row',
@@ -56,6 +66,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     },
     colQuantity: {
       width: '15%',
+      fontWeight: 'bold',
     },
     colDescription: {
       width: '55%',
@@ -64,16 +75,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       width: '30%',
       textAlign: 'right',
     },
-    notes: {
-      fontStyle: 'italic',
-      fontSize: 8,
-      marginLeft: 10,
-    },
-    orderNotes: {
-      marginTop: 5,
-      marginBottom: 10,
-    },
-    orderNoteItem: {
+    productName: {
+      fontWeight: 'bold',
+      textTransform: 'uppercase',
       marginBottom: 2,
     },
     totalSection: {
@@ -81,15 +85,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       paddingTop: 5,
       marginTop: 5,
     },
-    footer: {
-      textAlign: 'center',
-      marginTop: 15,
-    },
     calculationRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       marginBottom: 2,
-      fontSize: 9,
+      fontSize: 11,
+    },
+    footer: {
+      textAlign: 'center',
+      marginTop: 10,
     }
   });
 
@@ -97,98 +101,99 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   const TicketDocument = () => (
     <Document>
       <Page size={[226.77, 841.89]} style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.title}>MARY'S RESTAURANT</Text>
-          <Text style={styles.subtitle}>Av. Isabel La Católica 1254</Text>
-          <Text style={styles.subtitle}>Tel: 941 778 599</Text>
-          <View style={styles.divider} />
-        </View>
+        <View style={styles.ticket}>
+          {/* Encabezado */}
+          <View style={styles.center}>
+            <Text style={styles.bold}>MARY'S RESTAURANT</Text>
+            <Text>Av. Isabel La Católica 1254</Text>
+            <Text>Tel: 941 778 599</Text>
+            <View style={styles.divider} />
+          </View>
 
-        <View style={styles.section}>
-          <View style={styles.row}>
+          {/* Información de la orden */}
+          <View style={styles.itemRow}>
             <Text style={styles.bold}>ORDEN:</Text>
             <Text>{formatOrderId(order.id)}</Text>
           </View>
-          <View style={styles.row}>
+          <View style={styles.itemRow}>
             <Text style={styles.bold}>TIPO:</Text>
             <Text>{getSourceText(order.source.type)}</Text>
           </View>
-          <View style={styles.row}>
+          <View style={styles.itemRow}>
             <Text style={styles.bold}>FECHA:</Text>
             <Text>{order.createdAt.toLocaleDateString()}</Text>
           </View>
-          <View style={styles.row}>
+          <View style={styles.itemRow}>
             <Text style={styles.bold}>HORA:</Text>
             <Text>{order.createdAt.toLocaleTimeString()}</Text>
           </View>
-        </View>
 
-        <View style={styles.divider} />
+          <View style={styles.divider} />
 
-        <View style={styles.section}>
-          <View style={styles.row}>
-            <Text style={styles.bold}>CLIENTE:</Text>
-            <Text style={styles.bold}>{order.customerName}</Text>
+          {/* Información del cliente */}
+          <View style={[styles.itemRow, styles.bold]}>
+            <Text>CLIENTE:</Text>
+            <Text>{order.customerName}</Text>
           </View>
-          <View style={styles.row}>
+          <View style={styles.itemRow}>
             <Text>TELÉFONO:</Text>
             <Text>{order.phone}</Text>
           </View>
           {order.tableNumber && (
-            <View style={styles.row}>
+            <View style={styles.itemRow}>
               <Text>MESA:</Text>
               <Text>{order.tableNumber}</Text>
             </View>
           )}
           {order.address && (
-            <View style={styles.row}>
+            <View style={styles.itemRow}>
               <Text>DIRECCIÓN:</Text>
               <Text>{order.address}</Text>
             </View>
           )}
-        </View>
 
-        <View style={styles.divider} />
+          <View style={styles.divider} />
 
-        {/* Tabla de productos */}
-        <View style={styles.tableHeader}>
-          <Text style={styles.colQuantity}>Cant</Text>
-          <Text style={styles.colDescription}>Descripción</Text>
-          <Text style={styles.colPrice}>Precio</Text>
-        </View>
-
-        {order.items.map((item, index) => (
-          <View key={index} style={styles.tableRow}>
-            <Text style={styles.colQuantity}>{item.quantity}x</Text>
-            <View style={styles.colDescription}>
-              <Text style={styles.bold}>{item.menuItem.name}</Text>
-              {item.notes && (
-                <Text style={styles.notes}>Nota: {item.notes}</Text>
-              )}
-            </View>
-            <Text style={styles.colPrice}>
-              S/ {(item.menuItem.price * item.quantity).toFixed(2)}
-            </Text>
+          {/* Tabla de productos */}
+          <View style={styles.tableHeader}>
+            <Text style={styles.colQuantity}>Cant</Text>
+            <Text style={styles.colDescription}>Descripción</Text>
+            <Text style={styles.colPrice}>Precio</Text>
           </View>
-        ))}
 
-        {/* Notas del pedido */}
-        {order.notes && (
-          <>
-            <View style={styles.divider} />
-            <View style={styles.orderNotes}>
-              <Text style={styles.bold}>NOTAS DEL PEDIDO:</Text>
-              {formatOrderNotes(order.notes).map((note, index) => (
-                <Text key={index} style={styles.orderNoteItem}>• {note}</Text>
-              ))}
+          {order.items.map((item, index) => (
+            <View key={index} style={styles.tableRow}>
+              <Text style={styles.colQuantity}>{item.quantity}x</Text>
+              <View style={styles.colDescription}>
+                <Text style={styles.productName}>{item.menuItem.name}</Text>
+                {item.notes && (
+                  <Text style={styles.notes}>Nota: {item.notes}</Text>
+                )}
+              </View>
+              <Text style={styles.colPrice}>
+                S/ {(item.menuItem.price * item.quantity).toFixed(2)}
+              </Text>
             </View>
-          </>
-        )}
+          ))}
 
-        <View style={styles.divider} />
+          {/* Notas del pedido */}
+          {order.notes && (
+            <>
+              <View style={styles.divider} />
+              <View>
+                <Text style={styles.bold}>NOTAS DEL PEDIDO:</Text>
+                <View style={styles.orderNotesList}>
+                  {formatOrderNotes(order.notes).map((note, index) => (
+                    <Text key={index} style={styles.orderNoteItem}>• {note}</Text>
+                  ))}
+                </View>
+              </View>
+            </>
+          )}
 
-        {/* Cálculos con IGV */}
-        <View style={styles.totalSection}>
+          <View style={styles.divider} />
+
+          {/* Cálculos con IGV */}
           <View style={styles.calculationRow}>
             <Text>Subtotal:</Text>
             <Text>S/ {(order.total / 1.18).toFixed(2)}</Text>
@@ -197,20 +202,21 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
             <Text>IGV (18%):</Text>
             <Text>S/ {(order.total - (order.total / 1.18)).toFixed(2)}</Text>
           </View>
-          <View style={[styles.row, styles.bold]}>
+          <View style={[styles.itemRow, styles.bold, styles.totalSection]}>
             <Text>TOTAL:</Text>
             <Text>S/ {order.total.toFixed(2)}</Text>
           </View>
-        </View>
 
-        <View style={styles.divider} />
+          <View style={styles.divider} />
 
-        <View style={styles.footer}>
-          <Text style={styles.bold}>¡GRACIAS POR SU PEDIDO!</Text>
-          <Text>*** {getSourceText(order.source.type)} ***</Text>
-          <Text style={{ marginTop: 10, fontSize: 8 }}>
-            {new Date().toLocaleString()}
-          </Text>
+          {/* Pie de página */}
+          <View style={styles.footer}>
+            <Text style={styles.bold}>¡GRACIAS POR SU PEDIDO!</Text>
+            <Text>*** {getSourceText(order.source.type)} ***</Text>
+            <Text style={{ marginTop: 10, fontSize: 10 }}>
+              {new Date().toLocaleString()}
+            </Text>
+          </View>
         </View>
       </Page>
     </Document>
