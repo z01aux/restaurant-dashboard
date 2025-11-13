@@ -4,6 +4,7 @@ import { MenuItem, OrderItem, OrderSource, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
 import { useCustomers } from '../../hooks/useCustomers';
+import { useOrders } from '../../hooks/useOrders';
 
 // Estilos para ocultar scrollbar
 const styles = `
@@ -69,9 +70,10 @@ const OrderReception: React.FC = () => {
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Hooks - ✅ CORREGIDO: removida la variable getCategories que no se usa
+  // Hooks
   const { customers, loading: customersLoading } = useCustomers();
   const { getDailySpecialsByCategory, getAllDailySpecials } = useMenu();
+  const { createOrder } = useOrders();
 
   // Efecto para cerrar sugerencias al hacer click fuera
   useEffect(() => {
@@ -103,15 +105,7 @@ const OrderReception: React.FC = () => {
     }
   }, [customerName, customers]);
 
-  // Cargar pedidos desde localStorage
-  useEffect(() => {
-    const savedOrders = localStorage.getItem('restaurant-orders');
-    if (savedOrders) {
-      console.log('Pedidos cargados desde localStorage:', JSON.parse(savedOrders).length);
-    }
-  }, []);
-
-  // Función para seleccionar un cliente (CORREGIDA PARA MÓVIL)
+  // Función para seleccionar un cliente
   const selectCustomer = (customer: any) => {
     setCustomerName(customer.name);
     setPhone(customer.phone || '');
@@ -155,17 +149,16 @@ const OrderReception: React.FC = () => {
     }
   };
 
-  // CORREGIDO: Aumentado el delay para móvil
   const handleInputBlur = () => {
     setTimeout(() => {
       setShowSuggestions(false);
     }, 300);
   };
 
-  // Obtener items del menú - ✅ CORREGIDO: usando las funciones correctas
+  // Obtener items del menú
   const allMenuItems = getAllDailySpecials();
   
-  // ✅ CORREGIDO: Definir categorías en el orden deseado
+  // Definir categorías en el orden deseado
   const categories = ['Entradas', 'Platos de Fondo', 'Bebidas'];
 
   const getItemsToShow = () => {
@@ -246,68 +239,83 @@ const OrderReception: React.FC = () => {
     return cart.reduce((total, item) => total + (item.menuItem.price * item.quantity), 0);
   };
 
-  // Funciones de órdenes
-  const saveOrderToStorage = (order: Order) => {
-    const existingOrders = localStorage.getItem('restaurant-orders');
-    const orders = existingOrders ? JSON.parse(existingOrders) : [];
-    orders.push(order);
-    localStorage.setItem('restaurant-orders', JSON.stringify(orders));
-    console.log('Pedido guardado en localStorage:', order);
-  };
-
-  const createOrder = () => {
+  // Crear orden en Supabase
+  const handleCreateOrder = async () => {
     if (cart.length === 0) {
       showToast('El pedido está vacío', 'error');
       return;
     }
 
-    const orderSource: OrderSource = {
-      type: activeTab,
-      ...(activeTab === 'delivery' && { deliveryAddress: address })
-    };
-
-    const newOrder: Order = {
-      id: `ORD-${Date.now()}`,
-      items: [...cart],
-      status: 'pending',
-      createdAt: new Date(),
-      total: getTotal(),
-      customerName: customerName,
-      phone: phone,
-      address: activeTab === 'delivery' ? address : undefined,
-      source: orderSource,
-      notes: orderNotes,
-    };
-
-    setLastOrder(newOrder);
-    setShowConfirmation(true);
-    return newOrder;
-  };
-
-  const confirmOrder = () => {
-    if (lastOrder) {
-      saveOrderToStorage(lastOrder);
-      setCart([]);
-      setCustomerName('');
-      setPhone('');
-      setAddress('');
-      setOrderNotes('');
-      setShowConfirmation(false);
-      setShowCartDrawer(false);
-      setSelectedCustomer(null);
-      
-      setTimeout(() => {
-        const printButton = document.querySelector(`[data-order-id="${lastOrder.id}"]`) as HTMLButtonElement;
-        if (printButton) {
-          printButton.click();
-        }
-      }, 500);
+    if (!customerName || !phone) {
+      showToast('Por favor completa los datos del cliente', 'error');
+      return;
     }
-  };
 
-  const cancelOrder = () => {
-    setShowConfirmation(false);
-    setLastOrder(null);
+    try {
+      const result = await createOrder({
+        customerName: customerName,
+        phone: phone,
+        address: activeTab === 'delivery' ? address : undefined,
+        tableNumber: activeTab === 'walk-in' ? '1' : undefined,
+        source: {
+          type: activeTab,
+          ...(activeTab === 'delivery' && { deliveryAddress: address })
+        },
+        notes: orderNotes,
+        items: cart.map(item => ({
+          menuItem: {
+            id: item.menuItem.id,
+            name: item.menuItem.name,
+            price: item.menuItem.price,
+          },
+          quantity: item.quantity,
+          notes: item.notes,
+        }))
+      });
+
+      if (result.success) {
+        showToast('✅ Orden creada exitosamente', 'success');
+        
+        // Crear objeto Order para el ticket
+        const newOrder: Order = {
+          id: result.order.id,
+          items: cart,
+          status: 'pending',
+          createdAt: new Date(),
+          total: getTotal(),
+          customerName: customerName,
+          phone: phone,
+          address: activeTab === 'delivery' ? address : undefined,
+          source: {
+            type: activeTab,
+            ...(activeTab === 'delivery' && { deliveryAddress: address })
+          },
+          notes: orderNotes,
+          tableNumber: activeTab === 'walk-in' ? '1' : undefined,
+        };
+
+        setLastOrder(newOrder);
+        setCart([]);
+        setCustomerName('');
+        setPhone('');
+        setAddress('');
+        setOrderNotes('');
+        setSelectedCustomer(null);
+        setShowCartDrawer(false);
+        
+        // Imprimir ticket
+        setTimeout(() => {
+          const printButton = document.querySelector(`[data-order-id="${result.order.id}"]`) as HTMLButtonElement;
+          if (printButton) {
+            printButton.click();
+          }
+        }, 500);
+      } else {
+        showToast('❌ Error al crear orden: ' + result.error, 'error');
+      }
+    } catch (error: any) {
+      showToast('❌ Error: ' + error.message, 'error');
+    }
   };
 
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
@@ -361,41 +369,6 @@ const OrderReception: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Modal de Confirmación */}
-          {showConfirmation && lastOrder && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-md mx-auto">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <ShoppingBag className="h-8 w-8 text-red-500" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">¿Confirmar Pedido?</h3>
-                  <p className="text-gray-600 mb-3 sm:mb-4 text-sm">
-                    Pedido <strong>{lastOrder.id}</strong> para <strong>{lastOrder.customerName}</strong>
-                  </p>
-                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
-                    <p className="font-semibold text-base sm:text-lg">Total: S/ {lastOrder.total.toFixed(2)}</p>
-                    <p className="text-xs sm:text-sm text-gray-600">{lastOrder.items.length} items</p>
-                  </div>
-                  <div className="flex space-x-2 sm:space-x-3">
-                    <button
-                      onClick={cancelOrder}
-                      className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                    >
-                      Revisar
-                    </button>
-                    <button
-                      onClick={confirmOrder}
-                      className="flex-1 px-3 sm:px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
-                    >
-                      Confirmar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Drawer del Carrito Móvil */}
           {showCartDrawer && (
@@ -492,7 +465,7 @@ const OrderReception: React.FC = () => {
                           Vaciar Carrito
                         </button>
                         <button
-                          onClick={createOrder}
+                          onClick={handleCreateOrder}
                           disabled={!customerName || !phone}
                           className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold text-lg"
                         >
@@ -536,7 +509,7 @@ const OrderReception: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Nombre con Autocompletado CORREGIDO */}
+                {/* Nombre con Autocompletado */}
                 <div className="relative">
                   <input
                     ref={inputRef}
@@ -550,7 +523,7 @@ const OrderReception: React.FC = () => {
                     required
                   />
                   
-                  {/* Lista de Sugerencias Móvil CORREGIDA */}
+                  {/* Lista de Sugerencias Móvil */}
                   {showSuggestions && customerSuggestions.length > 0 && (
                     <div 
                       ref={suggestionsRef}
@@ -781,7 +754,7 @@ const OrderReception: React.FC = () => {
                 {/* Formulario del Cliente */}
                 <div className="md:col-span-3">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Campo de Nombre con Autocompletado CORREGIDO */}
+                    {/* Campo de Nombre con Autocompletado */}
                     <div className="relative md:col-span-1">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Nombre del Cliente *
@@ -805,7 +778,7 @@ const OrderReception: React.FC = () => {
                         )}
                       </div>
 
-                      {/* Lista de Sugerencias Desktop CORREGIDA */}
+                      {/* Lista de Sugerencias Desktop */}
                       {showSuggestions && customerSuggestions.length > 0 && (
                         <div 
                           ref={suggestionsRef}
@@ -1158,7 +1131,7 @@ const OrderReception: React.FC = () => {
                             Vaciar Carrito
                           </button>
                           <button
-                            onClick={createOrder}
+                            onClick={handleCreateOrder}
                             disabled={!customerName || !phone}
                             className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
                           >
