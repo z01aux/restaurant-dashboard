@@ -97,6 +97,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginLeft: 15,
       marginBottom: 2,
     },
+    productsContainer: {
+      marginBottom: 10,
+    },
     footer: {
       marginTop: 10,
       textAlign: 'center',
@@ -249,7 +252,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         <View style={kitchenStyles.divider} />
 
         {/* Lista de productos */}
-        <View style={kitchenStyles.section}>
+        <View style={kitchenStyles.productsContainer}>
           {order.items.map((item, index) => (
             <View key={index}>
               <View style={kitchenStyles.productRow}>
@@ -279,7 +282,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[226.77, 841.89]} style={normalStyles.page}>
-        {/* ... (tu código original del ticket normal) ... */}
         <View style={normalStyles.header}>
           <Text style={normalStyles.title}>MARY'S RESTAURANT</Text>
           <Text style={normalStyles.subtitle}>Av. Isabel La Católica 1254</Text>
@@ -594,6 +596,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       `;
     } else {
       // TICKET NORMAL (tu código original)
+      const subtotal = order.total / 1.18;
+      const igv = order.total - subtotal;
+      
       return `
         <div class="ticket">
           <div class="center">
@@ -603,7 +608,90 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
             <div class="divider"></div>
           </div>
           
-          <!-- ... (resto del ticket normal) ... -->
+          <div class="info-row">
+            <span class="bold">ORDEN:</span>
+            <span>${formatOrderId(order.id)}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">TIPO:</span>
+            <span>${getSourceText(order.source.type)}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">FECHA:</span>
+            <span>${order.createdAt.toLocaleDateString()}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">HORA:</span>
+            <span>${order.createdAt.toLocaleTimeString()}</span>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="info-row bold">
+            <span>CLIENTE:</span>
+            <span>${order.customerName.toUpperCase()}</span>
+          </div>
+          <div class="info-row">
+            <span>TELÉFONO:</span>
+            <span>${order.phone}</span>
+          </div>
+          ${order.tableNumber ? `
+          <div class="info-row">
+            <span>MESA:</span>
+            <span>${order.tableNumber}</span>
+          </div>
+          ` : ''}
+          
+          <div class="divider"></div>
+          
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="text-align: left; padding: 2px 0; border-bottom: 1px solid #000;">Cant</th>
+                <th style="text-align: left; padding: 2px 0; border-bottom: 1px solid #000;">Descripción</th>
+                <th style="text-align: right; padding: 2px 0; border-bottom: 1px solid #000;">Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items.map(item => `
+                <tr>
+                  <td style="padding: 2px 0; font-weight: bold;">${item.quantity}x</td>
+                  <td style="padding: 2px 0;">
+                    <div style="font-weight: bold; text-transform: uppercase;">${item.menuItem.name}</div>
+                    ${item.notes ? `<div style="font-style: italic; font-size: 10px; margin-left: 10px;">Nota: ${item.notes}</div>` : ''}
+                  </td>
+                  <td style="text-align: right; padding: 2px 0;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div style="font-size: 11px;">
+            <div class="info-row">
+              <span>Subtotal:</span>
+              <span>S/ ${subtotal.toFixed(2)}</span>
+            </div>
+            <div class="info-row">
+              <span>IGV (18%):</span>
+              <span>S/ ${igv.toFixed(2)}</span>
+            </div>
+            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px; font-weight: bold;">
+              <span>TOTAL:</span>
+              <span>S/ ${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="center">
+            <div class="bold">¡GRACIAS POR SU PEDIDO!</div>
+            <div>*** ${getSourceText(order.source.type)} ***</div>
+            <div style="margin-top: 10px; font-size: 10px;">
+              ${new Date().toLocaleString()}
+            </div>
+          </div>
         </div>
       `;
     }
