@@ -1,23 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react'; // ✅ REMOVIDO Search que no se usa
+import React, { useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Order } from '../../types';
 import OrderTicket from './OrderTicket';
+import { useOrders } from '../../hooks/useOrders';
+import { useAuth } from '../../hooks/useAuth';
 
 const OrdersManager: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Cargar órdenes desde localStorage
-  useEffect(() => {
-    const savedOrders = localStorage.getItem('restaurant-orders');
-    if (savedOrders) {
-      const parsedOrders = JSON.parse(savedOrders).map((order: any) => ({
-        ...order,
-        createdAt: new Date(order.createdAt)
-      }));
-      setOrders(parsedOrders);
-    }
-  }, []);
+  const { user } = useAuth();
+  const { 
+    orders, 
+    loading, 
+    updateOrderStatus, 
+    deleteOrder
+  } = useOrders();
 
   const filteredOrders = orders.filter(order =>
     order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -25,7 +21,6 @@ const OrdersManager: React.FC = () => {
     order.phone?.includes(searchTerm)
   );
 
-  // ✅ CORREGIDO: Incluye 'cancelled' en el objeto colors
   const getStatusColor = (status: Order['status']) => {
     const colors = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -46,12 +41,27 @@ const OrdersManager: React.FC = () => {
     return sourceMap[sourceType] || sourceType;
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    const updatedOrders = orders.map(order =>
-      order.id === orderId ? { ...order, status: newStatus } : order
-    );
-    setOrders(updatedOrders);
-    localStorage.setItem('restaurant-orders', JSON.stringify(updatedOrders));
+  const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
+    const result = await updateOrderStatus(orderId, newStatus);
+    if (!result.success) {
+      alert('Error al actualizar estado: ' + result.error);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
+    if (window.confirm(`¿Estás seguro de que quieres eliminar la orden ${orderNumber}? Esta acción no se puede deshacer.`)) {
+      const result = await deleteOrder(orderId);
+      if (result.success) {
+        alert('✅ Orden eliminada correctamente');
+      } else {
+        alert('❌ Error al eliminar orden: ' + result.error);
+      }
+    }
+  };
+
+  // Función para formatear el ID de la orden
+  const formatOrderId = (orderId: string) => {
+    return `ORD-${orderId.slice(-8).toUpperCase()}`;
   };
 
   return (
@@ -105,7 +115,12 @@ const OrdersManager: React.FC = () => {
 
       {/* Lista de órdenes */}
       <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-sm border border-white/20 overflow-hidden">
-        {filteredOrders.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+            <p className="text-gray-600 mt-2">Cargando órdenes...</p>
+          </div>
+        ) : filteredOrders.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg mb-2">
               {searchTerm ? 'No se encontraron órdenes' : 'No hay órdenes registradas'}
@@ -146,9 +161,9 @@ const OrdersManager: React.FC = () => {
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{order.id}</div>
+                      <div className="text-sm font-medium text-gray-900">{formatOrderId(order.id)}</div>
                       <div className="text-sm text-gray-500">
-                        {order.createdAt.toLocaleTimeString()}
+                        {order.createdAt.toLocaleDateString()} {order.createdAt.toLocaleTimeString()}
                       </div>
                     </td>
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
@@ -171,7 +186,7 @@ const OrdersManager: React.FC = () => {
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                       <select
                         value={order.status}
-                        onChange={(e) => updateOrderStatus(order.id, e.target.value as Order['status'])}
+                        onChange={(e) => handleStatusUpdate(order.id, e.target.value as Order['status'])}
                         className={`text-xs font-semibold rounded-full px-2 py-1 border-0 ${getStatusColor(order.status)}`}
                       >
                         <option value="pending">Pendiente</option>
@@ -183,6 +198,15 @@ const OrdersManager: React.FC = () => {
                     </td>
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <OrderTicket order={order} />
+                      {user?.role === 'admin' && (
+                        <button
+                          onClick={() => handleDeleteOrder(order.id, formatOrderId(order.id))}
+                          className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar orden"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
