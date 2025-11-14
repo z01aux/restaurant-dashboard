@@ -7,21 +7,21 @@ import { useAuth } from '../../hooks/useAuth';
 
 const OrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>(''); // Nuevo estado para filtro de estado
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const { user } = useAuth();
   const { 
     orders, 
     loading, 
     updateOrderStatus, 
     deleteOrder
-    // ELIMINADO: fetchOrders ya que no se usa
   } = useOrders();
 
   // Filtrar órdenes por búsqueda Y por estado
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.kitchenNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.phone?.includes(searchTerm);
     
     const matchesStatus = statusFilter === '' || order.status === statusFilter;
@@ -60,6 +60,11 @@ const OrdersManager: React.FC = () => {
     return sourceMap[sourceType] || sourceType;
   };
 
+  // Función para obtener número de orden para display
+  const getDisplayOrderNumber = (order: Order) => {
+    return order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`;
+  };
+
   const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
     const result = await updateOrderStatus(orderId, newStatus);
     if (!result.success) {
@@ -76,11 +81,6 @@ const OrdersManager: React.FC = () => {
         alert('❌ Error al eliminar orden: ' + result.error);
       }
     }
-  };
-
-  // Función para formatear el ID de la orden
-  const formatOrderId = (orderId: string) => {
-    return `ORD-${orderId.slice(-8).toUpperCase()}`;
   };
 
   // Función para manejar cambio en el filtro de estado
@@ -115,7 +115,7 @@ const OrdersManager: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar órdenes por cliente o ID..."
+              placeholder="Buscar órdenes por cliente, número de orden..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
             />
           </div>
@@ -213,10 +213,15 @@ const OrdersManager: React.FC = () => {
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{formatOrderId(order.id)}</div>
+                      <div className="text-sm font-medium text-gray-900">{getDisplayOrderNumber(order)}</div>
                       <div className="text-sm text-gray-500">
                         {order.createdAt.toLocaleDateString()} {order.createdAt.toLocaleTimeString()}
                       </div>
+                      {order.kitchenNumber && (
+                        <div className="text-xs text-blue-600">
+                          Cocina: {order.kitchenNumber}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
@@ -252,7 +257,7 @@ const OrdersManager: React.FC = () => {
                       <OrderTicket order={order} />
                       {user?.role === 'admin' && (
                         <button
-                          onClick={() => handleDeleteOrder(order.id, formatOrderId(order.id))}
+                          onClick={() => handleDeleteOrder(order.id, getDisplayOrderNumber(order))}
                           className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
                           title="Eliminar orden"
                         >
