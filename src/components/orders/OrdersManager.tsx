@@ -230,20 +230,23 @@ const OrdersManager: React.FC = () => {
                         {/* MOSTRAR SOLO EL NÚMERO PRINCIPAL SEGÚN EL TIPO DE PEDIDO */}
                         <div className="flex items-center space-x-2 mb-1">
                           <div className={`text-sm font-medium ${
-                            numberType === 'kitchen' ? 'text-green-600' : 'text-gray-900'
+                            numberType === 'kitchen' ? 'text-green-600' : 'text-blue-600'
                           }`}>
                             {displayNumber}
                           </div>
-                          {numberType === 'kitchen' && (
+                          {numberType === 'kitchen' ? (
                             <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">
                               COCINA
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
+                              NORMAL
                             </span>
                           )}
                         </div>
                         <div className="text-sm text-gray-500">
                           {order.createdAt.toLocaleDateString()} {order.createdAt.toLocaleTimeString()}
                         </div>
-                        {/* SOLO MOSTRAR EL NÚMERO PRINCIPAL, NO EL ALTERNO */}
                       </td>
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
