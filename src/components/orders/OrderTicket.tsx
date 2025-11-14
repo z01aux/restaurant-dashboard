@@ -218,13 +218,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   });
 
-  // Componente del documento PDF para COCINA
+  // Componente del documento PDF para COCINA (MODIFICADO)
   const KitchenTicketDocument = () => (
     <Document>
       <Page size={[226.77, 841.89]} style={kitchenStyles.page}>
-        {/* Header */}
+        {/* Header MODIFICADO - Nombre del cliente en lugar del restaurante */}
         <View style={kitchenStyles.header}>
-          <Text style={kitchenStyles.restaurantName}>MARY'S RESTAURANT</Text>
+          <Text style={kitchenStyles.restaurantName}>{order.customerName.toUpperCase()}</Text>
           <Text style={kitchenStyles.area}>** COCINA **</Text>
         </View>
 
@@ -256,8 +256,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 
         <View style={kitchenStyles.divider} />
 
-        {/* Header de productos */}
-        <Text style={kitchenStyles.productsHeader}>PRODUCTOS</Text>
+        {/* Header de productos MODIFICADO - "DESCRIPCION" en lugar de "PRODUCTOS" */}
+        <Text style={kitchenStyles.productsHeader}>DESCRIPCION</Text>
         
         <View style={kitchenStyles.divider} />
 
@@ -278,17 +278,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 
         <View style={kitchenStyles.divider} />
 
-        {/* Footer con asteriscos */}
+        {/* Footer MODIFICADO - Solo una línea de asteriscos */}
         <View style={kitchenStyles.footer}>
-          <Text style={kitchenStyles.asteriskLine}>********************************</Text>
-          <Text style={kitchenStyles.asteriskLine}>********************************</Text>
           <Text style={kitchenStyles.asteriskLine}>********************************</Text>
         </View>
       </Page>
     </Document>
   );
 
-  // Componente del documento PDF normal
+  // Componente del documento PDF normal (SIN CAMBIOS)
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[226.77, 841.89]} style={normalStyles.page}>
@@ -548,14 +546,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar contenido HTML para impresión
+  // Generar contenido HTML para impresión (MODIFICADO para ticket cocina)
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
-      // TICKET COCINA
+      // TICKET COCINA MODIFICADO
       return `
         <div class="ticket">
           <div class="center">
-            <div class="bold uppercase">MARY'S RESTAURANT</div>
+            <div class="bold uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
             <div class="bold">** COCINA **</div>
             <div class="divider"></div>
           </div>
@@ -583,7 +581,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="divider"></div>
           
-          <div class="products-header">PRODUCTOS</div>
+          <div class="products-header">DESCRIPCION</div>
           
           <div class="divider"></div>
           
@@ -599,13 +597,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="center">
             <div class="asterisk-line">********************************</div>
-            <div class="asterisk-line">********************************</div>
-            <div class="asterisk-line">********************************</div>
           </div>
         </div>
       `;
     } else {
-      // TICKET NORMAL
+      // TICKET NORMAL (SIN CAMBIOS)
       const subtotal = order.total / 1.18;
       const igv = order.total - subtotal;
       
