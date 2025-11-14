@@ -66,6 +66,10 @@ const OrderReception: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
+  // Estado para edición de precios
+  const [editingPrices, setEditingPrices] = useState<{ [key: string]: boolean }>({});
+  const [tempPrices, setTempPrices] = useState<{ [key: string]: number }>({});
+
   // Refs para manejar clicks
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -240,6 +244,39 @@ const OrderReception: React.FC = () => {
     return cart.reduce((total, item) => total + (item.menuItem.price * item.quantity), 0);
   };
 
+  // Funciones para edición de precios
+  const enablePriceEdit = (itemId: string, currentPrice: number) => {
+    setEditingPrices(prev => ({ ...prev, [itemId]: true }));
+    setTempPrices(prev => ({ ...prev, [itemId]: currentPrice }));
+  };
+
+  const savePriceEdit = (itemId: string) => {
+    setCart(prev =>
+      prev.map(item =>
+        item.menuItem.id === itemId
+          ? {
+              ...item,
+              menuItem: {
+                ...item.menuItem,
+                price: tempPrices[itemId]
+              }
+            }
+          : item
+      )
+    );
+    setEditingPrices(prev => ({ ...prev, [itemId]: false }));
+    showToast('Precio actualizado', 'success');
+  };
+
+  const cancelPriceEdit = (itemId: string) => {
+    setEditingPrices(prev => ({ ...prev, [itemId]: false }));
+  };
+
+  const handleTempPriceChange = (itemId: string, value: string) => {
+    const price = parseFloat(value) || 0;
+    setTempPrices(prev => ({ ...prev, [itemId]: price }));
+  };
+
   // Crear orden en Supabase
   const handleCreateOrder = async () => {
     if (cart.length === 0) {
@@ -315,6 +352,8 @@ const OrderReception: React.FC = () => {
         setTableNumber('');
         setOrderNotes('');
         setSelectedCustomer(null);
+        setEditingPrices({});
+        setTempPrices({});
         setShowCartDrawer(false);
         
         // Imprimir ticket
@@ -413,6 +452,15 @@ const OrderReception: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-3">
+                      {/* Información de precios ajustables */}
+                      {activeTab === 'walk-in' && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <div className="text-blue-800 text-sm">
+                            <strong>💡 Precios ajustables:</strong> Puedes modificar el precio de Entradas y Platos de Fondo.
+                          </div>
+                        </div>
+                      )}
+
                       {cart.map((item, index) => (
                         <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                           <div className="flex items-center justify-between">
@@ -420,11 +468,57 @@ const OrderReception: React.FC = () => {
                               <div className="font-medium text-gray-900 text-sm">
                                 {item.menuItem.name}
                               </div>
-                              <div className="text-gray-600 text-xs">
-                                S/ {item.menuItem.price.toFixed(2)} c/u
-                              </div>
+                              
+                              {/* Controles de precio móvil - SOLO para Entradas y Platos de Fondo en Local */}
+                              {activeTab === 'walk-in' && 
+                              (item.menuItem.category === 'Entradas' || item.menuItem.category === 'Platos de Fondo') ? (
+                                <div className="mt-2">
+                                  {editingPrices[item.menuItem.id] ? (
+                                    <div className="flex items-center space-x-2">
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={tempPrices[item.menuItem.id] || item.menuItem.price}
+                                        onChange={(e) => handleTempPriceChange(item.menuItem.id, e.target.value)}
+                                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500"
+                                        placeholder="Precio"
+                                      />
+                                      <button
+                                        onClick={() => savePriceEdit(item.menuItem.id)}
+                                        className="text-green-600 hover:text-green-800 text-sm font-medium px-2"
+                                      >
+                                        ✅
+                                      </button>
+                                      <button
+                                        onClick={() => cancelPriceEdit(item.menuItem.id)}
+                                        className="text-red-600 hover:text-red-800 text-sm font-medium px-2"
+                                      >
+                                        ❌
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600 text-xs">
+                                        S/ {item.menuItem.price.toFixed(2)} c/u
+                                      </span>
+                                      <button
+                                        onClick={() => enablePriceEdit(item.menuItem.id, item.menuItem.price)}
+                                        className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                      >
+                                        ✏️ Editar
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-gray-600 text-xs">
+                                  S/ {item.menuItem.price.toFixed(2)} c/u
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center space-x-3">
+                            
+                            <div className="flex items-center space-x-3 ml-3">
                               <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
                                 <button
                                   onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
@@ -1113,6 +1207,15 @@ const OrderReception: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      {/* Información de precios ajustables */}
+                      {activeTab === 'walk-in' && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <div className="text-blue-800 text-sm">
+                            <strong>💡 Precios ajustables:</strong> Puedes modificar el precio de Entradas y Platos de Fondo para pedidos en local.
+                          </div>
+                        </div>
+                      )}
+
                       {/* Lista de Items */}
                       <div className="space-y-3 max-h-96 overflow-y-auto">
                         {cart.map((item, index) => (
@@ -1122,10 +1225,56 @@ const OrderReception: React.FC = () => {
                                 <div className="font-medium text-gray-900 text-sm break-words">
                                   {item.menuItem.name}
                                 </div>
-                                <div className="text-gray-600 text-xs mt-1">
-                                  S/ {item.menuItem.price.toFixed(2)} c/u
-                                </div>
+                                
+                                {/* Controles de precio - SOLO para Entradas y Platos de Fondo en Local */}
+                                {activeTab === 'walk-in' && 
+                                (item.menuItem.category === 'Entradas' || item.menuItem.category === 'Platos de Fondo') ? (
+                                  <div className="mt-2">
+                                    {editingPrices[item.menuItem.id] ? (
+                                      <div className="flex items-center space-x-2">
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={tempPrices[item.menuItem.id] || item.menuItem.price}
+                                          onChange={(e) => handleTempPriceChange(item.menuItem.id, e.target.value)}
+                                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500"
+                                          placeholder="Precio"
+                                        />
+                                        <button
+                                          onClick={() => savePriceEdit(item.menuItem.id)}
+                                          className="text-green-600 hover:text-green-800 text-sm font-medium"
+                                        >
+                                          ✅
+                                        </button>
+                                        <button
+                                          onClick={() => cancelPriceEdit(item.menuItem.id)}
+                                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                                        >
+                                          ❌
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-gray-600 text-xs">
+                                          Precio: S/ {item.menuItem.price.toFixed(2)}
+                                        </span>
+                                        <button
+                                          onClick={() => enablePriceEdit(item.menuItem.id, item.menuItem.price)}
+                                          className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                        >
+                                          ✏️ Editar
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="text-gray-600 text-xs mt-1">
+                                    S/ {item.menuItem.price.toFixed(2)} c/u
+                                  </div>
+                                )}
                               </div>
+                              
                               <div className="flex items-center space-x-2 flex-shrink-0">
                                 <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
                                   <button
@@ -1150,6 +1299,7 @@ const OrderReception: React.FC = () => {
                                 </button>
                               </div>
                             </div>
+                            
                             <div className="text-right text-sm font-semibold text-red-600">
                               S/ {(item.menuItem.price * item.quantity).toFixed(2)}
                             </div>
