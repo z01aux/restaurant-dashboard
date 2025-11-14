@@ -32,6 +32,8 @@ export const useOrders = () => {
 
     return {
       id: dbOrder.id,
+      orderNumber: dbOrder.order_number,      // Nuevo campo
+      kitchenNumber: dbOrder.kitchen_number,  // Nuevo campo
       customerName: dbOrder.customer_name,
       phone: dbOrder.phone,
       address: dbOrder.address,
@@ -111,7 +113,11 @@ export const useOrders = () => {
           total: total,
           status: 'pending',
         }])
-        .select()
+        .select(`
+          *,
+          order_number,
+          kitchen_number
+        `)
         .single();
 
       if (orderError) throw orderError;
