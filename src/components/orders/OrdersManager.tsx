@@ -42,17 +42,6 @@ const OrdersManager: React.FC = () => {
     return colors[status];
   };
 
-  const getStatusText = (status: Order['status']) => {
-    const statusMap = {
-      pending: 'Pendiente',
-      preparing: 'Preparando',
-      ready: 'Listo',
-      delivered: 'Entregado',
-      cancelled: 'Cancelado'
-    };
-    return statusMap[status];
-  };
-
   const getPaymentColor = (paymentMethod?: string) => {
     const colors = {
       'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
