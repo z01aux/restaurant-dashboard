@@ -34,6 +34,19 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     return order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`;
   };
 
+  // Función para obtener texto del método de pago
+  const getPaymentText = () => {
+    if (order.paymentMethod) {
+      const paymentMap = {
+        'EFECTIVO': 'EFECTIVO',
+        'YAPE/PLIN': 'YAPE/PLIN', 
+        'TARJETA': 'TARJETA'
+      };
+      return paymentMap[order.paymentMethod];
+    }
+    return 'NO APLICA';
+  };
+
   // Estilos para el PDF de COCINA (sin precios)
   const kitchenStyles = StyleSheet.create({
     page: {
@@ -218,11 +231,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   });
 
-  // Componente del documento PDF para COCINA (MODIFICADO)
+  // Componente del documento PDF para COCINA
   const KitchenTicketDocument = () => (
     <Document>
       <Page size={[226.77, 841.89]} style={kitchenStyles.page}>
-        {/* Header MODIFICADO - Nombre del cliente en lugar del restaurante */}
+        {/* Header - Nombre del cliente en lugar del restaurante */}
         <View style={kitchenStyles.header}>
           <Text style={kitchenStyles.restaurantName}>{order.customerName.toUpperCase()}</Text>
           <Text style={kitchenStyles.area}>** COCINA **</Text>
@@ -256,7 +269,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 
         <View style={kitchenStyles.divider} />
 
-        {/* Header de productos MODIFICADO - "DESCRIPCION" en lugar de "PRODUCTOS" */}
+        {/* Header de productos - "DESCRIPCION" en lugar de "PRODUCTOS" */}
         <Text style={kitchenStyles.productsHeader}>DESCRIPCION</Text>
         
         <View style={kitchenStyles.divider} />
@@ -278,7 +291,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 
         <View style={kitchenStyles.divider} />
 
-        {/* Footer MODIFICADO - Solo una línea de asteriscos */}
+        {/* Footer - Solo una línea de asteriscos */}
         <View style={kitchenStyles.footer}>
           <Text style={kitchenStyles.asteriskLine}>********************************</Text>
         </View>
@@ -286,7 +299,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     </Document>
   );
 
-  // Componente del documento PDF normal (ACTUALIZADO para mostrar mesa)
+  // Componente del documento PDF normal (ACTUALIZADO para mostrar método de pago)
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[226.77, 841.89]} style={normalStyles.page}>
@@ -314,6 +327,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <View style={normalStyles.row}>
             <Text style={normalStyles.bold}>HORA:</Text>
             <Text>{order.createdAt.toLocaleTimeString()}</Text>
+          </View>
+          {/* Nuevo: Método de Pago */}
+          <View style={normalStyles.row}>
+            <Text style={normalStyles.bold}>PAGO:</Text>
+            <Text>{getPaymentText()}</Text>
           </View>
         </View>
 
@@ -546,10 +564,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar contenido HTML para impresión (MODIFICADO para ambos tickets)
+  // Generar contenido HTML para impresión (ACTUALIZADO para mostrar método de pago)
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
-      // TICKET COCINA MODIFICADO
+      // TICKET COCINA
       return `
         <div class="ticket">
           <div class="center">
@@ -601,7 +619,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         </div>
       `;
     } else {
-      // TICKET NORMAL ACTUALIZADO con mesa
+      // TICKET NORMAL ACTUALIZADO con método de pago
       const subtotal = order.total / 1.18;
       const igv = order.total - subtotal;
       
@@ -629,6 +647,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <div class="info-row">
             <span class="bold">HORA:</span>
             <span>${order.createdAt.toLocaleTimeString()}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">PAGO:</span>
+            <span>${getPaymentText()}</span>
           </div>
           
           <div class="divider"></div>
