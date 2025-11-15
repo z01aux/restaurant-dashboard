@@ -36,7 +36,7 @@ export const useMenu = () => {
             category: item.category,
             type: item.type,
             available: item.available,
-            isDailySpecial: item.is_daily_special // Nuevo campo
+            isDailySpecial: item.is_daily_special // Usando el campo correcto de la base de datos
           };
           
           // Todos los productos
