@@ -47,21 +47,20 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     return 'NO APLICA';
   };
 
-  // Estilos para el PDF de COCINA (sin precios) - SOLO CAMBIO EL ANCHO
+  // Estilos para el PDF de COCINA (sin precios) - VERSIÓN ANTERIOR
   const kitchenStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
       backgroundColor: '#FFFFFF',
-      padding: 10, // Reducido ligeramente
+      padding: 15,
       fontSize: 10,
       fontFamily: 'Helvetica-Bold',
-      width: 200, // Ancho ajustado para 72mm
     },
     header: {
       textAlign: 'center',
-      marginBottom: 8,
+      marginBottom: 10,
       borderBottom: '2pt solid #000000',
-      paddingBottom: 6,
+      paddingBottom: 8,
     },
     restaurantName: {
       fontSize: 16,
@@ -118,7 +117,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     notes: {
       fontStyle: 'italic',
       fontSize: 8,
-      marginLeft: 12,
+      marginLeft: 15,
       marginBottom: 2,
     },
     productsContainer: {
@@ -136,15 +135,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   });
 
-  // Estilos normales para otros tipos de pedido - SOLO CAMBIO EL ANCHO
+  // Estilos normales para otros tipos de pedido - VERSIÓN ANTERIOR
   const normalStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
       backgroundColor: '#FFFFFF',
-      padding: 15, // Reducido ligeramente
+      padding: 20,
       fontSize: 10,
       fontFamily: 'Helvetica',
-      width: 200, // Ancho ajustado para 72mm
     },
     header: {
       textAlign: 'center',
@@ -207,7 +205,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     notes: {
       fontStyle: 'italic',
       fontSize: 8,
-      marginLeft: 8,
+      marginLeft: 10,
     },
     calculations: {
       marginTop: 5,
@@ -233,10 +231,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   });
 
-  // Componente del documento PDF para COCINA
+  // Componente del documento PDF para COCINA - VERSIÓN ANTERIOR
   const KitchenTicketDocument = () => (
     <Document>
-      <Page size={[200]} style={kitchenStyles.page}> {/* Ancho ajustado */}
+      <Page size={[226.77, 841.89]} style={kitchenStyles.page}>
         {/* Header - Nombre del cliente en lugar del restaurante */}
         <View style={kitchenStyles.header}>
           <Text style={kitchenStyles.restaurantName}>{order.customerName.toUpperCase()}</Text>
@@ -301,10 +299,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     </Document>
   );
 
-  // Componente del documento PDF normal (ACTUALIZADO para mostrar método de pago)
+  // Componente del documento PDF normal - VERSIÓN ANTERIOR
   const NormalTicketDocument = () => (
     <Document>
-      <Page size={[200]} style={normalStyles.page}> {/* Ancho ajustado */}
+      <Page size={[226.77, 841.89]} style={normalStyles.page}>
         <View style={normalStyles.header}>
           <Text style={normalStyles.title}>MARY'S RESTAURANT</Text>
           <Text style={normalStyles.subtitle}>Av. Isabel La Católica 1254</Text>
@@ -435,7 +433,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para imprimir - MODIFICADO SOLO EL ANCHO
+  // Función para imprimir - MANTENIENDO EL NUEVO DISEÑO QUE TE GUSTA
   const handlePrint = async () => {
     const printContent = document.getElementById(`ticket-${order.id}`);
     if (printContent) {
@@ -571,7 +569,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar contenido HTML para impresión (SIN CAMBIOS EN EL CONTENIDO)
+  // Generar contenido HTML para impresión (MANTENIENDO EL NUEVO DISEÑO)
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
       // TICKET COCINA
@@ -732,7 +730,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Funciones auxiliares (SIN CAMBIOS)
+  // Funciones auxiliares
   const getSourceText = (sourceType: Order['source']['type']) => {
     const sourceMap = {
       'phone': 'COCINA',
