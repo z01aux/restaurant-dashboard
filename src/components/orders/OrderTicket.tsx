@@ -47,176 +47,155 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     return 'NO APLICA';
   };
 
-  // CONSTANTES PARA EL ANCHO DE IMPRESIÓN
-  const TICKET_WIDTH = 72; // 72mm para tu impresora
-  const PAGE_WIDTH = TICKET_WIDTH * 2.83465; // Convertir mm a puntos (1mm = 2.83465 puntos)
-  const FONT_SIZE_SMALL = 7;
-  const FONT_SIZE_NORMAL = 8;
-  const FONT_SIZE_LARGE = 9;
-  const FONT_SIZE_XLARGE = 10;
-  const PADDING = 8;
-
-  // Estilos para el PDF de COCINA (sin precios) - MODIFICADO para 72mm
+  // Estilos para el PDF de COCINA (sin precios) - SOLO CAMBIO EL ANCHO
   const kitchenStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
       backgroundColor: '#FFFFFF',
-      padding: PADDING,
-      fontSize: FONT_SIZE_NORMAL,
+      padding: 10, // Reducido ligeramente
+      fontSize: 10,
       fontFamily: 'Helvetica-Bold',
-      width: PAGE_WIDTH,
+      width: 200, // Ancho ajustado para 72mm
     },
     header: {
       textAlign: 'center',
-      marginBottom: 6,
-      borderBottom: '1pt solid #000000',
-      paddingBottom: 4,
+      marginBottom: 8,
+      borderBottom: '2pt solid #000000',
+      paddingBottom: 6,
     },
     restaurantName: {
-      fontSize: FONT_SIZE_XLARGE,
+      fontSize: 16,
       fontWeight: 'bold',
-      marginBottom: 2,
+      marginBottom: 3,
       textTransform: 'uppercase',
     },
     area: {
-      fontSize: FONT_SIZE_LARGE,
+      fontSize: 14,
       fontWeight: 'bold',
-      marginBottom: 3,
+      marginBottom: 5,
       textTransform: 'uppercase',
     },
     divider: {
       borderBottom: '1pt solid #000000',
-      marginVertical: 3,
+      marginVertical: 5,
     },
     row: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 2,
+      marginBottom: 3,
     },
     infoSection: {
-      marginBottom: 6,
+      marginBottom: 8,
     },
     label: {
       fontWeight: 'bold',
-      marginBottom: 1,
-      fontSize: FONT_SIZE_SMALL,
+      marginBottom: 2,
     },
     value: {
       fontWeight: 'normal',
-      fontSize: FONT_SIZE_SMALL,
-      maxWidth: '60%',
-      flexWrap: 'wrap',
     },
     productsHeader: {
       textAlign: 'center',
       fontWeight: 'bold',
-      marginBottom: 3,
+      marginBottom: 5,
       textTransform: 'uppercase',
       borderBottom: '1pt solid #000000',
-      paddingBottom: 2,
-      fontSize: FONT_SIZE_NORMAL,
+      paddingBottom: 3,
     },
     productRow: {
       flexDirection: 'row',
-      marginBottom: 3,
+      marginBottom: 4,
     },
     quantity: {
-      width: '20%',
+      width: '15%',
       fontWeight: 'bold',
-      fontSize: FONT_SIZE_SMALL,
     },
     productName: {
-      width: '80%',
+      width: '85%',
       fontWeight: 'bold',
       textTransform: 'uppercase',
-      fontSize: FONT_SIZE_SMALL,
-      flexWrap: 'wrap',
     },
     notes: {
       fontStyle: 'italic',
-      fontSize: FONT_SIZE_SMALL - 1,
+      fontSize: 8,
       marginLeft: 12,
-      marginBottom: 1,
-      flexWrap: 'wrap',
+      marginBottom: 2,
     },
     productsContainer: {
-      marginBottom: 8,
+      marginBottom: 10,
     },
     footer: {
-      marginTop: 6,
+      marginTop: 10,
       textAlign: 'center',
     },
     asteriskLine: {
       textAlign: 'center',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: 9,
       letterSpacing: 1,
       marginBottom: 1,
     }
   });
 
-  // Estilos normales para otros tipos de pedido - MODIFICADO para 72mm
+  // Estilos normales para otros tipos de pedido - SOLO CAMBIO EL ANCHO
   const normalStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
       backgroundColor: '#FFFFFF',
-      padding: PADDING,
-      fontSize: FONT_SIZE_NORMAL,
+      padding: 15, // Reducido ligeramente
+      fontSize: 10,
       fontFamily: 'Helvetica',
-      width: PAGE_WIDTH,
+      width: 200, // Ancho ajustado para 72mm
     },
     header: {
       textAlign: 'center',
-      marginBottom: 6,
+      marginBottom: 10,
     },
     title: {
-      fontSize: FONT_SIZE_XLARGE,
+      fontSize: 14,
       fontWeight: 'bold',
-      marginBottom: 3,
+      marginBottom: 5,
     },
     subtitle: {
-      fontSize: FONT_SIZE_SMALL,
-      marginBottom: 1,
+      fontSize: 10,
+      marginBottom: 2,
     },
     divider: {
       borderBottom: '1pt solid #000000',
-      marginVertical: 3,
+      marginVertical: 5,
     },
     row: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 2,
+      marginBottom: 3,
     },
     bold: {
       fontWeight: 'bold',
     },
     section: {
-      marginBottom: 6,
+      marginBottom: 10,
     },
     table: {
-      marginBottom: 6,
+      marginBottom: 10,
     },
     tableHeader: {
       flexDirection: 'row',
       borderBottom: '1pt solid #000000',
-      paddingBottom: 2,
-      marginBottom: 2,
+      paddingBottom: 3,
+      marginBottom: 3,
     },
     tableRow: {
       flexDirection: 'row',
-      marginBottom: 3,
+      marginBottom: 5,
     },
     colQuantity: {
-      width: '20%',
-      fontSize: FONT_SIZE_SMALL,
+      width: '15%',
     },
     colDescription: {
-      width: '45%',
-      fontSize: FONT_SIZE_SMALL,
+      width: '55%',
     },
     colPrice: {
-      width: '35%',
+      width: '30%',
       textAlign: 'right',
-      fontSize: FONT_SIZE_SMALL,
     },
     quantity: {
       fontWeight: 'bold',
@@ -224,43 +203,40 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     productName: {
       fontWeight: 'bold',
       textTransform: 'uppercase',
-      fontSize: FONT_SIZE_SMALL,
-      flexWrap: 'wrap',
     },
     notes: {
       fontStyle: 'italic',
-      fontSize: FONT_SIZE_SMALL - 1,
+      fontSize: 8,
       marginLeft: 8,
-      flexWrap: 'wrap',
     },
     calculations: {
-      marginTop: 3,
+      marginTop: 5,
     },
     calculationRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 1,
-      fontSize: FONT_SIZE_SMALL,
+      marginBottom: 2,
+      fontSize: 9,
     },
     total: {
-      borderTop: '1pt solid #000000',
-      paddingTop: 3,
-      marginTop: 3,
+      borderTop: '2pt solid #000000',
+      paddingTop: 5,
+      marginTop: 5,
     },
     footer: {
       textAlign: 'center',
-      marginTop: 8,
+      marginTop: 15,
     },
     footerDate: {
-      marginTop: 6,
-      fontSize: FONT_SIZE_SMALL - 1,
+      marginTop: 10,
+      fontSize: 8,
     }
   });
 
   // Componente del documento PDF para COCINA
   const KitchenTicketDocument = () => (
     <Document>
-      <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
+      <Page size={[200]} style={kitchenStyles.page}> {/* Ancho ajustado */}
         {/* Header - Nombre del cliente en lugar del restaurante */}
         <View style={kitchenStyles.header}>
           <Text style={kitchenStyles.restaurantName}>{order.customerName.toUpperCase()}</Text>
@@ -284,7 +260,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <View style={kitchenStyles.row}>
             <Text style={kitchenStyles.label}>FECHA:</Text>
             <Text style={kitchenStyles.value}>
-              {order.createdAt.toLocaleDateString('es-ES')} - {order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+              {order.createdAt.toLocaleDateString('es-ES')} - {order.createdAt.toLocaleTimeString('es-ES')}
             </Text>
           </View>
           <View style={kitchenStyles.row}>
@@ -328,7 +304,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   // Componente del documento PDF normal (ACTUALIZADO para mostrar método de pago)
   const NormalTicketDocument = () => (
     <Document>
-      <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
+      <Page size={[200]} style={normalStyles.page}> {/* Ancho ajustado */}
         <View style={normalStyles.header}>
           <Text style={normalStyles.title}>MARY'S RESTAURANT</Text>
           <Text style={normalStyles.subtitle}>Av. Isabel La Católica 1254</Text>
@@ -352,7 +328,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           </View>
           <View style={normalStyles.row}>
             <Text style={normalStyles.bold}>HORA:</Text>
-            <Text>{order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</Text>
+            <Text>{order.createdAt.toLocaleTimeString()}</Text>
           </View>
           {/* Nuevo: Método de Pago */}
           <View style={normalStyles.row}>
@@ -367,7 +343,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         <View style={normalStyles.section}>
           <View style={[normalStyles.row, normalStyles.bold]}>
             <Text>CLIENTE:</Text>
-            <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.customerName.toUpperCase()}</Text>
+            <Text>{order.customerName.toUpperCase()}</Text>
           </View>
           <View style={normalStyles.row}>
             <Text>TELÉFONO:</Text>
@@ -429,13 +405,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <Text style={normalStyles.bold}>¡GRACIAS POR SU PEDIDO!</Text>
           <Text>*** {getSourceText(order.source.type)} ***</Text>
           <Text style={normalStyles.footerDate}>
-            {new Date().toLocaleString('es-ES', { 
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
+            {new Date().toLocaleString()}
           </Text>
         </View>
       </Page>
@@ -465,7 +435,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para imprimir - MODIFICADO para 72mm
+  // Función para imprimir - MODIFICADO SOLO EL ANCHO
   const handlePrint = async () => {
     const printContent = document.getElementById(`ticket-${order.id}`);
     if (printContent) {
@@ -486,28 +456,28 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 @media print {
                   @page {
                     margin: 0;
-                    size: ${TICKET_WIDTH}mm auto;
+                    size: 72mm auto; /* ANCHO ESPECÍFICO PARA TU IMPRESORA */
                   }
                   body {
-                    width: ${TICKET_WIDTH}mm !important;
+                    width: 72mm !important;
                     margin: 0 auto !important;
-                    padding: 2mm !important;
+                    padding: 5px !important;
                   }
                 }
                 body {
                   font-family: 'Courier New', monospace;
-                  font-size: ${FONT_SIZE_SMALL}px;
-                  line-height: 1.1;
-                  width: ${TICKET_WIDTH}mm;
+                  font-size: 12px; /* MANTENIENDO EL TAMAÑO ORIGINAL */
+                  line-height: 1.2;
+                  width: 72mm; /* ANCHO ESPECÍFICO */
                   margin: 0 auto;
-                  padding: 2mm;
+                  padding: 10px;
                   background: white;
                   color: black;
                   box-sizing: border-box;
                 }
                 .ticket {
                   width: 100%;
-                  max-width: ${TICKET_WIDTH}mm;
+                  max-width: 72mm; /* ANCHO ESPECÍFICO */
                   margin: 0 auto;
                 }
                 .center {
@@ -521,66 +491,51 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 }
                 .divider {
                   border-top: 1px dashed #000;
-                  margin: 3px 0;
+                  margin: 5px 0;
                 }
                 .info-row {
                   display: flex;
                   justify-content: space-between;
-                  margin-bottom: 2px;
-                  font-size: ${FONT_SIZE_SMALL}px;
+                  margin-bottom: 3px;
                 }
                 .notes {
                   font-style: italic;
-                  font-size: ${FONT_SIZE_SMALL - 1}px;
-                  margin-left: 10px;
+                  font-size: 10px;
+                  margin-left: 15px;
                 }
                 .products-header {
                   text-align: center;
                   font-weight: bold;
-                  margin: 3px 0;
+                  margin: 5px 0;
                   text-transform: uppercase;
                   border-bottom: 1px dashed #000;
-                  padding-bottom: 2px;
-                  font-size: ${FONT_SIZE_NORMAL}px;
+                  padding-bottom: 3px;
                 }
                 .product-row {
                   display: flex;
-                  margin-bottom: 2px;
-                  font-size: ${FONT_SIZE_SMALL}px;
+                  margin-bottom: 4px;
                 }
                 .quantity {
-                  width: 20%;
+                  width: 15%;
                   font-weight: bold;
                 }
                 .product-name {
-                  width: 80%;
+                  width: 85%;
                   font-weight: bold;
                   text-transform: uppercase;
                 }
                 .asterisk-line {
                   text-align: center;
-                  font-size: ${FONT_SIZE_SMALL}px;
+                  font-size: 9px;
                   letter-spacing: 1px;
                   margin-bottom: 1px;
-                }
-                table {
-                  width: 100%;
-                  border-collapse: collapse;
-                  font-size: ${FONT_SIZE_SMALL}px;
-                }
-                th, td {
-                  padding: 1px 0;
-                  text-align: left;
-                }
-                th {
-                  border-bottom: 1px solid #000;
                 }
                 
                 /* Estilos para vista previa */
                 @media screen and (min-width: 769px) {
                   body {
                     width: 100%;
-                    max-width: ${TICKET_WIDTH}mm;
+                    max-width: 72mm; /* ANCHO ESPECÍFICO */
                     background: #f5f5f5;
                     display: flex;
                     justify-content: center;
@@ -589,9 +544,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                   }
                   .ticket {
                     background: white;
-                    padding: 3mm;
+                    padding: 15px;
                     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    border-radius: 4px;
+                    border-radius: 8px;
                   }
                 }
               </style>
@@ -616,15 +571,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar contenido HTML para impresión (ACTUALIZADO para 72mm)
+  // Generar contenido HTML para impresión (SIN CAMBIOS EN EL CONTENIDO)
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
       // TICKET COCINA
       return `
         <div class="ticket">
           <div class="center">
-            <div class="bold uppercase" style="font-size: ${FONT_SIZE_XLARGE}px; margin-bottom: 3px;">${order.customerName.toUpperCase()}</div>
-            <div class="bold" style="font-size: ${FONT_SIZE_LARGE}px;">** COCINA **</div>
+            <div class="bold uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
+            <div class="bold">** COCINA **</div>
             <div class="divider"></div>
           </div>
           
@@ -642,7 +597,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           </div>
           <div class="info-row">
             <span class="bold">FECHA:</span>
-            <span>${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span>${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES')}</span>
           </div>
           <div class="info-row">
             <span class="bold">ATENDIDO POR:</span>
@@ -678,9 +633,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       return `
         <div class="ticket">
           <div class="center">
-            <div class="bold" style="font-size: ${FONT_SIZE_XLARGE}px;">MARY'S RESTAURANT</div>
-            <div style="font-size: ${FONT_SIZE_SMALL}px;">Av. Isabel La Católica 1254</div>
-            <div style="font-size: ${FONT_SIZE_SMALL}px;">Tel: 941 778 599</div>
+            <div class="bold">MARY'S RESTAURANT</div>
+            <div>Av. Isabel La Católica 1254</div>
+            <div>Tel: 941 778 599</div>
             <div class="divider"></div>
           </div>
           
@@ -698,7 +653,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           </div>
           <div class="info-row">
             <span class="bold">HORA:</span>
-            <span>${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span>${order.createdAt.toLocaleTimeString()}</span>
           </div>
           <div class="info-row">
             <span class="bold">PAGO:</span>
@@ -709,7 +664,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="info-row bold">
             <span>CLIENTE:</span>
-            <span style="max-width: 60%;">${order.customerName.toUpperCase()}</span>
+            <span>${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span>TELÉFONO:</span>
@@ -724,23 +679,23 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="divider"></div>
           
-          <table>
+          <table style="width: 100%; border-collapse: collapse;">
             <thead>
               <tr>
-                <th style="text-align: left;">Cant</th>
-                <th style="text-align: left;">Descripción</th>
-                <th style="text-align: right;">Precio</th>
+                <th style="text-align: left; padding: 2px 0; border-bottom: 1px solid #000;">Cant</th>
+                <th style="text-align: left; padding: 2px 0; border-bottom: 1px solid #000;">Descripción</th>
+                <th style="text-align: right; padding: 2px 0; border-bottom: 1px solid #000;">Precio</th>
               </tr>
             </thead>
             <tbody>
               ${order.items.map(item => `
                 <tr>
-                  <td style="font-weight: bold;">${item.quantity}x</td>
-                  <td>
+                  <td style="padding: 2px 0; font-weight: bold;">${item.quantity}x</td>
+                  <td style="padding: 2px 0;">
                     <div style="font-weight: bold; text-transform: uppercase;">${item.menuItem.name}</div>
-                    ${item.notes ? `<div style="font-style: italic; font-size: ${FONT_SIZE_SMALL - 1}px; margin-left: 8px;">Nota: ${item.notes}</div>` : ''}
+                    ${item.notes ? `<div style="font-style: italic; font-size: 10px; margin-left: 10px;">Nota: ${item.notes}</div>` : ''}
                   </td>
-                  <td style="text-align: right;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
+                  <td style="text-align: right; padding: 2px 0;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -748,7 +703,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="divider"></div>
           
-          <div style="font-size: ${FONT_SIZE_SMALL}px;">
+          <div style="font-size: 11px;">
             <div class="info-row">
               <span>Subtotal:</span>
               <span>S/ ${subtotal.toFixed(2)}</span>
@@ -757,7 +712,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               <span>IGV (18%):</span>
               <span>S/ ${igv.toFixed(2)}</span>
             </div>
-            <div class="info-row" style="border-top: 1px solid #000; padding-top: 2px; margin-top: 2px; font-weight: bold;">
+            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px; font-weight: bold;">
               <span>TOTAL:</span>
               <span>S/ ${order.total.toFixed(2)}</span>
             </div>
@@ -768,14 +723,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <div class="center">
             <div class="bold">¡GRACIAS POR SU PEDIDO!</div>
             <div>*** ${getSourceText(order.source.type)} ***</div>
-            <div style="margin-top: 5px; font-size: ${FONT_SIZE_SMALL - 1}px;">
-              ${new Date().toLocaleString('es-ES', { 
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+            <div style="margin-top: 10px; font-size: 10px;">
+              ${new Date().toLocaleString()}
             </div>
           </div>
         </div>
@@ -783,7 +732,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Funciones auxiliares
+  // Funciones auxiliares (SIN CAMBIOS)
   const getSourceText = (sourceType: Order['source']['type']) => {
     const sourceMap = {
       'phone': 'COCINA',
