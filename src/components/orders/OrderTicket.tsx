@@ -465,8 +465,19 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para imprimir - MODIFICADA para usar la misma página
+  // Función para cerrar la vista de impresión
+  const closePrintView = () => {
+    const container = document.getElementById('print-ticket-container');
+    const styles = document.getElementById('print-ticket-styles');
+    if (container) container.remove();
+    if (styles) styles.remove();
+  };
+
+  // Función para imprimir - MODIFICADA para limpiar contenedores anteriores
   const handlePrint = async () => {
+    // Limpiar cualquier contenedor de impresión anterior
+    closePrintView();
+
     // Crear un contenedor temporal para el ticket
     const printContainer = document.createElement('div');
     printContainer.id = 'print-ticket-container';
@@ -496,7 +507,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
             🖨️ Imprimir
           </button>
-          <button onclick="document.getElementById('print-ticket-container').remove()" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+          <button id="close-print-btn" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
             ❌ Cerrar
           </button>
         </div>
@@ -506,8 +517,22 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     printContainer.innerHTML = ticketHTML;
     document.body.appendChild(printContainer);
 
+    // Agregar evento al botón cerrar
+    const closeButton = printContainer.querySelector('#close-print-btn');
+    if (closeButton) {
+      closeButton.addEventListener('click', closePrintView);
+    }
+
+    // Agregar evento para cerrar haciendo clic fuera del ticket
+    printContainer.addEventListener('click', (e) => {
+      if (e.target === printContainer) {
+        closePrintView();
+      }
+    });
+
     // Agregar estilos de impresión globales
     const printStyles = document.createElement('style');
+    printStyles.id = 'print-ticket-styles';
     printStyles.innerHTML = `
       @media print {
         @page {
@@ -543,6 +568,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       }
     `;
     document.head.appendChild(printStyles);
+
+    // Agregar evento de teclado para cerrar con Escape
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closePrintView();
+        document.removeEventListener('keydown', handleKeyDown);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
   };
 
   // Generar contenido HTML para impresión (MODIFICADO con estilos inline)
