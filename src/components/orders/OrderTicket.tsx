@@ -63,7 +63,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       backgroundColor: '#FFFFFF',
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
-      fontFamily: 'Consolas', // Fuente Consolas para el cuerpo
+      fontFamily: 'Courier', // Usar Courier como alternativa a Consolas
       width: PAGE_WIDTH,
     },
     header: {
@@ -77,14 +77,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontWeight: 'bold',
       marginBottom: 2,
       textTransform: 'uppercase',
-      fontFamily: 'Helvetica-Bold', // Helvetica para encabezados
+      fontFamily: 'Helvetica-Bold',
     },
     area: {
       fontSize: FONT_SIZE_LARGE,
       fontWeight: 'bold',
       marginBottom: 3,
       textTransform: 'uppercase',
-      fontFamily: 'Helvetica-Bold', // Helvetica para encabezados
+      fontFamily: 'Helvetica-Bold',
     },
     divider: {
       borderBottom: '1pt solid #000000',
@@ -102,14 +102,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontWeight: 'bold',
       marginBottom: 1,
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Helvetica-Bold', // Helvetica para etiquetas
+      fontFamily: 'Helvetica-Bold',
     },
     value: {
       fontWeight: 'normal',
       fontSize: FONT_SIZE_SMALL,
       maxWidth: '60%',
       flexWrap: 'wrap',
-      fontFamily: 'Consolas', // Consolas para valores
+      fontFamily: 'Courier',
     },
     productsHeader: {
       textAlign: 'center',
@@ -119,7 +119,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       borderBottom: '1pt solid #000000',
       paddingBottom: 2,
       fontSize: FONT_SIZE_NORMAL,
-      fontFamily: 'Helvetica-Bold', // Helvetica para encabezados de productos
+      fontFamily: 'Helvetica-Bold',
     },
     productRow: {
       flexDirection: 'row',
@@ -129,7 +129,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       width: '15%',
       fontWeight: 'bold',
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Consolas-Bold', // Consolas Bold para cantidades
+      fontFamily: 'Courier-Bold',
     },
     productName: {
       width: '85%',
@@ -137,7 +137,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       textTransform: 'uppercase',
       fontSize: FONT_SIZE_SMALL,
       flexWrap: 'wrap',
-      fontFamily: 'Consolas', // Consolas para nombres de productos
+      fontFamily: 'Courier',
     },
     notes: {
       fontStyle: 'italic',
@@ -146,7 +146,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginBottom: 3,
       flexWrap: 'wrap',
       width: '85%',
-      fontFamily: 'Consolas', // Consolas para notas
+      fontFamily: 'Courier',
     },
     productsContainer: {
       marginBottom: 8,
@@ -160,7 +160,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontSize: FONT_SIZE_SMALL,
       letterSpacing: 1,
       marginBottom: 1,
-      fontFamily: 'Consolas', // Consolas para líneas de asteriscos
+      fontFamily: 'Courier',
     }
   });
 
@@ -171,7 +171,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       backgroundColor: '#FFFFFF',
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
-      fontFamily: 'Consolas', // Fuente Consolas para el cuerpo
+      fontFamily: 'Courier',
       width: PAGE_WIDTH,
     },
     header: {
@@ -182,18 +182,18 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontSize: FONT_SIZE_XLARGE,
       fontWeight: 'bold',
       marginBottom: 3,
-      fontFamily: 'Helvetica-Bold', // Helvetica para títulos principales
+      fontFamily: 'Helvetica-Bold',
     },
     subtitle: {
       fontSize: FONT_SIZE_SMALL,
       marginBottom: 1,
-      fontFamily: 'Helvetica', // Helvetica para subtítulos
+      fontFamily: 'Helvetica',
     },
     boldSubtitle: {
       fontSize: FONT_SIZE_SMALL,
       marginBottom: 1,
       fontWeight: 'bold',
-      fontFamily: 'Helvetica-Bold', // Helvetica Bold para subtítulos en negrita
+      fontFamily: 'Helvetica-Bold',
     },
     divider: {
       borderBottom: '1pt solid #000000',
@@ -206,7 +206,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     },
     bold: {
       fontWeight: 'bold',
-      fontFamily: 'Helvetica-Bold', // Helvetica Bold para texto en negrita
+      fontFamily: 'Helvetica-Bold',
     },
     section: {
       marginBottom: 6,
@@ -227,29 +227,29 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     colQuantity: {
       width: '15%',
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Consolas', // Consolas para columna de cantidad
+      fontFamily: 'Courier',
     },
     colDescription: {
       width: '50%',
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Consolas', // Consolas para columna de descripción
+      fontFamily: 'Courier',
     },
     colPrice: {
       width: '35%',
       textAlign: 'right',
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Consolas', // Consolas para columna de precio
+      fontFamily: 'Courier',
     },
     quantity: {
       fontWeight: 'bold',
-      fontFamily: 'Consolas-Bold', // Consolas Bold para cantidades
+      fontFamily: 'Courier-Bold',
     },
     productName: {
       fontWeight: 'bold',
       textTransform: 'uppercase',
       fontSize: FONT_SIZE_SMALL,
       flexWrap: 'wrap',
-      fontFamily: 'Consolas', // Consolas para nombres de productos
+      fontFamily: 'Courier',
     },
     notes: {
       fontStyle: 'italic',
@@ -257,7 +257,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginLeft: 0,
       marginTop: 1,
       flexWrap: 'wrap',
-      fontFamily: 'Consolas', // Consolas para notas
+      fontFamily: 'Courier',
     },
     calculations: {
       marginTop: 3,
@@ -267,7 +267,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       justifyContent: 'space-between',
       marginBottom: 1,
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Consolas', // Consolas para cálculos
+      fontFamily: 'Courier',
     },
     total: {
       borderTop: '1pt solid #000000',
@@ -281,7 +281,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     footerDate: {
       marginTop: 6,
       fontSize: FONT_SIZE_SMALL - 1,
-      fontFamily: 'Consolas', // Consolas para fecha del pie
+      fontFamily: 'Courier',
     }
   });
 
@@ -489,7 +489,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       
-      const fileName = generateFileName(order, isPhoneOrder);
+      const fileName = generateFileName();
       
       link.href = url;
       link.download = fileName;
@@ -514,7 +514,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     
     document.body.appendChild(iframe);
 
-    const ticketContent = generateTicketContent(order, isPhoneOrder);
+    const ticketContent = generateTicketContent();
     
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (iframeDoc) {
@@ -539,7 +539,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 }
               }
               body {
-                font-family: 'Consolas', 'Courier New', monospace; /* Consolas como primera opción */
+                font-family: 'Courier New', monospace;
                 font-size: 12px;
                 line-height: 1.2;
                 width: 80mm;
@@ -557,7 +557,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               }
               .bold {
                 font-weight: bold;
-                font-family: 'Helvetica', 'Arial', sans-serif; /* Helvetica para encabezados */
+                font-family: 'Helvetica', 'Arial', sans-serif;
               }
               .uppercase {
                 text-transform: uppercase;
@@ -571,7 +571,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 justify-content: space-between;
                 margin-bottom: 3px;
               }
-              /* ESTILOS CORREGIDOS PARA NOTAS */
               .notes {
                 font-style: italic;
                 font-size: 10px;
@@ -579,7 +578,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 margin-bottom: 3px;
                 display: block;
                 width: 85%;
-                font-family: 'Consolas', 'Courier New', monospace;
+                font-family: 'Courier New', monospace;
               }
               .table-notes {
                 font-style: italic;
@@ -587,7 +586,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 margin-left: 0;
                 margin-top: 2px;
                 display: block;
-                font-family: 'Consolas', 'Courier New', monospace;
+                font-family: 'Courier New', monospace;
               }
               .products-header {
                 text-align: center;
@@ -596,7 +595,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 text-transform: uppercase;
                 border-bottom: 1px solid #000;
                 padding-bottom: 3px;
-                font-family: 'Helvetica', 'Arial', sans-serif; /* Helvetica para encabezados */
+                font-family: 'Helvetica', 'Arial', sans-serif;
               }
               .product-row {
                 display: flex;
@@ -605,20 +604,20 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               .quantity {
                 width: 15%;
                 font-weight: bold;
-                font-family: 'Consolas', 'Courier New', monospace;
+                font-family: 'Courier New', monospace;
               }
               .product-name {
                 width: 85%;
                 font-weight: bold;
                 text-transform: uppercase;
-                font-family: 'Consolas', 'Courier New', monospace;
+                font-family: 'Courier New', monospace;
               }
               .asterisk-line {
                 text-align: center;
                 font-size: 9px;
                 letter-spacing: 1px;
                 margin: 3px 0;
-                font-family: 'Consolas', 'Courier New', monospace;
+                font-family: 'Courier New', monospace;
               }
               table {
                 width: 100%;
@@ -629,23 +628,23 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 padding: 2px 0;
                 text-align: left;
                 vertical-align: top;
-                font-family: 'Consolas', 'Courier New', monospace;
+                font-family: 'Courier New', monospace;
               }
               th {
                 border-bottom: 1px solid #000;
                 font-weight: bold;
-                font-family: 'Helvetica', 'Arial', sans-serif; /* Helvetica para encabezados de tabla */
+                font-family: 'Helvetica', 'Arial', sans-serif;
               }
               .notes-row td {
                 padding-top: 0;
                 padding-bottom: 3px;
               }
               .header-title {
-                font-family: 'Helvetica', 'Arial', sans-serif; /* Helvetica para títulos principales */
+                font-family: 'Helvetica', 'Arial', sans-serif;
                 font-weight: bold;
               }
               .header-subtitle {
-                font-family: 'Helvetica', 'Arial', sans-serif; /* Helvetica para subtítulos */
+                font-family: 'Helvetica', 'Arial', sans-serif;
               }
             </style>
           </head>
@@ -668,8 +667,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   };
 
   // Generar contenido HTML para impresión - CON NUEVAS FUENTES
-  const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
-    if (isKitchenTicket) {
+  const generateTicketContent = () => {
+    if (isPhoneOrder) {
       return `
         <div class="ticket">
           <div class="center">
@@ -688,7 +687,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           </div>
           <div class="info-row">
             <span class="bold header-title">COMANDA:</span>
-            <span>#${getDisplayKitchenNumber(order)}</span>
+            <span>#${getDisplayKitchenNumber()}</span>
           </div>
           <div class="info-row">
             <span class="bold header-title">FECHA:</span>
@@ -735,7 +734,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="info-row">
             <span class="bold header-title">ORDEN:</span>
-            <span>${getDisplayOrderNumber(order)}</span>
+            <span>${getDisplayOrderNumber()}</span>
           </div>
           <div class="info-row">
             <span class="bold header-title">TIPO:</span>
@@ -751,7 +750,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           </div>
           <div class="info-row">
             <span class="bold header-title">PAGO:</span>
-            <span>${getPaymentText(order.paymentMethod)}</span>
+            <span>${getPaymentText()}</span>
           </div>
           
           <div class="divider"></div>
@@ -848,8 +847,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     return sourceMap[sourceType] || sourceType;
   };
 
-  const generateFileName = (order: Order, isKitchenTicket: boolean) => {
-    const orderNumber = isKitchenTicket ? getDisplayKitchenNumber(order) : getDisplayOrderNumber(order);
+  const generateFileName = () => {
+    const orderNumber = isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber();
     const customerName = order.customerName
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '-')
@@ -857,7 +856,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       .replace(/^-|-$/g, '');
     
     const date = order.createdAt.toISOString().split('T')[0];
-    const type = isKitchenTicket ? 'cocina' : 'cliente';
+    const type = isPhoneOrder ? 'cocina' : 'cliente';
     
     return `comanda-${orderNumber}-${customerName}-${date}-${type}.pdf`;
   };
