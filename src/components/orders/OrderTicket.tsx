@@ -471,8 +471,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     if (printContent) {
       const isMobile = window.innerWidth <= 768;
       const windowFeatures = isMobile 
-        ? 'width=320,height=600,scrollbars=no,toolbar=no,location=no'
-        : 'width=400,height=600,scrollbars=no,toolbar=no,location=no';
+        ? 'width=400,height=700,scrollbars=no,toolbar=no,location=no'
+        : 'width=500,height=800,scrollbars=no,toolbar=no,location=no';
       
       const printWindow = window.open('', '_blank', windowFeatures);
       if (printWindow) {
@@ -831,3 +831,4 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 };
 
 export default OrderTicket;
+
