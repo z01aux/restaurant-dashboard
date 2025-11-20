@@ -56,14 +56,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   const FONT_SIZE_XLARGE = 10;
   const PADDING = 8;
 
-  // Estilos para el PDF de COCINA - CON NUEVAS FUENTES
+  // Estilos para el PDF de COCINA - TODAS LAS FUENTES EN HELVETICA-BOLD
   const kitchenStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
       backgroundColor: '#FFFFFF',
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
-      fontFamily: 'Courier', // Usar Courier como alternativa a Consolas
+      fontFamily: 'Helvetica-Bold', // TODOS LOS TEXTOS EN NEGRITA
       width: PAGE_WIDTH,
     },
     header: {
@@ -105,11 +105,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontFamily: 'Helvetica-Bold',
     },
     value: {
-      fontWeight: 'normal',
+      fontWeight: 'bold', // EN NEGRITA
       fontSize: FONT_SIZE_SMALL,
       maxWidth: '60%',
       flexWrap: 'wrap',
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
     },
     productsHeader: {
       textAlign: 'center',
@@ -129,7 +129,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       width: '15%',
       fontWeight: 'bold',
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Courier-Bold',
+      fontFamily: 'Helvetica-Bold',
     },
     productName: {
       width: '85%',
@@ -137,7 +137,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       textTransform: 'uppercase',
       fontSize: FONT_SIZE_SMALL,
       flexWrap: 'wrap',
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
     },
     notes: {
       fontStyle: 'italic',
@@ -146,7 +146,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginBottom: 3,
       flexWrap: 'wrap',
       width: '85%',
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold', // NOTAS TAMBIÉN EN NEGRITA
+      fontWeight: 'bold',
     },
     productsContainer: {
       marginBottom: 8,
@@ -160,18 +161,19 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontSize: FONT_SIZE_SMALL,
       letterSpacing: 1,
       marginBottom: 1,
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
+      fontWeight: 'bold',
     }
   });
 
-  // Estilos normales para otros tipos de pedido - CON NUEVAS FUENTES
+  // Estilos normales para otros tipos de pedido - TODAS LAS FUENTES EN HELVETICA-BOLD
   const normalStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
       backgroundColor: '#FFFFFF',
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold', // TODOS LOS TEXTOS EN NEGRITA
       width: PAGE_WIDTH,
     },
     header: {
@@ -187,7 +189,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     subtitle: {
       fontSize: FONT_SIZE_SMALL,
       marginBottom: 1,
-      fontFamily: 'Helvetica',
+      fontFamily: 'Helvetica-Bold',
+      fontWeight: 'bold',
     },
     boldSubtitle: {
       fontSize: FONT_SIZE_SMALL,
@@ -227,29 +230,32 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     colQuantity: {
       width: '15%',
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
+      fontWeight: 'bold',
     },
     colDescription: {
       width: '50%',
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
+      fontWeight: 'bold',
     },
     colPrice: {
       width: '35%',
       textAlign: 'right',
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
+      fontWeight: 'bold',
     },
     quantity: {
       fontWeight: 'bold',
-      fontFamily: 'Courier-Bold',
+      fontFamily: 'Helvetica-Bold',
     },
     productName: {
       fontWeight: 'bold',
       textTransform: 'uppercase',
       fontSize: FONT_SIZE_SMALL,
       flexWrap: 'wrap',
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
     },
     notes: {
       fontStyle: 'italic',
@@ -257,7 +263,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginLeft: 0,
       marginTop: 1,
       flexWrap: 'wrap',
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
+      fontWeight: 'bold',
     },
     calculations: {
       marginTop: 3,
@@ -267,7 +274,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       justifyContent: 'space-between',
       marginBottom: 1,
       fontSize: FONT_SIZE_SMALL,
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
+      fontWeight: 'bold',
     },
     total: {
       borderTop: '1pt solid #000000',
@@ -281,11 +289,12 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     footerDate: {
       marginTop: 6,
       fontSize: FONT_SIZE_SMALL - 1,
-      fontFamily: 'Courier',
+      fontFamily: 'Helvetica-Bold',
+      fontWeight: 'bold',
     }
   });
 
-  // Componente del documento PDF para COCINA - CON NUEVAS FUENTES
+  // Componente del documento PDF para COCINA
   const KitchenTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
@@ -350,7 +359,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     </Document>
   );
 
-  // Componente del documento PDF normal - CON NUEVAS FUENTES
+  // Componente del documento PDF normal
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -502,7 +511,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para imprimir - CON NUEVAS FUENTES EN HTML
+  // Función para imprimir - TODAS LAS FUENTES EN HELVETICA-BOLD
   const handlePrint = () => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -538,8 +547,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                   font-size: 12px !important;
                 }
               }
+              * {
+                font-family: 'Helvetica', 'Arial', sans-serif !important;
+                font-weight: bold !important;
+              }
               body {
-                font-family: 'Courier New', monospace;
+                font-family: 'Helvetica', 'Arial', sans-serif;
+                font-weight: bold;
                 font-size: 12px;
                 line-height: 1.2;
                 width: 80mm;
@@ -578,7 +592,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 margin-bottom: 3px;
                 display: block;
                 width: 85%;
-                font-family: 'Courier New', monospace;
+                font-family: 'Helvetica', 'Arial', sans-serif;
+                font-weight: bold;
               }
               .table-notes {
                 font-style: italic;
@@ -586,7 +601,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 margin-left: 0;
                 margin-top: 2px;
                 display: block;
-                font-family: 'Courier New', monospace;
+                font-family: 'Helvetica', 'Arial', sans-serif;
+                font-weight: bold;
               }
               .products-header {
                 text-align: center;
@@ -604,20 +620,21 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               .quantity {
                 width: 15%;
                 font-weight: bold;
-                font-family: 'Courier New', monospace;
+                font-family: 'Helvetica', 'Arial', sans-serif;
               }
               .product-name {
                 width: 85%;
                 font-weight: bold;
                 text-transform: uppercase;
-                font-family: 'Courier New', monospace;
+                font-family: 'Helvetica', 'Arial', sans-serif;
               }
               .asterisk-line {
                 text-align: center;
                 font-size: 9px;
                 letter-spacing: 1px;
                 margin: 3px 0;
-                font-family: 'Courier New', monospace;
+                font-family: 'Helvetica', 'Arial', sans-serif;
+                font-weight: bold;
               }
               table {
                 width: 100%;
@@ -628,7 +645,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 padding: 2px 0;
                 text-align: left;
                 vertical-align: top;
-                font-family: 'Courier New', monospace;
+                font-family: 'Helvetica', 'Arial', sans-serif;
+                font-weight: bold;
               }
               th {
                 border-bottom: 1px solid #000;
@@ -645,6 +663,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               }
               .header-subtitle {
                 font-family: 'Helvetica', 'Arial', sans-serif;
+                font-weight: bold;
               }
             </style>
           </head>
@@ -666,7 +685,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar contenido HTML para impresión - CON NUEVAS FUENTES
+  // Generar contenido HTML para impresión
   const generateTicketContent = () => {
     if (isPhoneOrder) {
       return `
