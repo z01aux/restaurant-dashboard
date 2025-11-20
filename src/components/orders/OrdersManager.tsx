@@ -161,6 +161,44 @@ const OrdersManager: React.FC = () => {
         </div>
       </div>
 
+      {/* Resumen de Pagos - MOVIDO ARRIBA */}
+      <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen de Pagos</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { method: 'EFECTIVO', label: 'Efectivo', color: 'bg-green-100 text-green-800' },
+            { method: 'YAPE/PLIN', label: 'Yape/Plin', color: 'bg-purple-100 text-purple-800' },
+            { method: 'TARJETA', label: 'Tarjeta', color: 'bg-blue-100 text-blue-800' },
+            { method: undefined, label: 'No Aplica', color: 'bg-gray-100 text-gray-800' }
+          ].map(({ method, label, color }) => {
+            const count = orders.filter(order => order.paymentMethod === method).length;
+            const total = orders
+              .filter(order => order.paymentMethod === method)
+              .reduce((sum, order) => sum + order.total, 0);
+            
+            return (
+              <div 
+                key={label}
+                className={`text-center p-3 rounded-lg cursor-pointer transition-all ${
+                  paymentFilter === method 
+                    ? 'ring-2 ring-red-500 bg-white shadow-md' 
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
+                onClick={() => setPaymentFilter(paymentFilter === method ? '' : method || '')}
+              >
+                <div className={`text-2xl font-bold ${color.split(' ')[1]}`}>
+                  {count}
+                </div>
+                <div className="text-sm text-gray-600">{label}</div>
+                <div className="text-xs text-gray-500 font-semibold">
+                  S/ {total.toFixed(2)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Barra de búsqueda y filtros */}
       <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -348,44 +386,6 @@ const OrdersManager: React.FC = () => {
             </table>
           </div>
         )}
-      </div>
-
-      {/* Estadísticas rápidas */}
-      <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen de Pagos</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { method: 'EFECTIVO', label: 'Efectivo', color: 'bg-green-100 text-green-800' },
-            { method: 'YAPE/PLIN', label: 'Yape/Plin', color: 'bg-purple-100 text-purple-800' },
-            { method: 'TARJETA', label: 'Tarjeta', color: 'bg-blue-100 text-blue-800' },
-            { method: undefined, label: 'No Aplica', color: 'bg-gray-100 text-gray-800' }
-          ].map(({ method, label, color }) => {
-            const count = orders.filter(order => order.paymentMethod === method).length;
-            const total = orders
-              .filter(order => order.paymentMethod === method)
-              .reduce((sum, order) => sum + order.total, 0);
-            
-            return (
-              <div 
-                key={label}
-                className={`text-center p-3 rounded-lg cursor-pointer transition-all ${
-                  paymentFilter === method 
-                    ? 'ring-2 ring-red-500 bg-white shadow-md' 
-                    : 'bg-gray-50 hover:bg-gray-100'
-                }`}
-                onClick={() => setPaymentFilter(paymentFilter === method ? '' : method || '')}
-              >
-                <div className={`text-2xl font-bold ${color.split(' ')[1]}`}>
-                  {count}
-                </div>
-                <div className="text-sm text-gray-600">{label}</div>
-                <div className="text-xs text-gray-500 font-semibold">
-                  S/ {total.toFixed(2)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
