@@ -770,14 +770,7 @@ const OrderReception: React.FC = () => {
                   </div>
                 )}
 
-                {/* Notas */}
-                <textarea
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Notas del pedido (opcional)"
-                />
+                {/* ELIMINADO: Notas del pedido */}
               </div>
             </div>
 
@@ -1128,19 +1121,7 @@ const OrderReception: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Notas del Pedido */}
-                    <div className="md:col-span-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Notas del Pedido
-                      </label>
-                      <textarea
-                        value={orderNotes}
-                        onChange={(e) => setOrderNotes(e.target.value)}
-                        rows={2}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        placeholder="Instrucciones especiales..."
-                      />
-                    </div>
+                    {/* ELIMINADO: Notas del Pedido */}
                   </div>
                 </div>
               </div>
@@ -1478,4 +1459,3 @@ const OrderReception: React.FC = () => {
 };
 
 export default OrderReception;
-
