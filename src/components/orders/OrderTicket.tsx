@@ -152,26 +152,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontSize: FONT_SIZE_SMALL,
       letterSpacing: 1,
       marginBottom: 1,
-    },
-    notesSection: {
-      marginTop: 4,
-      marginBottom: 4,
-      padding: 3,
-      backgroundColor: '#fff3cd',
-      border: '1pt solid #ffeaa7',
-      borderRadius: 2,
-    },
-    notesLabel: {
-      fontWeight: 'bold',
-      fontSize: FONT_SIZE_SMALL,
-      marginBottom: 1,
-      color: '#856404',
-    },
-    notesText: {
-      fontSize: FONT_SIZE_SMALL,
-      color: '#856404',
-      flexWrap: 'wrap',
-    },
+    }
   });
 
   // Estilos normales para otros tipos de pedido - MODIFICADO para 80mm
@@ -280,29 +261,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     footerDate: {
       marginTop: 6,
       fontSize: FONT_SIZE_SMALL - 1,
-    },
-    notesSection: {
-      marginTop: 4,
-      marginBottom: 4,
-      padding: 3,
-      backgroundColor: '#fff3cd',
-      border: '1pt solid #ffeaa7',
-      borderRadius: 2,
-    },
-    notesLabel: {
-      fontWeight: 'bold',
-      fontSize: FONT_SIZE_SMALL,
-      marginBottom: 1,
-      color: '#856404',
-    },
-    notesText: {
-      fontSize: FONT_SIZE_SMALL,
-      color: '#856404',
-      flexWrap: 'wrap',
-    },
+    }
   });
 
-  // Componente del documento PDF para COCINA - NOTAS DESPUÉS DE PRODUCTOS
+  // Componente del documento PDF para COCINA - CORREGIDO para mostrar notas
   const KitchenTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
@@ -342,7 +304,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         
         <View style={kitchenStyles.divider} />
 
-        {/* LISTA DE PRODUCTOS CON NOTAS */}
+        {/* LISTA DE PRODUCTOS CON NOTAS - CORREGIDO */}
         <View style={kitchenStyles.productsContainer}>
           {order.items.map((item, index) => (
             <View key={index}>
@@ -350,21 +312,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 <Text style={kitchenStyles.quantity}>{item.quantity}x</Text>
                 <Text style={kitchenStyles.productName}>{item.menuItem.name.toUpperCase()}</Text>
               </View>
-              {/* NOTAS DEL ITEM */}
+              {/* NOTAS - AHORA SE MUESTRAN CORRECTAMENTE */}
               {item.notes && item.notes.trim() !== '' && (
                 <Text style={kitchenStyles.notes}>- {item.notes}</Text>
               )}
             </View>
           ))}
         </View>
-
-        {/* NOTAS GENERALES DEL PEDIDO - DESPUÉS DE LOS PRODUCTOS */}
-        {order.notes && order.notes.trim() !== '' && (
-          <View style={kitchenStyles.notesSection}>
-            <Text style={kitchenStyles.notesLabel}>NOTAS DEL PEDIDO:</Text>
-            <Text style={kitchenStyles.notesText}>{order.notes}</Text>
-          </View>
-        )}
 
         <View style={kitchenStyles.divider} />
 
@@ -375,7 +329,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     </Document>
   );
 
-  // Componente del documento PDF normal - NOTAS DESPUÉS DE PRODUCTOS
+  // Componente del documento PDF normal - CORREGIDO para mostrar notas y MESA en negrita
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -426,7 +380,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.address}</Text>
             </View>
           )}
-          {/* MESA EN NEGRITA */}
+          {/* MESA EN NEGRITA - CORREGIDO */}
           {order.tableNumber && (
             <View style={normalStyles.row}>
               <Text style={normalStyles.bold}>MESA:</Text>
@@ -444,7 +398,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
             <Text style={normalStyles.colPrice}>Precio</Text>
           </View>
 
-          {/* PRODUCTOS CON NOTAS */}
+          {/* PRODUCTOS CON NOTAS - CORREGIDO */}
           {order.items.map((item, index) => (
             <View key={index}>
               <View style={normalStyles.tableRow}>
@@ -456,7 +410,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                   S/ {(item.menuItem.price * item.quantity).toFixed(2)}
                 </Text>
               </View>
-              {/* NOTAS DEL ITEM */}
+              {/* NOTAS - AHORA SE MUESTRAN CORRECTAMENTE */}
               {item.notes && item.notes.trim() !== '' && (
                 <View style={normalStyles.tableRow}>
                   <Text style={normalStyles.colQuantity}></Text>
@@ -469,14 +423,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
             </View>
           ))}
         </View>
-
-        {/* NOTAS GENERALES DEL PEDIDO - DESPUÉS DE LOS PRODUCTOS */}
-        {order.notes && order.notes.trim() !== '' && (
-          <View style={normalStyles.notesSection}>
-            <Text style={normalStyles.notesLabel}>NOTAS DEL PEDIDO:</Text>
-            <Text style={normalStyles.notesText}>{order.notes}</Text>
-          </View>
-        )}
 
         <View style={normalStyles.calculations}>
           <View style={normalStyles.calculationRow}>
@@ -535,38 +481,156 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para imprimir - CORREGIDA PARA EVITAR SUPERPOSICIÓN
+  // Función para imprimir - CORREGIDO para mostrar notas
   const handlePrint = () => {
-    // Crear un contenedor temporal para la impresión
-    const printContainer = document.createElement('div');
-    printContainer.style.position = 'fixed';
-    printContainer.style.left = '0';
-    printContainer.style.top = '0';
-    printContainer.style.width = '100%';
-    printContainer.style.height = '100%';
-    printContainer.style.backgroundColor = 'white';
-    printContainer.style.zIndex = '9999';
-    printContainer.style.overflow = 'auto';
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
     
-    const ticketContent = generateTicketContent(order, isPhoneOrder);
-    printContainer.innerHTML = ticketContent;
-    
-    document.body.appendChild(printContainer);
+    document.body.appendChild(iframe);
 
-    // Esperar a que el contenido se renderice antes de imprimir
-    setTimeout(() => {
-      window.print();
-      
-      // Remover el contenedor después de imprimir
-      setTimeout(() => {
-        if (document.body.contains(printContainer)) {
-          document.body.removeChild(printContainer);
-        }
-      }, 500);
-    }, 500);
+    const ticketContent = generateTicketContent(order, isPhoneOrder);
+    
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Ticket ${isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}</title>
+            <style>
+              @media print {
+                @page {
+                  size: 80mm auto;
+                  margin: 0;
+                  padding: 0;
+                }
+                body {
+                  width: 80mm !important;
+                  margin: 0 auto !important;
+                  padding: 0 !important;
+                  font-size: 12px !important;
+                }
+              }
+              body {
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.2;
+                width: 80mm;
+                margin: 0 auto;
+                padding: 8px;
+                background: white;
+                color: black;
+              }
+              .ticket {
+                width: 100%;
+                max-width: 80mm;
+              }
+              .center {
+                text-align: center;
+              }
+              .bold {
+                font-weight: bold;
+              }
+              .uppercase {
+                text-transform: uppercase;
+              }
+              .divider {
+                border-top: 1px solid #000;
+                margin: 6px 0;
+              }
+              .info-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 3px;
+              }
+              /* ESTILOS CORREGIDOS PARA NOTAS */
+              .notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 15%;
+                margin-bottom: 3px;
+                display: block;
+                width: 85%;
+              }
+              .table-notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 0;
+                margin-top: 2px;
+                display: block;
+              }
+              .products-header {
+                text-align: center;
+                font-weight: bold;
+                margin: 6px 0;
+                text-transform: uppercase;
+                border-bottom: 1px solid #000;
+                padding-bottom: 3px;
+              }
+              .product-row {
+                display: flex;
+                margin-bottom: 4px;
+              }
+              .quantity {
+                width: 15%;
+                font-weight: bold;
+              }
+              .product-name {
+                width: 85%;
+                font-weight: bold;
+                text-transform: uppercase;
+              }
+              .asterisk-line {
+                text-align: center;
+                font-size: 9px;
+                letter-spacing: 1px;
+                margin: 3px 0;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 5px 0;
+              }
+              th, td {
+                padding: 2px 0;
+                text-align: left;
+                vertical-align: top;
+              }
+              th {
+                border-bottom: 1px solid #000;
+                font-weight: bold;
+              }
+              .notes-row td {
+                padding-top: 0;
+                padding-bottom: 3px;
+              }
+            </style>
+          </head>
+          <body>
+            ${ticketContent}
+          </body>
+        </html>
+      `);
+      iframeDoc.close();
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 1000);
+        }, 500);
+      };
+    }
   };
 
-  // Generar contenido HTML para impresión - NOTAS DESPUÉS DE PRODUCTOS
+  // Generar contenido HTML para impresión - CORREGIDO para mostrar notas
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
       return `
@@ -611,14 +675,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
             </div>
             ${item.notes && item.notes.trim() !== '' ? `<div class="notes">- ${item.notes}</div>` : ''}
           `).join('')}
-          
-          ${order.notes && order.notes.trim() !== '' ? `
-          <div class="divider"></div>
-          <div style="margin: 8px 0; padding: 5px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px;">
-            <div style="font-weight: bold; font-size: 10px; color: #856404;">NOTAS DEL PEDIDO:</div>
-            <div style="font-size: 10px; color: #856404;">${order.notes}</div>
-          </div>
-          ` : ''}
           
           <div class="divider"></div>
           
@@ -707,14 +763,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               `).join('')}
             </tbody>
           </table>
-          
-          ${order.notes && order.notes.trim() !== '' ? `
-          <div class="divider"></div>
-          <div style="margin: 8px 0; padding: 5px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px;">
-            <div style="font-weight: bold; font-size: 10px; color: #856404;">NOTAS DEL PEDIDO:</div>
-            <div style="font-size: 10px; color: #856404;">${order.notes}</div>
-          </div>
-          ` : ''}
           
           <div class="divider"></div>
           
