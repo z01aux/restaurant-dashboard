@@ -870,9 +870,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <div class="client-amount">NOTAS</div>
         </div>
         
-        ${order.items.map((item, index) => `
+        ${order.items.map((item) => `
           <div class="client-row">
-            <div class="client-number">${index + 1}</div>
+            <div class="client-number">${order.items.indexOf(item) + 1}</div>
             <div class="client-name">${item.menuItem.name.toUpperCase()}</div>
             <div class="client-payment">
               <span class="payment-option-print">${item.quantity}x</span>
@@ -945,7 +945,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           <div class="client-amount">TOTAL</div>
         </div>
         
-        ${order.items.map((item, index) => `
+        ${order.items.map((item) => `
           <div class="client-row">
             <div class="client-number">${item.quantity}x</div>
             <div class="client-name">${item.menuItem.name}</div>
