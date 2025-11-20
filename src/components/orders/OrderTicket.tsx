@@ -546,9 +546,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         `;
       } else {
         // TICKET CLIENTE NORMAL
-        const subtotal = order.total / 1.18;
-        const igv = order.total - subtotal;
-        
         printContent = `
           <div class="pos-header text-center border-b-2 border-black py-3 mb-2">
             <div class="pos-title text-lg font-bold mb-2 tracking-widest">MARY'S RESTAURANT</div>
@@ -758,7 +755,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                     window.close();
                   }, 500);
                 }, 250);
-              };
+            };
             </script>
           </body>
         </html>
