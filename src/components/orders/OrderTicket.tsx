@@ -465,144 +465,144 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para imprimir - SIMPLIFICADA para imprimir directamente
+  // Función para imprimir - DIRECTAMENTE en la misma página
   const handlePrint = () => {
-    // Crear una ventana temporal para imprimir
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      alert('Por favor permite las ventanas emergentes para imprimir');
-      return;
-    }
+    // Crear un iframe temporal para imprimir
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    
+    document.body.appendChild(iframe);
 
     // Generar el contenido del ticket
     const ticketContent = generateTicketContent(order, isPhoneOrder);
     
-    // Escribir el contenido en la ventana
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Ticket ${isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}</title>
-          <style>
-            @media print {
-              @page {
-                size: 72mm auto;
-                margin: 0;
-                padding: 0;
+    // Escribir el contenido en el iframe
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Ticket ${isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}</title>
+            <style>
+              @media print {
+                @page {
+                  size: 72mm auto;
+                  margin: 0;
+                  padding: 0;
+                }
+                body {
+                  width: 72mm !important;
+                  margin: 0 auto !important;
+                  padding: 0 !important;
+                  font-size: 12px !important;
+                }
               }
               body {
-                width: 72mm !important;
-                margin: 0 auto !important;
-                padding: 0 !important;
-                font-size: 12px !important;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.2;
+                width: 72mm;
+                margin: 0 auto;
+                padding: 8px;
+                background: white;
+                color: black;
               }
-            }
-            body {
-              font-family: 'Courier New', monospace;
-              font-size: 12px;
-              line-height: 1.2;
-              width: 72mm;
-              margin: 0 auto;
-              padding: 8px;
-              background: white;
-              color: black;
-            }
-            .ticket {
-              width: 100%;
-              max-width: 72mm;
-            }
-            .center {
-              text-align: center;
-            }
-            .bold {
-              font-weight: bold;
-            }
-            .uppercase {
-              text-transform: uppercase;
-            }
-            .divider {
-              border-top: 1px solid #000;
-              margin: 6px 0;
-            }
-            .info-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 3px;
-            }
-            .notes {
-              font-style: italic;
-              font-size: 10px;
-              margin-left: 12px;
-              margin-bottom: 2px;
-            }
-            .products-header {
-              text-align: center;
-              font-weight: bold;
-              margin: 6px 0;
-              text-transform: uppercase;
-              border-bottom: 1px solid #000;
-              padding-bottom: 3px;
-            }
-            .product-row {
-              display: flex;
-              margin-bottom: 4px;
-            }
-            .quantity {
-              width: 15%;
-              font-weight: bold;
-            }
-            .product-name {
-              width: 85%;
-              font-weight: bold;
-              text-transform: uppercase;
-            }
-            .asterisk-line {
-              text-align: center;
-              font-size: 9px;
-              letter-spacing: 1px;
-              margin: 3px 0;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 5px 0;
-            }
-            th, td {
-              padding: 2px 0;
-              text-align: left;
-            }
-            th {
-              border-bottom: 1px solid #000;
-              font-weight: bold;
-            }
-          </style>
-        </head>
-        <body>
-          ${ticketContent}
-          <script>
-            // Imprimir automáticamente y cerrar después de imprimir
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-                // Cerrar después de un tiempo si no se cancela la impresión
-                setTimeout(function() {
-                  window.close();
-                }, 1000);
-              }, 250);
-            };
-            
-            // También permitir cerrar manualmente con Escape
-            document.addEventListener('keydown', function(e) {
-              if (e.key === 'Escape') {
-                window.close();
+              .ticket {
+                width: 100%;
+                max-width: 72mm;
               }
-            });
-          </script>
-        </body>
-      </html>
-    `);
-    
-    printWindow.document.close();
+              .center {
+                text-align: center;
+              }
+              .bold {
+                font-weight: bold;
+              }
+              .uppercase {
+                text-transform: uppercase;
+              }
+              .divider {
+                border-top: 1px solid #000;
+                margin: 6px 0;
+              }
+              .info-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 3px;
+              }
+              .notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 12px;
+                margin-bottom: 2px;
+              }
+              .products-header {
+                text-align: center;
+                font-weight: bold;
+                margin: 6px 0;
+                text-transform: uppercase;
+                border-bottom: 1px solid #000;
+                padding-bottom: 3px;
+              }
+              .product-row {
+                display: flex;
+                margin-bottom: 4px;
+              }
+              .quantity {
+                width: 15%;
+                font-weight: bold;
+              }
+              .product-name {
+                width: 85%;
+                font-weight: bold;
+                text-transform: uppercase;
+              }
+              .asterisk-line {
+                text-align: center;
+                font-size: 9px;
+                letter-spacing: 1px;
+                margin: 3px 0;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 5px 0;
+              }
+              th, td {
+                padding: 2px 0;
+                text-align: left;
+              }
+              th {
+                border-bottom: 1px solid #000;
+                font-weight: bold;
+              }
+            </style>
+          </head>
+          <body>
+            ${ticketContent}
+          </body>
+        </html>
+      `);
+      iframeDoc.close();
+
+      // Esperar a que el contenido se cargue y luego imprimir
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.print();
+          
+          // Remover el iframe después de imprimir
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 1000);
+        }, 500);
+      };
+    }
   };
 
   // Generar contenido HTML para impresión
