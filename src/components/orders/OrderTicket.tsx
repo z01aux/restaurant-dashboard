@@ -465,301 +465,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para imprimir - CON LA VENTANA DE IMPRESIÓN DEL POS
-  const handlePrint = async () => {
-    const isMobile = window.innerWidth <= 768;
-    const windowFeatures = isMobile 
-      ? 'width=320,height=600,scrollbars=no,toolbar=no,location=no'
-      : 'width=400,height=600,scrollbars=no,toolbar=no,location=no';
-    
-    const printWindow = window.open('', '_blank', windowFeatures);
-    if (printWindow) {
-      const ticketContent = generateTicketContent(order, isPhoneOrder);
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Ticket ${order.id}</title>
-            <style>
-              @media print {
-                @page {
-                  margin: 0;
-                  size: 72mm auto;
-                }
-                body {
-                  width: 72mm !important;
-                  margin: 0 auto !important;
-                  padding: 5px !important;
-                }
-              }
-              body {
-                font-family: 'Courier New', monospace;
-                font-size: 12px;
-                line-height: 1.2;
-                width: 72mm;
-                margin: 0 auto;
-                padding: 10px;
-                background: white;
-                color: black;
-                box-sizing: border-box;
-              }
-              .ticket {
-                width: 100%;
-                max-width: 72mm;
-                margin: 0 auto;
-              }
-              .center {
-                text-align: center;
-              }
-              .bold {
-                font-weight: bold;
-              }
-              .uppercase {
-                text-transform: uppercase;
-              }
-              .divider {
-                border-top: 1px dashed #000;
-                margin: 5px 0;
-              }
-              .info-row {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 3px;
-              }
-              .notes {
-                font-style: italic;
-                font-size: 10px;
-                margin-left: 15px;
-              }
-              .products-header {
-                text-align: center;
-                font-weight: bold;
-                margin: 5px 0;
-                text-transform: uppercase;
-                border-bottom: 1px dashed #000;
-                padding-bottom: 3px;
-              }
-              .product-row {
-                display: flex;
-                margin-bottom: 4px;
-              }
-              .quantity {
-                width: 15%;
-                font-weight: bold;
-              }
-              .product-name {
-                width: 85%;
-                font-weight: bold;
-                text-transform: uppercase;
-              }
-              .asterisk-line {
-                text-align: center;
-                font-size: 9px;
-                letterSpacing: 1px;
-                margin-bottom: 1px;
-              }
-              
-              /* Estilos para vista previa */
-              @media screen and (min-width: 769px) {
-                body {
-                  width: 100%;
-                  max-width: 72mm;
-                  background: #f5f5f5;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  min-height: 100vh;
-                }
-                .ticket {
-                  background: white;
-                  padding: 15px;
-                  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                  border-radius: 8px;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            ${ticketContent}
-            <script>
-              window.onload = function() {
-                setTimeout(function() {
-                  window.print();
-                  setTimeout(function() {
-                    window.close();
-                  }, 1000);
-                }, 100);
-              };
-            </script>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-    }
-  };
-
-  // Generar contenido HTML para impresión (MANTENIENDO EL DISEÑO QUE TE GUSTA)
-  const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
-    if (isKitchenTicket) {
-      // TICKET COCINA
-      return `
-        <div class="ticket">
-          <div class="center">
-            <div class="bold uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
-            <div class="bold">** COCINA **</div>
-            <div class="divider"></div>
-          </div>
-          
-          <div class="info-row">
-            <span class="bold">CLIENTE:</span>
-            <span>${order.customerName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span class="bold">AREA:</span>
-            <span>COCINA</span>
-          </div>
-          <div class="info-row">
-            <span class="bold">COMANDA:</span>
-            <span>#${getDisplayKitchenNumber()}</span>
-          </div>
-          <div class="info-row">
-            <span class="bold">FECHA:</span>
-            <span>${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES')}</span>
-          </div>
-          <div class="info-row">
-            <span class="bold">ATENDIDO POR:</span>
-            <span>${getCurrentUserName().toUpperCase()}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="products-header">DESCRIPCION</div>
-          
-          <div class="divider"></div>
-          
-          ${order.items.map(item => `
-            <div class="product-row">
-              <div class="quantity">${item.quantity}x</div>
-              <div class="product-name">${item.menuItem.name.toUpperCase()}</div>
-            </div>
-            ${item.notes ? `<div class="notes">- ${item.notes}</div>` : ''}
-          `).join('')}
-          
-          <div class="divider"></div>
-          
-          <div class="center">
-            <div class="asterisk-line">********************************</div>
-          </div>
-        </div>
-      `;
-    } else {
-      // TICKET NORMAL ACTUALIZADO con método de pago
-      const subtotal = order.total / 1.18;
-      const igv = order.total - subtotal;
-      
-      return `
-        <div class="ticket">
-          <div class="center">
-            <div class="bold">MARY'S RESTAURANT</div>
-            <div>Av. Isabel La Católica 1254</div>
-            <div>Tel: 941 778 599</div>
-            <div class="divider"></div>
-          </div>
-          
-          <div class="info-row">
-            <span class="bold">ORDEN:</span>
-            <span>${getDisplayOrderNumber()}</span>
-          </div>
-          <div class="info-row">
-            <span class="bold">TIPO:</span>
-            <span>${getSourceText(order.source.type)}</span>
-          </div>
-          <div class="info-row">
-            <span class="bold">FECHA:</span>
-            <span>${order.createdAt.toLocaleDateString()}</span>
-          </div>
-          <div class="info-row">
-            <span class="bold">HORA:</span>
-            <span>${order.createdAt.toLocaleTimeString()}</span>
-          </div>
-          <div class="info-row">
-            <span class="bold">PAGO:</span>
-            <span>${getPaymentText()}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="info-row bold">
-            <span>CLIENTE:</span>
-            <span>${order.customerName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span>TELÉFONO:</span>
-            <span>${order.phone}</span>
-          </div>
-          ${order.tableNumber ? `
-          <div class="info-row">
-            <span>MESA:</span>
-            <span>${order.tableNumber}</span>
-          </div>
-          ` : ''}
-          
-          <div class="divider"></div>
-          
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr>
-                <th style="text-align: left; padding: 2px 0; border-bottom: 1px solid #000;">Cant</th>
-                <th style="text-align: left; padding: 2px 0; border-bottom: 1px solid #000;">Descripción</th>
-                <th style="text-align: right; padding: 2px 0; border-bottom: 1px solid #000;">Precio</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${order.items.map(item => `
-                <tr>
-                  <td style="padding: 2px 0; font-weight: bold;">${item.quantity}x</td>
-                  <td style="padding: 2px 0;">
-                    <div style="font-weight: bold; text-transform: uppercase;">${item.menuItem.name}</div>
-                    ${item.notes ? `<div style="font-style: italic; font-size: 10px; margin-left: 10px;">Nota: ${item.notes}</div>` : ''}
-                  </td>
-                  <td style="text-align: right; padding: 2px 0;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <div class="divider"></div>
-          
-          <div style="font-size: 11px;">
-            <div class="info-row">
-              <span>Subtotal:</span>
-              <span>S/ ${subtotal.toFixed(2)}</span>
-            </div>
-            <div class="info-row">
-              <span>IGV (18%):</span>
-              <span>S/ ${igv.toFixed(2)}</span>
-            </div>
-            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px; font-weight: bold;">
-              <span>TOTAL:</span>
-              <span>S/ ${order.total.toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="center">
-            <div class="bold">¡GRACIAS POR SU PEDIDO!</div>
-            <div>*** ${getSourceText(order.source.type)} ***</div>
-            <div style="margin-top: 10px; font-size: 10px;">
-              ${new Date().toLocaleString()}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-  };
-
-  // Funciones auxiliares
+  // Función auxiliar para obtener texto del tipo de orden
   const getSourceText = (sourceType: Order['source']['type']) => {
     const sourceMap = {
       'phone': 'COCINA',
@@ -769,6 +475,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     return sourceMap[sourceType] || sourceType;
   };
 
+  // Función para generar nombre de archivo
   const generateFileName = (order: Order, isKitchenTicket: boolean) => {
     const orderNumber = isKitchenTicket ? getDisplayKitchenNumber() : getDisplayOrderNumber();
     const customerName = order.customerName
@@ -781,6 +488,283 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     const type = isKitchenTicket ? 'cocina' : 'cliente';
     
     return `comanda-${orderNumber}-${customerName}-${date}-${type}.pdf`;
+  };
+
+  // FUNCIÓN DE IMPRESIÓN CORREGIDA - SIMILAR AL RESTAURANTPOS
+  const handlePrint = () => {
+    const isMobile = window.innerWidth <= 768;
+    const windowFeatures = isMobile 
+      ? 'width=320,height=600,scrollbars=no,toolbar=no,location=no'
+      : 'width=400,height=600,scrollbars=no,toolbar=no,location=no';
+    
+    const printWindow = window.open('', '_blank', windowFeatures);
+    
+    if (printWindow) {
+      // Obtener fecha y hora actual
+      const now = new Date();
+      const dateOptions: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+      const timeOptions: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+      
+      const currentDate = now.toLocaleDateString('es-PE', dateOptions);
+      const currentTime = now.toLocaleTimeString('es-PE', timeOptions);
+
+      // Generar contenido del ticket
+      let printContent = '';
+      let printTotal = 0;
+
+      if (isPhoneOrder) {
+        // TICKET COCINA
+        printContent = `
+          <div class="pos-header text-center border-b-2 border-black py-3 mb-2">
+            <div class="pos-title text-lg font-bold mb-2 tracking-widest">${order.customerName.toUpperCase()}</div>
+            <div class="pos-subtitle text-[10px]">** COCINA **</div>
+          </div>
+          
+          <div class="client-row header-row flex border-b-2 border-black py-2 font-bold">
+            <div class="client-number w-[12%] text-center">N°</div>
+            <div class="client-name w-[48%] px-1 text-center">DESCRIPCIÓN</div>
+            <div class="client-payment w-[20%] text-center">CANT</div>
+            <div class="client-amount w-[20%] text-right pr-1">NOTAS</div>
+          </div>
+          
+          ${order.items.map((item, index) => `
+            <div class="client-row">
+              <div class="client-number">${index + 1}</div>
+              <div class="client-name">${item.menuItem.name.toUpperCase()}</div>
+              <div class="client-payment">
+                <span class="payment-option-print">${item.quantity}x</span>
+              </div>
+              <div class="client-amount">${item.notes || '-'}</div>
+            </div>
+          `).join('')}
+          
+          <div class="pos-total text-center mt-3 pt-2 border-t-2 border-black text-xs font-bold">
+            <div class="pos-total-label text-[11px] mb-1">COMANDA: #${getDisplayKitchenNumber()}</div>
+            <div class="pos-total-label text-[11px]">ATENDIDO POR: ${getCurrentUserName().toUpperCase()}</div>
+            <div class="pos-total-label text-[11px] mt-1">FECHA: ${currentDate} ${currentTime}</div>
+          </div>
+        `;
+      } else {
+        // TICKET CLIENTE NORMAL
+        const subtotal = order.total / 1.18;
+        const igv = order.total - subtotal;
+        
+        printContent = `
+          <div class="pos-header text-center border-b-2 border-black py-3 mb-2">
+            <div class="pos-title text-lg font-bold mb-2 tracking-widest">MARY'S RESTAURANT</div>
+            <div class="pos-subtitle text-[10px]">RUC: 20505262086</div>
+            <div class="pos-subtitle text-[10px]">Fecha: ${currentDate}</div>
+            <div class="pos-subtitle text-[10px]">Hora: ${currentTime}</div>
+          </div>
+          
+          <div class="client-row header-row flex border-b-2 border-black py-2 font-bold">
+            <div class="client-number w-[12%] text-center">N°</div>
+            <div class="client-name w-[48%] px-1 text-center">PRODUCTO</div>
+            <div class="client-payment w-[20%] text-center">CANT</div>
+            <div class="client-amount w-[20%] text-right pr-1">PRECIO</div>
+          </div>
+          
+          ${order.items.map((item, index) => {
+            const itemTotal = item.menuItem.price * item.quantity;
+            printTotal += itemTotal;
+            return `
+              <div class="client-row">
+                <div class="client-number">${index + 1}</div>
+                <div class="client-name">${item.menuItem.name.toUpperCase()}</div>
+                <div class="client-payment">
+                  <span class="payment-option-print">${item.quantity}x</span>
+                </div>
+                <div class="client-amount">S/ ${itemTotal.toFixed(2)}</div>
+              </div>
+              ${item.notes ? `
+                <div class="client-row" style="border-bottom: none; padding-top: 0;">
+                  <div class="client-number"></div>
+                  <div class="client-name" style="font-style: italic; font-size: 9px;">Nota: ${item.notes}</div>
+                  <div class="client-payment"></div>
+                  <div class="client-amount"></div>
+                </div>
+              ` : ''}
+            `;
+          }).join('')}
+          
+          <div class="pos-total text-right mt-3 pt-2 border-t-2 border-black text-xs font-bold">
+            <div class="pos-total-label text-[11px] mb-1">======════════════════</div>
+            <div class="pos-total-amount text-base">TOTAL: S/ ${printTotal.toFixed(2)}</div>
+            <div class="pos-total-label text-[11px] mt-1">======════════════════</div>
+          </div>
+        `;
+      }
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Ticket ${order.id}</title>
+            <style>
+              @media print {
+                * {
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                body {
+                  background: white !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  width: 80mm !important;
+                  min-height: auto !important;
+                  height: auto !important;
+                }
+                .pos-container {
+                  display: block !important;
+                  width: 80mm !important;
+                  padding: 5mm !important;
+                  padding-bottom: 0 !important;
+                  margin: 0 !important;
+                  font-family: 'Courier New', monospace !important;
+                  font-size: 11px !important;
+                  line-height: 1.4 !important;
+                  box-sizing: border-box !important;
+                }
+              }
+              
+              @page {
+                size: 80mm auto;
+                margin: 0;
+                margin-bottom: 0;
+              }
+
+              .pos-container {
+                width: 80mm;
+                background: white;
+                padding: 5mm;
+                font-family: 'Courier New', monospace;
+                font-size: 11px;
+                line-height: 1.4;
+                box-sizing: border-box;
+                margin: 0 auto;
+              }
+
+              .pos-header {
+                text-align: center;
+                border-bottom: 2px solid #000;
+                padding-bottom: 8px;
+                margin-bottom: 8px;
+              }
+
+              .pos-title {
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 4px;
+              }
+
+              .pos-subtitle {
+                font-size: 9px;
+                margin-bottom: 2px;
+              }
+
+              .client-row {
+                display: flex;
+                border-bottom: 1px dotted #999;
+                padding: 6px 0;
+                font-size: 10px;
+                line-height: 1.3;
+                min-height: 28px;
+                align-items: center;
+              }
+
+              .header-row {
+                font-weight: bold;
+                border-bottom: 2px solid #000 !important;
+                background: none !important;
+                padding: 8px 0 !important;
+              }
+
+              .client-number {
+                width: 12%;
+                text-align: center;
+                font-weight: bold;
+                font-size: 10px;
+              }
+
+              .client-name {
+                width: 48%;
+                padding: 0 4px;
+                word-break: break-word;
+                line-height: 1.3;
+                font-weight: bold;
+                font-size: 10px;
+              }
+
+              .client-payment {
+                width: 20%;
+                text-align: center;
+                line-height: 1.3;
+                font-size: 10px;
+              }
+
+              .client-amount {
+                width: 20%;
+                text-align: right;
+                padding-right: 4px;
+                font-weight: bold;
+                line-height: 1.3;
+                font-size: 10px;
+              }
+
+              .payment-option-print {
+                border: 1.5px solid #000;
+                padding: 2px 4px;
+                font-size: 8px;
+                display: inline-block;
+                min-width: 35px;
+                font-weight: bold;
+              }
+
+              .pos-total {
+                text-align: center;
+                margin-top: 12px;
+                padding-top: 8px;
+                border-top: 2px solid #000;
+              }
+
+              .pos-total-amount {
+                font-size: 12px;
+                font-weight: bold;
+                margin: 4px 0;
+              }
+
+              .pos-total-label {
+                font-size: 9px;
+                margin-bottom: 2px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="pos-container">
+              ${printContent}
+              
+              <div class="pos-footer text-center mt-5 pt-3 border-t-2 border-dashed border-black text-[10px] leading-relaxed">
+                <div class="font-bold text-[11px]">*** ${isPhoneOrder ? 'COMANDA COCINA' : 'RECIBO DE VENTA'} ***</div>
+                <div style="margin: 8px 0;">generado por @jozzymar</div>
+                <div>@restaurantmarys</div>
+              </div>
+            </div>
+            
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                  setTimeout(function() {
+                    window.close();
+                  }, 500);
+                }, 250);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
   };
 
   return (
@@ -818,10 +802,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         >
           Descargar PDF
         </button>
-      </div>
-
-      <div id={`ticket-${order.id}`} style={{ display: 'none' }}>
-        <div>Ticket content for printing</div>
       </div>
     </>
   );
