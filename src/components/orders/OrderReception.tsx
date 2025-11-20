@@ -278,7 +278,375 @@ const OrderReception: React.FC = () => {
     setTempPrices(prev => ({ ...prev, [itemId]: price }));
   };
 
-  // Crear orden en Supabase
+  // Funciones auxiliares para obtener números de display
+  const getDisplayOrderNumber = (order: Order) => {
+    return order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`;
+  };
+
+  const getDisplayKitchenNumber = (order: Order) => {
+    return order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`;
+  };
+
+  // Función para obtener texto del método de pago
+  const getPaymentText = (paymentMethod?: string) => {
+    const paymentMap = {
+      'EFECTIVO': 'EFECTIVO',
+      'YAPE/PLIN': 'YAPE/PLIN', 
+      'TARJETA': 'TARJETA'
+    };
+    return paymentMethod ? paymentMap[paymentMethod as keyof typeof paymentMap] : 'NO APLICA';
+  };
+
+  // Función para obtener texto del tipo de origen
+  const getSourceText = (sourceType: Order['source']['type']) => {
+    const sourceMap = {
+      'phone': 'COCINA',
+      'walk-in': 'LOCAL', 
+      'delivery': 'DELIVERY',
+    };
+    return sourceMap[sourceType] || sourceType;
+  };
+
+  // Función para generar contenido HTML del ticket - OPTIMIZADA
+  const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
+    if (isKitchenTicket) {
+      // Obtener el nombre del usuario actual desde localStorage
+      const getCurrentUserName = () => {
+        try {
+          const savedUser = localStorage.getItem('restaurant-user');
+          if (savedUser) {
+            const userData = JSON.parse(savedUser);
+            return userData.name || 'Sistema';
+          }
+        } catch (error) {
+          console.error('Error obteniendo usuario:', error);
+        }
+        return 'Sistema';
+      };
+
+      return `
+        <div class="ticket">
+          <div class="center">
+            <div class="bold uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
+            <div class="bold">** COCINA **</div>
+            <div class="divider"></div>
+          </div>
+          
+          <div class="info-row">
+            <span class="bold">CLIENTE:</span>
+            <span>${order.customerName.toUpperCase()}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">AREA:</span>
+            <span>COCINA</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">COMANDA:</span>
+            <span>#${getDisplayKitchenNumber(order)}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">FECHA:</span>
+            <span>${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">ATENDIDO POR:</span>
+            <span>${getCurrentUserName().toUpperCase()}</span>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="products-header">DESCRIPCION</div>
+          
+          <div class="divider"></div>
+          
+          ${order.items.map(item => `
+            <div class="product-row">
+              <div class="quantity">${item.quantity}x</div>
+              <div class="product-name">${item.menuItem.name.toUpperCase()}</div>
+            </div>
+            ${item.notes && item.notes.trim() !== '' ? `<div class="notes">- ${item.notes}</div>` : ''}
+          `).join('')}
+          
+          <div class="divider"></div>
+          
+          <div class="center">
+            <div class="asterisk-line">********************************</div>
+          </div>
+        </div>
+      `;
+    } else {
+      const subtotal = order.total / 1.18;
+      const igv = order.total - subtotal;
+      
+      return `
+        <div class="ticket">
+          <div class="center">
+            <div class="bold" style="font-size: 14px;">MARY'S RESTAURANT</div>
+            <div class="bold">Av. Isabel La Católica 1254</div>
+            <div class="bold">Tel: 941 778 599</div>
+            <div class="divider"></div>
+          </div>
+          
+          <div class="info-row">
+            <span class="bold">ORDEN:</span>
+            <span>${getDisplayOrderNumber(order)}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">TIPO:</span>
+            <span>${getSourceText(order.source.type)}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">FECHA:</span>
+            <span>${order.createdAt.toLocaleDateString()}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">HORA:</span>
+            <span>${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">PAGO:</span>
+            <span>${getPaymentText(order.paymentMethod)}</span>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="info-row bold">
+            <span>CLIENTE:</span>
+            <span style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
+          </div>
+          <div class="info-row">
+            <span class="bold">TELÉFONO:</span>
+            <span>${order.phone}</span>
+          </div>
+          ${order.address ? `
+          <div class="info-row">
+            <span class="bold">DIRECCIÓN:</span>
+            <span style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
+          </div>
+          ` : ''}
+          ${order.tableNumber ? `
+          <div class="info-row">
+            <span class="bold">MESA:</span>
+            <span>${order.tableNumber}</span>
+          </div>
+          ` : ''}
+          
+          <div class="divider"></div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Cant</th>
+                <th>Descripción</th>
+                <th style="text-align: right;">Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items.map(item => `
+                <tr>
+                  <td style="font-weight: bold; vertical-align: top;">${item.quantity}x</td>
+                  <td style="vertical-align: top;">
+                    <div style="font-weight: bold; text-transform: uppercase;">${item.menuItem.name}</div>
+                    ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes">Nota: ${item.notes}</div>` : ''}
+                  </td>
+                  <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div style="font-size: 11px;">
+            <div class="info-row">
+              <span>Subtotal:</span>
+              <span>S/ ${subtotal.toFixed(2)}</span>
+            </div>
+            <div class="info-row">
+              <span>IGV (18%):</span>
+              <span>S/ ${igv.toFixed(2)}</span>
+            </div>
+            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px; font-weight: bold;">
+              <span>TOTAL:</span>
+              <span>S/ ${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="center">
+            <div class="bold">¡GRACIAS POR SU PEDIDO!</div>
+            <div>*** ${getSourceText(order.source.type)} ***</div>
+            <div style="margin-top: 10px; font-size: 10px;">
+              ${new Date().toLocaleString('es-ES', { 
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  };
+
+  // Función optimizada para imprimir inmediatamente
+  const printOrderImmediately = (order: Order) => {
+    const isPhoneOrder = order.source.type === 'phone';
+    
+    // Crear iframe para impresión
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    
+    document.body.appendChild(iframe);
+
+    // Generar contenido del ticket
+    const ticketContent = generateTicketContent(order, isPhoneOrder);
+    
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Ticket ${isPhoneOrder ? getDisplayKitchenNumber(order) : getDisplayOrderNumber(order)}</title>
+            <style>
+              @media print {
+                @page {
+                  size: 80mm auto;
+                  margin: 0;
+                  padding: 0;
+                }
+                body {
+                  width: 80mm !important;
+                  margin: 0 auto !important;
+                  padding: 0 !important;
+                  font-size: 12px !important;
+                }
+              }
+              body {
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.2;
+                width: 80mm;
+                margin: 0 auto;
+                padding: 8px;
+                background: white;
+                color: black;
+              }
+              .ticket {
+                width: 100%;
+                max-width: 80mm;
+              }
+              .center {
+                text-align: center;
+              }
+              .bold {
+                font-weight: bold;
+              }
+              .uppercase {
+                text-transform: uppercase;
+              }
+              .divider {
+                border-top: 1px solid #000;
+                margin: 6px 0;
+              }
+              .info-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 3px;
+              }
+              .notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 15%;
+                margin-bottom: 3px;
+                display: block;
+                width: 85%;
+              }
+              .table-notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 0;
+                margin-top: 2px;
+                display: block;
+              }
+              .products-header {
+                text-align: center;
+                font-weight: bold;
+                margin: 6px 0;
+                text-transform: uppercase;
+                border-bottom: 1px solid #000;
+                padding-bottom: 3px;
+              }
+              .product-row {
+                display: flex;
+                margin-bottom: 4px;
+              }
+              .quantity {
+                width: 15%;
+                font-weight: bold;
+              }
+              .product-name {
+                width: 85%;
+                font-weight: bold;
+                text-transform: uppercase;
+              }
+              .asterisk-line {
+                text-align: center;
+                font-size: 9px;
+                letter-spacing: 1px;
+                margin: 3px 0;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 5px 0;
+              }
+              th, td {
+                padding: 2px 0;
+                text-align: left;
+                vertical-align: top;
+              }
+              th {
+                border-bottom: 1px solid #000;
+                font-weight: bold;
+              }
+              .notes-row td {
+                padding-top: 0;
+                padding-bottom: 3px;
+              }
+            </style>
+          </head>
+          <body>
+            ${ticketContent}
+          </body>
+        </html>
+      `);
+      iframeDoc.close();
+
+      // Imprimir inmediatamente
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        // Limpiar el iframe después de un tiempo
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 1000);
+      }, 50);
+    }
+  };
+
+  // Crear orden en Supabase - VERSIÓN SUPER OPTIMIZADA
   const handleCreateOrder = async () => {
     if (cart.length === 0) {
       showToast('El pedido está vacío', 'error');
@@ -290,7 +658,6 @@ const OrderReception: React.FC = () => {
       return;
     }
 
-    // Validar mesa para pedidos Local
     if (activeTab === 'walk-in' && !tableNumber) {
       showToast('Por favor ingresa el número de mesa', 'error');
       return;
@@ -307,7 +674,7 @@ const OrderReception: React.FC = () => {
           ...(activeTab === 'delivery' && { deliveryAddress: address })
         },
         notes: orderNotes,
-        paymentMethod: activeTab !== 'phone' ? paymentMethod : undefined, // Solo para Local y Delivery
+        paymentMethod: activeTab !== 'phone' ? paymentMethod : undefined,
         items: cart.map(item => ({
           menuItem: {
             id: item.menuItem.id,
@@ -322,15 +689,11 @@ const OrderReception: React.FC = () => {
       if (result.success) {
         showToast('✅ Orden creada exitosamente', 'success');
         
-        // Obtener los números generados por el trigger
-        const orderNumber = result.order.order_number;
-        const kitchenNumber = result.order.kitchen_number;
-        
-        // Crear objeto Order para el ticket con los números correctos
+        // Crear objeto Order inmediatamente
         const newOrder: Order = {
           id: result.order.id,
-          orderNumber: orderNumber,
-          kitchenNumber: kitchenNumber,
+          orderNumber: result.order.order_number,
+          kitchenNumber: result.order.kitchen_number,
           items: cart,
           status: 'pending',
           createdAt: new Date(),
@@ -348,6 +711,11 @@ const OrderReception: React.FC = () => {
         };
 
         setLastOrder(newOrder);
+        
+        // GUARDAR TEMPORALMENTE PARA IMPRIMIR
+        const tempOrderForPrint = { ...newOrder };
+        
+        // Limpiar formulario inmediatamente
         setCart([]);
         setCustomerName('');
         setPhone('');
@@ -358,15 +726,11 @@ const OrderReception: React.FC = () => {
         setEditingPrices({});
         setTempPrices({});
         setShowCartDrawer(false);
-        setPaymentMethod('EFECTIVO'); // Resetear método de pago
+        setPaymentMethod('EFECTIVO');
+
+        // IMPRIMIR INMEDIATAMENTE usando el objeto temporal
+        printOrderImmediately(tempOrderForPrint);
         
-        // Imprimir ticket
-        setTimeout(() => {
-          const printButton = document.querySelector(`[data-order-id="${result.order.id}"]`) as HTMLButtonElement;
-          if (printButton) {
-            printButton.click();
-          }
-        }, 500);
       } else {
         showToast('❌ Error al crear orden: ' + result.error, 'error');
       }
@@ -769,8 +1133,6 @@ const OrderReception: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {/* ELIMINADO: Notas del pedido */}
               </div>
             </div>
 
@@ -1120,8 +1482,6 @@ const OrderReception: React.FC = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* ELIMINADO: Notas del Pedido */}
                   </div>
                 </div>
               </div>
