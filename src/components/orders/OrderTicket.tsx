@@ -47,8 +47,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     return 'NO APLICA';
   };
 
-  // CONSTANTES PARA EL ANCHO DE IMPRESIÓN
-  const TICKET_WIDTH = 72; // 72mm para tu impresora
+  // CONSTANTES PARA EL ANCHO DE IMPRESIÓN - CAMBIADO A 80mm
+  const TICKET_WIDTH = 80; // 80mm para impresoras térmicas estándar
   const PAGE_WIDTH = TICKET_WIDTH * 2.83465; // Convertir mm a puntos (1mm = 2.83465 puntos)
   const FONT_SIZE_SMALL = 7;
   const FONT_SIZE_NORMAL = 8;
@@ -56,7 +56,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   const FONT_SIZE_XLARGE = 10;
   const PADDING = 8;
 
-  // Estilos para el PDF de COCINA (sin precios) - MODIFICADO para 72mm
+  // Estilos para el PDF de COCINA (sin precios) - MODIFICADO para 80mm
   const kitchenStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
@@ -121,12 +121,12 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginBottom: 3,
     },
     quantity: {
-      width: '20%',
+      width: '15%',
       fontWeight: 'bold',
       fontSize: FONT_SIZE_SMALL,
     },
     productName: {
-      width: '80%',
+      width: '85%',
       fontWeight: 'bold',
       textTransform: 'uppercase',
       fontSize: FONT_SIZE_SMALL,
@@ -135,9 +135,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     notes: {
       fontStyle: 'italic',
       fontSize: FONT_SIZE_SMALL - 1,
-      marginLeft: 12,
-      marginBottom: 1,
+      marginLeft: 15, // Aumentado para mejor indentación
+      marginBottom: 2, // Aumentado para mejor separación
       flexWrap: 'wrap',
+      width: '85%',
+      alignSelf: 'flex-end',
     },
     productsContainer: {
       marginBottom: 8,
@@ -154,7 +156,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   });
 
-  // Estilos normales para otros tipos de pedido - MODIFICADO para 72mm
+  // Estilos normales para otros tipos de pedido - MODIFICADO para 80mm
   const normalStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
@@ -176,6 +178,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     subtitle: {
       fontSize: FONT_SIZE_SMALL,
       marginBottom: 1,
+    },
+    boldSubtitle: { // NUEVO: Para teléfono y dirección en negrita
+      fontSize: FONT_SIZE_SMALL,
+      marginBottom: 1,
+      fontWeight: 'bold',
     },
     divider: {
       borderBottom: '1pt solid #000000',
@@ -206,11 +213,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginBottom: 3,
     },
     colQuantity: {
-      width: '20%',
+      width: '15%',
       fontSize: FONT_SIZE_SMALL,
     },
     colDescription: {
-      width: '45%',
+      width: '50%',
       fontSize: FONT_SIZE_SMALL,
     },
     colPrice: {
@@ -232,6 +239,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontSize: FONT_SIZE_SMALL - 1,
       marginLeft: 8,
       flexWrap: 'wrap',
+      marginTop: 1, // Añadido para mejor separación
     },
     calculations: {
       marginTop: 3,
@@ -257,7 +265,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   });
 
-  // Componente del documento PDF para COCINA
+  // Componente del documento PDF para COCINA - CORREGIDO para mostrar notas
   const KitchenTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
@@ -300,7 +308,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         
         <View style={kitchenStyles.divider} />
 
-        {/* Lista de productos */}
+        {/* Lista de productos - CORREGIDO: Ahora muestra las notas */}
         <View style={kitchenStyles.productsContainer}>
           {order.items.map((item, index) => (
             <View key={index}>
@@ -325,14 +333,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     </Document>
   );
 
-  // Componente del documento PDF normal (ACTUALIZADO para mostrar método de pago)
+  // Componente del documento PDF normal (ACTUALIZADO para mostrar teléfono y dirección en negrita)
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
         <View style={normalStyles.header}>
           <Text style={normalStyles.title}>MARY'S RESTAURANT</Text>
-          <Text style={normalStyles.subtitle}>Av. Isabel La Católica 1254</Text>
-          <Text style={normalStyles.subtitle}>Tel: 941 778 599</Text>
+          {/* CAMBIADO: Teléfono y dirección ahora en negrita */}
+          <Text style={normalStyles.boldSubtitle}>Av. Isabel La Católica 1254</Text>
+          <Text style={normalStyles.boldSubtitle}>Tel: 941 778 599</Text>
           <View style={normalStyles.divider} />
         </View>
 
@@ -370,9 +379,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
             <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.customerName.toUpperCase()}</Text>
           </View>
           <View style={normalStyles.row}>
-            <Text>TELÉFONO:</Text>
+            <Text style={normalStyles.bold}>TELÉFONO:</Text> {/* CAMBIADO: Ahora en negrita */}
             <Text>{order.phone}</Text>
           </View>
+          {order.address && (
+            <View style={normalStyles.row}>
+              <Text style={normalStyles.bold}>DIRECCIÓN:</Text> {/* CAMBIADO: Ahora en negrita */}
+              <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.address}</Text>
+            </View>
+          )}
           {order.tableNumber && (
             <View style={normalStyles.row}>
               <Text>MESA:</Text>
@@ -493,12 +508,12 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
             <style>
               @media print {
                 @page {
-                  size: 72mm auto;
+                  size: 80mm auto; /* CAMBIADO: 80mm en lugar de 72mm */
                   margin: 0;
                   padding: 0;
                 }
                 body {
-                  width: 72mm !important;
+                  width: 80mm !important; /* CAMBIADO: 80mm en lugar de 72mm */
                   margin: 0 auto !important;
                   padding: 0 !important;
                   font-size: 12px !important;
@@ -508,7 +523,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 font-family: 'Courier New', monospace;
                 font-size: 12px;
                 line-height: 1.2;
-                width: 72mm;
+                width: 80mm; /* CAMBIADO: 80mm en lugar de 72mm */
                 margin: 0 auto;
                 padding: 8px;
                 background: white;
@@ -516,7 +531,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               }
               .ticket {
                 width: 100%;
-                max-width: 72mm;
+                max-width: 80mm; /* CAMBIADO: 80mm en lugar de 72mm */
               }
               .center {
                 text-align: center;
@@ -539,8 +554,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               .notes {
                 font-style: italic;
                 font-size: 10px;
-                margin-left: 12px;
-                margin-bottom: 2px;
+                margin-left: 15px; /* Aumentado para mejor indentación */
+                margin-bottom: 3px; /* Aumentado para mejor separación */
+                display: block;
+                width: 85%;
+                margin-left: auto;
               }
               .products-header {
                 text-align: center;
@@ -605,10 +623,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar contenido HTML para impresión
+  // Generar contenido HTML para impresión - CORREGIDO para mostrar notas
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
-      // TICKET COCINA
+      // TICKET COCINA - CORREGIDO: Ahora muestra las notas
       return `
         <div class="ticket">
           <div class="center">
@@ -660,7 +678,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         </div>
       `;
     } else {
-      // TICKET NORMAL ACTUALIZADO con método de pago
+      // TICKET NORMAL ACTUALIZADO con método de pago y teléfono/dirección en negrita
       const subtotal = order.total / 1.18;
       const igv = order.total - subtotal;
       
@@ -668,8 +686,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         <div class="ticket">
           <div class="center">
             <div class="bold" style="font-size: 14px;">MARY'S RESTAURANT</div>
-            <div>Av. Isabel La Católica 1254</div>
-            <div>Tel: 941 778 599</div>
+            <!-- CAMBIADO: Teléfono y dirección ahora en negrita -->
+            <div class="bold">Av. Isabel La Católica 1254</div>
+            <div class="bold">Tel: 941 778 599</div>
             <div class="divider"></div>
           </div>
           
@@ -700,10 +719,18 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
             <span>CLIENTE:</span>
             <span style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
           </div>
+          <!-- CAMBIADO: Teléfono ahora en negrita -->
           <div class="info-row">
-            <span>TELÉFONO:</span>
+            <span class="bold">TELÉFONO:</span>
             <span>${order.phone}</span>
           </div>
+          ${order.address ? `
+          <!-- CAMBIADO: Dirección ahora en negrita -->
+          <div class="info-row">
+            <span class="bold">DIRECCIÓN:</span>
+            <span style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
+          </div>
+          ` : ''}
           ${order.tableNumber ? `
           <div class="info-row">
             <span>MESA:</span>
@@ -727,7 +754,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                   <td style="font-weight: bold;">${item.quantity}x</td>
                   <td>
                     <div style="font-weight: bold; text-transform: uppercase;">${item.menuItem.name}</div>
-                    ${item.notes ? `<div style="font-style: italic; font-size: 10px; margin-left: 10px;">Nota: ${item.notes}</div>` : ''}
+                    ${item.notes ? `<div class="notes">Nota: ${item.notes}</div>` : ''}
                   </td>
                   <td style="text-align: right;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
                 </tr>
