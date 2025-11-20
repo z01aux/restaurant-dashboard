@@ -465,171 +465,197 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para cerrar la vista de impresión
-  const closePrintView = () => {
-    const container = document.getElementById('print-ticket-container');
-    const styles = document.getElementById('print-ticket-styles');
-    if (container) container.remove();
-    if (styles) styles.remove();
-  };
-
-  // Función para imprimir - MODIFICADA para limpiar contenedores anteriores
-  const handlePrint = async () => {
-    // Limpiar cualquier contenedor de impresión anterior
-    closePrintView();
-
-    // Crear un contenedor temporal para el ticket
-    const printContainer = document.createElement('div');
-    printContainer.id = 'print-ticket-container';
-    printContainer.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: white;
-      z-index: 9999;
-      padding: 20px;
-      overflow: auto;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-    `;
+  // Función para imprimir - SIMPLIFICADA para imprimir directamente
+  const handlePrint = () => {
+    // Crear una ventana temporal para imprimir
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      alert('Por favor permite las ventanas emergentes para imprimir');
+      return;
+    }
 
     // Generar el contenido del ticket
     const ticketContent = generateTicketContent(order, isPhoneOrder);
     
-    // Crear el contenido del ticket con estilos de impresión
-    const ticketHTML = `
-      <div style="width: 72mm; margin: 0 auto; background: white;">
-        ${ticketContent}
-        <div style="text-align: center; margin-top: 20px;">
-          <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
-            🖨️ Imprimir
-          </button>
-          <button id="close-print-btn" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
-            ❌ Cerrar
-          </button>
-        </div>
-      </div>
-    `;
-
-    printContainer.innerHTML = ticketHTML;
-    document.body.appendChild(printContainer);
-
-    // Agregar evento al botón cerrar
-    const closeButton = printContainer.querySelector('#close-print-btn');
-    if (closeButton) {
-      closeButton.addEventListener('click', closePrintView);
-    }
-
-    // Agregar evento para cerrar haciendo clic fuera del ticket
-    printContainer.addEventListener('click', (e) => {
-      if (e.target === printContainer) {
-        closePrintView();
-      }
-    });
-
-    // Agregar estilos de impresión globales
-    const printStyles = document.createElement('style');
-    printStyles.id = 'print-ticket-styles';
-    printStyles.innerHTML = `
-      @media print {
-        @page {
-          size: 72mm auto;
-          margin: 0;
-          padding: 0;
-        }
-        body * {
-          visibility: hidden;
-        }
-        #print-ticket-container,
-        #print-ticket-container * {
-          visibility: visible;
-        }
-        #print-ticket-container {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: white;
-          padding: 0;
-          margin: 0;
-        }
-        #print-ticket-container button {
-          display: none !important;
-        }
-        .ticket {
-          width: 72mm !important;
-          margin: 0 auto !important;
-          padding: 8px !important;
-        }
-      }
-    `;
-    document.head.appendChild(printStyles);
-
-    // Agregar evento de teclado para cerrar con Escape
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closePrintView();
-        document.removeEventListener('keydown', handleKeyDown);
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
+    // Escribir el contenido en la ventana
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Ticket ${isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}</title>
+          <style>
+            @media print {
+              @page {
+                size: 72mm auto;
+                margin: 0;
+                padding: 0;
+              }
+              body {
+                width: 72mm !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                font-size: 12px !important;
+              }
+            }
+            body {
+              font-family: 'Courier New', monospace;
+              font-size: 12px;
+              line-height: 1.2;
+              width: 72mm;
+              margin: 0 auto;
+              padding: 8px;
+              background: white;
+              color: black;
+            }
+            .ticket {
+              width: 100%;
+              max-width: 72mm;
+            }
+            .center {
+              text-align: center;
+            }
+            .bold {
+              font-weight: bold;
+            }
+            .uppercase {
+              text-transform: uppercase;
+            }
+            .divider {
+              border-top: 1px solid #000;
+              margin: 6px 0;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 3px;
+            }
+            .notes {
+              font-style: italic;
+              font-size: 10px;
+              margin-left: 12px;
+              margin-bottom: 2px;
+            }
+            .products-header {
+              text-align: center;
+              font-weight: bold;
+              margin: 6px 0;
+              text-transform: uppercase;
+              border-bottom: 1px solid #000;
+              padding-bottom: 3px;
+            }
+            .product-row {
+              display: flex;
+              margin-bottom: 4px;
+            }
+            .quantity {
+              width: 15%;
+              font-weight: bold;
+            }
+            .product-name {
+              width: 85%;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .asterisk-line {
+              text-align: center;
+              font-size: 9px;
+              letter-spacing: 1px;
+              margin: 3px 0;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 5px 0;
+            }
+            th, td {
+              padding: 2px 0;
+              text-align: left;
+            }
+            th {
+              border-bottom: 1px solid #000;
+              font-weight: bold;
+            }
+          </style>
+        </head>
+        <body>
+          ${ticketContent}
+          <script>
+            // Imprimir automáticamente y cerrar después de imprimir
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                // Cerrar después de un tiempo si no se cancela la impresión
+                setTimeout(function() {
+                  window.close();
+                }, 1000);
+              }, 250);
+            };
+            
+            // También permitir cerrar manualmente con Escape
+            document.addEventListener('keydown', function(e) {
+              if (e.key === 'Escape') {
+                window.close();
+              }
+            });
+          </script>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
   };
 
-  // Generar contenido HTML para impresión (MODIFICADO con estilos inline)
+  // Generar contenido HTML para impresión
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
       // TICKET COCINA
       return `
-        <div class="ticket" style="font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.2; width: 72mm; margin: 0 auto; padding: 8px;">
-          <div style="text-align: center;">
-            <div style="font-weight: bold; text-transform: uppercase; font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
-            <div style="font-weight: bold;">** COCINA **</div>
-            <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+        <div class="ticket">
+          <div class="center">
+            <div class="bold uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
+            <div class="bold">** COCINA **</div>
+            <div class="divider"></div>
           </div>
           
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">CLIENTE:</span>
+          <div class="info-row">
+            <span class="bold">CLIENTE:</span>
             <span>${order.customerName.toUpperCase()}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">AREA:</span>
+          <div class="info-row">
+            <span class="bold">AREA:</span>
             <span>COCINA</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">COMANDA:</span>
+          <div class="info-row">
+            <span class="bold">COMANDA:</span>
             <span>#${getDisplayKitchenNumber()}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">FECHA:</span>
+          <div class="info-row">
+            <span class="bold">FECHA:</span>
             <span>${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">ATENDIDO POR:</span>
+          <div class="info-row">
+            <span class="bold">ATENDIDO POR:</span>
             <span>${getCurrentUserName().toUpperCase()}</span>
           </div>
           
-          <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+          <div class="divider"></div>
           
-          <div style="text-align: center; font-weight: bold; margin: 6px 0; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 3px;">DESCRIPCION</div>
+          <div class="products-header">DESCRIPCION</div>
           
-          <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+          <div class="divider"></div>
           
           ${order.items.map(item => `
-            <div style="display: flex; margin-bottom: 4px;">
-              <div style="width: 15%; font-weight: bold;">${item.quantity}x</div>
-              <div style="width: 85%; font-weight: bold; text-transform: uppercase;">${item.menuItem.name.toUpperCase()}</div>
+            <div class="product-row">
+              <div class="quantity">${item.quantity}x</div>
+              <div class="product-name">${item.menuItem.name.toUpperCase()}</div>
             </div>
-            ${item.notes ? `<div style="font-style: italic; font-size: 10px; margin-left: 12px; margin-bottom: 2px;">- ${item.notes}</div>` : ''}
+            ${item.notes ? `<div class="notes">- ${item.notes}</div>` : ''}
           `).join('')}
           
-          <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+          <div class="divider"></div>
           
-          <div style="text-align: center;">
-            <div style="text-align: center; font-size: 9px; letter-spacing: 1px; margin: 3px 0;">********************************</div>
+          <div class="center">
+            <div class="asterisk-line">********************************</div>
           </div>
         </div>
       `;
@@ -639,97 +665,97 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       const igv = order.total - subtotal;
       
       return `
-        <div class="ticket" style="font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.2; width: 72mm; margin: 0 auto; padding: 8px;">
-          <div style="text-align: center;">
-            <div style="font-weight: bold; font-size: 14px;">MARY'S RESTAURANT</div>
+        <div class="ticket">
+          <div class="center">
+            <div class="bold" style="font-size: 14px;">MARY'S RESTAURANT</div>
             <div>Av. Isabel La Católica 1254</div>
             <div>Tel: 941 778 599</div>
-            <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+            <div class="divider"></div>
           </div>
           
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">ORDEN:</span>
+          <div class="info-row">
+            <span class="bold">ORDEN:</span>
             <span>${getDisplayOrderNumber()}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">TIPO:</span>
+          <div class="info-row">
+            <span class="bold">TIPO:</span>
             <span>${getSourceText(order.source.type)}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">FECHA:</span>
+          <div class="info-row">
+            <span class="bold">FECHA:</span>
             <span>${order.createdAt.toLocaleDateString()}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">HORA:</span>
+          <div class="info-row">
+            <span class="bold">HORA:</span>
             <span>${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="font-weight: bold;">PAGO:</span>
+          <div class="info-row">
+            <span class="bold">PAGO:</span>
             <span>${getPaymentText()}</span>
           </div>
           
-          <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+          <div class="divider"></div>
           
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold;">
+          <div class="info-row bold">
             <span>CLIENTE:</span>
             <span style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+          <div class="info-row">
             <span>TELÉFONO:</span>
             <span>${order.phone}</span>
           </div>
           ${order.tableNumber ? `
-          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+          <div class="info-row">
             <span>MESA:</span>
             <span>${order.tableNumber}</span>
           </div>
           ` : ''}
           
-          <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+          <div class="divider"></div>
           
-          <table style="width: 100%; border-collapse: collapse; margin: 5px 0;">
+          <table>
             <thead>
               <tr>
-                <th style="text-align: left; padding: 2px 0; border-bottom: 1px solid #000; font-weight: bold;">Cant</th>
-                <th style="text-align: left; padding: 2px 0; border-bottom: 1px solid #000; font-weight: bold;">Descripción</th>
-                <th style="text-align: right; padding: 2px 0; border-bottom: 1px solid #000; font-weight: bold;">Precio</th>
+                <th>Cant</th>
+                <th>Descripción</th>
+                <th style="text-align: right;">Precio</th>
               </tr>
             </thead>
             <tbody>
               ${order.items.map(item => `
                 <tr>
-                  <td style="padding: 2px 0; font-weight: bold;">${item.quantity}x</td>
-                  <td style="padding: 2px 0;">
+                  <td style="font-weight: bold;">${item.quantity}x</td>
+                  <td>
                     <div style="font-weight: bold; text-transform: uppercase;">${item.menuItem.name}</div>
                     ${item.notes ? `<div style="font-style: italic; font-size: 10px; margin-left: 10px;">Nota: ${item.notes}</div>` : ''}
                   </td>
-                  <td style="text-align: right; padding: 2px 0;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
+                  <td style="text-align: right;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
           
-          <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+          <div class="divider"></div>
           
           <div style="font-size: 11px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1px;">
+            <div class="info-row">
               <span>Subtotal:</span>
               <span>S/ ${subtotal.toFixed(2)}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1px;">
+            <div class="info-row">
               <span>IGV (18%):</span>
               <span>S/ ${igv.toFixed(2)}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; border-top: 2px solid #000; padding-top: 5px; margin-top: 5px; font-weight: bold;">
+            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px; font-weight: bold;">
               <span>TOTAL:</span>
               <span>S/ ${order.total.toFixed(2)}</span>
             </div>
           </div>
           
-          <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+          <div class="divider"></div>
           
-          <div style="text-align: center;">
-            <div style="font-weight: bold;">¡GRACIAS POR SU PEDIDO!</div>
+          <div class="center">
+            <div class="bold">¡GRACIAS POR SU PEDIDO!</div>
             <div>*** ${getSourceText(order.source.type)} ***</div>
             <div style="margin-top: 10px; font-size: 10px;">
               ${new Date().toLocaleString('es-ES', { 
