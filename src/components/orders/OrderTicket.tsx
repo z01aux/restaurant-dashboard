@@ -152,7 +152,26 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontSize: FONT_SIZE_SMALL,
       letterSpacing: 1,
       marginBottom: 1,
-    }
+    },
+    notesSection: {
+      marginTop: 4,
+      marginBottom: 4,
+      padding: 3,
+      backgroundColor: '#fff3cd',
+      border: '1pt solid #ffeaa7',
+      borderRadius: 2,
+    },
+    notesLabel: {
+      fontWeight: 'bold',
+      fontSize: FONT_SIZE_SMALL,
+      marginBottom: 1,
+      color: '#856404',
+    },
+    notesText: {
+      fontSize: FONT_SIZE_SMALL,
+      color: '#856404',
+      flexWrap: 'wrap',
+    },
   });
 
   // Estilos normales para otros tipos de pedido - MODIFICADO para 80mm
@@ -261,10 +280,29 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     footerDate: {
       marginTop: 6,
       fontSize: FONT_SIZE_SMALL - 1,
-    }
+    },
+    notesSection: {
+      marginTop: 4,
+      marginBottom: 4,
+      padding: 3,
+      backgroundColor: '#fff3cd',
+      border: '1pt solid #ffeaa7',
+      borderRadius: 2,
+    },
+    notesLabel: {
+      fontWeight: 'bold',
+      fontSize: FONT_SIZE_SMALL,
+      marginBottom: 1,
+      color: '#856404',
+    },
+    notesText: {
+      fontSize: FONT_SIZE_SMALL,
+      color: '#856404',
+      flexWrap: 'wrap',
+    },
   });
 
-  // Componente del documento PDF para COCINA - CORREGIDO para mostrar notas
+  // Componente del documento PDF para COCINA - CON NOTAS DEL PEDIDO
   const KitchenTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
@@ -300,11 +338,19 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 
         <View style={kitchenStyles.divider} />
 
+        {/* NOTAS GENERALES DEL PEDIDO */}
+        {order.notes && order.notes.trim() !== '' && (
+          <View style={kitchenStyles.notesSection}>
+            <Text style={kitchenStyles.notesLabel}>NOTAS DEL PEDIDO:</Text>
+            <Text style={kitchenStyles.notesText}>{order.notes}</Text>
+          </View>
+        )}
+
         <Text style={kitchenStyles.productsHeader}>DESCRIPCION</Text>
         
         <View style={kitchenStyles.divider} />
 
-        {/* LISTA DE PRODUCTOS CON NOTAS - CORREGIDO */}
+        {/* LISTA DE PRODUCTOS CON NOTAS */}
         <View style={kitchenStyles.productsContainer}>
           {order.items.map((item, index) => (
             <View key={index}>
@@ -312,7 +358,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 <Text style={kitchenStyles.quantity}>{item.quantity}x</Text>
                 <Text style={kitchenStyles.productName}>{item.menuItem.name.toUpperCase()}</Text>
               </View>
-              {/* NOTAS - AHORA SE MUESTRAN CORRECTAMENTE */}
+              {/* NOTAS DEL ITEM */}
               {item.notes && item.notes.trim() !== '' && (
                 <Text style={kitchenStyles.notes}>- {item.notes}</Text>
               )}
@@ -329,7 +375,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     </Document>
   );
 
-  // Componente del documento PDF normal - CORREGIDO para mostrar notas y MESA en negrita
+  // Componente del documento PDF normal - CON NOTAS DEL PEDIDO
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -380,7 +426,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.address}</Text>
             </View>
           )}
-          {/* MESA EN NEGRITA - CORREGIDO */}
+          {/* MESA EN NEGRITA */}
           {order.tableNumber && (
             <View style={normalStyles.row}>
               <Text style={normalStyles.bold}>MESA:</Text>
@@ -391,6 +437,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 
         <View style={normalStyles.divider} />
 
+        {/* NOTAS GENERALES DEL PEDIDO */}
+        {order.notes && order.notes.trim() !== '' && (
+          <View style={normalStyles.notesSection}>
+            <Text style={normalStyles.notesLabel}>NOTAS DEL PEDIDO:</Text>
+            <Text style={normalStyles.notesText}>{order.notes}</Text>
+          </View>
+        )}
+
         <View style={normalStyles.table}>
           <View style={normalStyles.tableHeader}>
             <Text style={normalStyles.colQuantity}>Cant</Text>
@@ -398,7 +452,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
             <Text style={normalStyles.colPrice}>Precio</Text>
           </View>
 
-          {/* PRODUCTOS CON NOTAS - CORREGIDO */}
+          {/* PRODUCTOS CON NOTAS */}
           {order.items.map((item, index) => (
             <View key={index}>
               <View style={normalStyles.tableRow}>
@@ -410,7 +464,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                   S/ {(item.menuItem.price * item.quantity).toFixed(2)}
                 </Text>
               </View>
-              {/* NOTAS - AHORA SE MUESTRAN CORRECTAMENTE */}
+              {/* NOTAS DEL ITEM */}
               {item.notes && item.notes.trim() !== '' && (
                 <View style={normalStyles.tableRow}>
                   <Text style={normalStyles.colQuantity}></Text>
@@ -481,7 +535,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para imprimir - CORREGIDO para mostrar notas
+  // Función para imprimir - CON NOTAS DEL PEDIDO
   const handlePrint = () => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -549,7 +603,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 justify-content: space-between;
                 margin-bottom: 3px;
               }
-              /* ESTILOS CORREGIDOS PARA NOTAS */
               .notes {
                 font-style: italic;
                 font-size: 10px;
@@ -630,7 +683,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar contenido HTML para impresión - CORREGIDO para mostrar notas
+  // Generar contenido HTML para impresión - CON NOTAS DEL PEDIDO
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
       return `
@@ -663,6 +716,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           </div>
           
           <div class="divider"></div>
+          
+          ${order.notes && order.notes.trim() !== '' ? `
+          <div style="margin: 8px 0; padding: 5px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px;">
+            <div style="font-weight: bold; font-size: 10px; color: #856404;">NOTAS DEL PEDIDO:</div>
+            <div style="font-size: 10px; color: #856404;">${order.notes}</div>
+          </div>
+          <div class="divider"></div>
+          ` : ''}
           
           <div class="products-header">DESCRIPCION</div>
           
@@ -741,6 +802,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           ` : ''}
           
           <div class="divider"></div>
+          
+          ${order.notes && order.notes.trim() !== '' ? `
+          <div style="margin: 8px 0; padding: 5px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px;">
+            <div style="font-weight: bold; font-size: 10px; color: #856404;">NOTAS DEL PEDIDO:</div>
+            <div style="font-size: 10px; color: #856404;">${order.notes}</div>
+          </div>
+          <div class="divider"></div>
+          ` : ''}
           
           <table>
             <thead>
