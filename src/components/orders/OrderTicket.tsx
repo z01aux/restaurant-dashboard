@@ -467,139 +467,196 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 
   // Función para imprimir - MANTENIENDO EL DISEÑO QUE TE GUSTA
   const handlePrint = async () => {
-    const printContent = document.getElementById(`ticket-${order.id}`);
-    if (printContent) {
-      const isMobile = window.innerWidth <= 768;
-      const windowFeatures = isMobile 
-        ? 'width=320,height=600,scrollbars=no,toolbar=no,location=no'
-        : 'width=400,height=600,scrollbars=no,toolbar=no,location=no';
-      
-      const printWindow = window.open('', '_blank', windowFeatures);
-      if (printWindow) {
-        const ticketContent = generateTicketContent(order, isPhoneOrder);
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Ticket ${order.id}</title>
-              <style>
-                @media print {
-                  @page {
-                    margin: 0;
-                    size: 72mm auto;
-                  }
-                  body {
-                    width: 72mm !important;
-                    margin: 0 auto !important;
-                    padding: 5px !important;
-                  }
+  const printContent = document.getElementById(`ticket-${order.id}`);
+  if (printContent) {
+    const isMobile = window.innerWidth <= 768;
+    const windowFeatures = isMobile 
+      ? 'width=400,height=600,scrollbars=no,toolbar=no,location=no'
+      : 'width=500,height=700,scrollbars=no,toolbar=no,location=no';
+    
+    const printWindow = window.open('', '_blank', windowFeatures);
+    if (printWindow) {
+      const ticketContent = generateTicketContent(order, isPhoneOrder);
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Ticket ${order.id}</title>
+            <meta charset="UTF-8">
+            <style>
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              body {
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 12px;
+                line-height: 1.2;
+                width: 72mm;
+                margin: 0 auto;
+                padding: 8px;
+                background: white;
+                color: black;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              
+              @media print {
+                @page {
+                  size: 72mm auto;
+                  margin: 0;
+                  padding: 0;
                 }
                 body {
-                  font-family: 'Courier New', monospace;
-                  font-size: 12px;
-                  line-height: 1.2;
-                  width: 72mm;
-                  margin: 0 auto;
-                  padding: 10px;
-                  background: white;
-                  color: black;
-                  box-sizing: border-box;
+                  width: 72mm !important;
+                  margin: 0 !important;
+                  padding: 8px !important;
+                  font-size: 12px !important;
                 }
                 .ticket {
-                  width: 100%;
-                  max-width: 72mm;
-                  margin: 0 auto;
+                  width: 100% !important;
+                  max-width: 72mm !important;
                 }
-                .center {
-                  text-align: center;
-                }
-                .bold {
-                  font-weight: bold;
-                }
-                .uppercase {
-                  text-transform: uppercase;
-                }
-                .divider {
-                  border-top: 1px dashed #000;
-                  margin: 5px 0;
-                }
-                .info-row {
+              }
+              
+              .ticket {
+                width: 100%;
+                max-width: 72mm;
+                margin: 0 auto;
+              }
+              
+              .center {
+                text-align: center;
+              }
+              
+              .bold {
+                font-weight: bold;
+              }
+              
+              .uppercase {
+                text-transform: uppercase;
+              }
+              
+              .divider {
+                border-top: 1px solid #000;
+                margin: 6px 0;
+                width: 100%;
+              }
+              
+              .info-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 3px;
+                width: 100%;
+              }
+              
+              .notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 12px;
+                margin-bottom: 2px;
+              }
+              
+              .products-header {
+                text-align: center;
+                font-weight: bold;
+                margin: 6px 0;
+                text-transform: uppercase;
+                border-bottom: 1px solid #000;
+                padding-bottom: 3px;
+              }
+              
+              .product-row {
+                display: flex;
+                margin-bottom: 4px;
+                width: 100%;
+              }
+              
+              .quantity {
+                width: 15%;
+                font-weight: bold;
+              }
+              
+              .product-name {
+                width: 85%;
+                font-weight: bold;
+                text-transform: uppercase;
+                word-wrap: break-word;
+              }
+              
+              .asterisk-line {
+                text-align: center;
+                font-size: 9px;
+                letter-spacing: 1px;
+                margin: 3px 0;
+              }
+              
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 5px 0;
+              }
+              
+              th, td {
+                padding: 2px 0;
+                text-align: left;
+                vertical-align: top;
+              }
+              
+              th {
+                border-bottom: 1px solid #000;
+                font-weight: bold;
+              }
+              
+              .ticket {
+                page-break-inside: avoid;
+              }
+              
+              @media screen {
+                body {
+                  background: #f0f0f0;
                   display: flex;
-                  justify-content: space-between;
-                  margin-bottom: 3px;
+                  justify-content: center;
+                  align-items: flex-start;
+                  min-height: 100vh;
+                  padding: 20px;
                 }
-                .notes {
-                  font-style: italic;
-                  font-size: 10px;
-                  margin-left: 15px;
+                .ticket {
+                  background: white;
+                  padding: 15px;
+                  box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+                  border-radius: 4px;
+                  border: 1px solid #ddd;
                 }
-                .products-header {
-                  text-align: center;
-                  font-weight: bold;
-                  margin: 5px 0;
-                  text-transform: uppercase;
-                  border-bottom: 1px dashed #000;
-                  padding-bottom: 3px;
-                }
-                .product-row {
-                  display: flex;
-                  margin-bottom: 4px;
-                }
-                .quantity {
-                  width: 15%;
-                  font-weight: bold;
-                }
-                .product-name {
-                  width: 85%;
-                  font-weight: bold;
-                  text-transform: uppercase;
-                }
-                .asterisk-line {
-                  text-align: center;
-                  font-size: 9px;
-                  letterSpacing: 1px;
-                  margin-bottom: 1px;
-                }
-                
-                /* Estilos para vista previa */
-                @media screen and (min-width: 769px) {
-                  body {
-                    width: 100%;
-                    max-width: 72mm;
-                    background: #f5f5f5;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    min-height: 100vh;
-                  }
-                  .ticket {
-                    background: white;
-                    padding: 15px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    border-radius: 8px;
-                  }
-                }
-              </style>
-            </head>
-            <body>
-              ${ticketContent}
-              <script>
-                window.onload = function() {
+              }
+            </style>
+          </head>
+          <body>
+            ${ticketContent}
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
                   setTimeout(function() {
-                    window.print();
-                    setTimeout(function() {
-                      window.close();
-                    }, 1000);
-                  }, 100);
-                };
-              </script>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-      }
+                    window.close();
+                  }, 1500);
+                }, 200);
+              };
+              
+              document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                  window.close();
+                }
+              });
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
     }
-  };
+  }
+};
 
 
   // Generar contenido HTML para impresión (MANTENIENDO EL DISEÑO QUE TE GUSTA)
@@ -832,6 +889,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 };
 
 export default OrderTicket;
+
 
 
 
