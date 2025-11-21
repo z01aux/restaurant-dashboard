@@ -278,7 +278,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginTop: 6,
       fontSize: FONT_SIZE_SMALL - 1,
       fontWeight: 'normal',
-    }
+    },
+    valueBold: {
+      fontWeight: 'bold',
+      fontSize: FONT_SIZE_SMALL,
+      maxWidth: '60%',
+      flexWrap: 'wrap',
+    },
   });
 
   // Componente del documento PDF para COCINA - ACTUALIZADO
@@ -346,7 +352,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     </Document>
   );
 
-  // Componente del documento PDF normal - ACTUALIZADO
+  // Componente del documento PDF normal - ACTUALIZADO CON NOMBRE EN NEGRITA
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -385,9 +391,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         <View style={normalStyles.divider} />
 
         <View style={normalStyles.section}>
-          <View style={[normalStyles.row, normalStyles.bold]}>
-            <Text>CLIENTE:</Text>
-            <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.customerName.toUpperCase()}</Text>
+          <View style={normalStyles.row}>
+            <Text style={normalStyles.bold}>CLIENTE:</Text>
+            <Text style={normalStyles.valueBold}>{order.customerName.toUpperCase()}</Text>
           </View>
           <View style={normalStyles.row}>
             <Text style={normalStyles.bold}>TELÉFONO:</Text>
@@ -504,7 +510,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Función para imprimir - HELVETICA CON PESOS ESPECÍFICOS
+  // Función para imprimir - ACTUALIZADA CON NOMBRE EN NEGRITA
   const handlePrint = () => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -543,7 +549,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 }
                 * {
                   font-family: inherit !important;
-                  font-weight: inherit !important;
                 }
               }
               body {
@@ -586,6 +591,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               }
               .value {
                 font-weight: normal !important;
+              }
+              .customer-name-bold {
+                font-weight: bold !important;
+                max-width: 60%;
+                word-wrap: break-word;
               }
               .header-title {
                 font-weight: bold !important;
@@ -676,7 +686,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar contenido HTML para impresión - ACTUALIZADO
+  // Generar contenido HTML para impresión - ACTUALIZADO CON NOMBRE EN NEGRITA
   const generateTicketContent = () => {
     if (isPhoneOrder) {
       return `
@@ -689,7 +699,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="value bold" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">AREA:</span>
@@ -769,7 +779,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="value bold" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">TELÉFONO:</span>
@@ -918,4 +928,3 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
 };
 
 export default OrderTicket;
-
