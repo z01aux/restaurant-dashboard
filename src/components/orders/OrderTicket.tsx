@@ -64,7 +64,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
       fontFamily: 'Helvetica',
-      fontWeight: 'normal', // NORMAL por defecto
+      fontWeight: 'normal',
       width: PAGE_WIDTH,
     },
     header: {
@@ -75,13 +75,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     },
     restaurantName: {
       fontSize: FONT_SIZE_XLARGE,
-      fontWeight: 'bold', // SOLO ESTO EN NEGRITA
+      fontWeight: 'bold',
       marginBottom: 2,
       textTransform: 'uppercase',
     },
     area: {
       fontSize: FONT_SIZE_LARGE,
-      fontWeight: 'bold', // SOLO ESTO EN NEGRITA
+      fontWeight: 'bold',
       marginBottom: 3,
       textTransform: 'uppercase',
     },
@@ -98,19 +98,25 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginBottom: 6,
     },
     label: {
-      fontWeight: 'bold', // SOLO LABELS EN NEGRITA
+      fontWeight: 'bold',
       marginBottom: 1,
       fontSize: FONT_SIZE_SMALL,
     },
     value: {
-      fontWeight: 'normal', // VALORES EN NORMAL
+      fontWeight: 'normal',
+      fontSize: FONT_SIZE_SMALL,
+      maxWidth: '60%',
+      flexWrap: 'wrap',
+    },
+    valueBold: {
+      fontWeight: 'bold',
       fontSize: FONT_SIZE_SMALL,
       maxWidth: '60%',
       flexWrap: 'wrap',
     },
     productsHeader: {
       textAlign: 'center',
-      fontWeight: 'bold', // SOLO HEADER EN NEGRITA
+      fontWeight: 'bold',
       marginBottom: 3,
       textTransform: 'uppercase',
       borderBottom: '1pt solid #000000',
@@ -123,12 +129,12 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     },
     quantity: {
       width: '15%',
-      fontWeight: 'bold', // CANTIDADES EN NEGRITA
+      fontWeight: 'bold',
       fontSize: FONT_SIZE_SMALL,
     },
     productName: {
       width: '85%',
-      fontWeight: 'bold', // NOMBRES DE PRODUCTO EN NEGRITA
+      fontWeight: 'bold',
       textTransform: 'uppercase',
       fontSize: FONT_SIZE_SMALL,
       flexWrap: 'wrap',
@@ -140,7 +146,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginBottom: 3,
       flexWrap: 'wrap',
       width: '85%',
-      fontWeight: 'normal', // NOTAS EN NORMAL
+      fontWeight: 'normal',
     },
     productsContainer: {
       marginBottom: 8,
@@ -154,7 +160,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontSize: FONT_SIZE_SMALL,
       letterSpacing: 1,
       marginBottom: 1,
-      fontWeight: 'normal', // ASTERISCOS EN NORMAL
+      fontWeight: 'normal',
     }
   });
 
@@ -166,7 +172,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
       fontFamily: 'Helvetica',
-      fontWeight: 'normal', // NORMAL por defecto
+      fontWeight: 'normal',
       width: PAGE_WIDTH,
     },
     header: {
@@ -175,18 +181,18 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     },
     title: {
       fontSize: FONT_SIZE_XLARGE,
-      fontWeight: 'bold', // TÍTULO EN NEGRITA
+      fontWeight: 'bold',
       marginBottom: 3,
     },
     subtitle: {
       fontSize: FONT_SIZE_SMALL,
       marginBottom: 1,
-      fontWeight: 'normal', // SUBTÍTULO EN NORMAL
+      fontWeight: 'normal',
     },
     boldSubtitle: {
       fontSize: FONT_SIZE_SMALL,
       marginBottom: 1,
-      fontWeight: 'bold', // SOLO ESTE SUBTÍTULO EN NEGRITA
+      fontWeight: 'bold',
     },
     divider: {
       borderBottom: '1pt solid #000000',
@@ -198,7 +204,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginBottom: 2,
     },
     bold: {
-      fontWeight: 'bold', // CLASE PARA NEGRITA
+      fontWeight: 'bold',
     },
     section: {
       marginBottom: 6,
@@ -219,24 +225,24 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     colQuantity: {
       width: '15%',
       fontSize: FONT_SIZE_SMALL,
-      fontWeight: 'bold', // CANTIDADES EN NEGRITA
+      fontWeight: 'bold',
     },
     colDescription: {
       width: '50%',
       fontSize: FONT_SIZE_SMALL,
-      fontWeight: 'normal', // DESCRIPCIÓN EN NORMAL
+      fontWeight: 'normal',
     },
     colPrice: {
       width: '35%',
       textAlign: 'right',
       fontSize: FONT_SIZE_SMALL,
-      fontWeight: 'normal', // PRECIOS EN NORMAL
+      fontWeight: 'normal',
     },
     quantity: {
-      fontWeight: 'bold', // CANTIDAD EN NEGRITA
+      fontWeight: 'bold',
     },
     productName: {
-      fontWeight: 'bold', // NOMBRE DE PRODUCTO EN NEGRITA
+      fontWeight: 'bold',
       textTransform: 'uppercase',
       fontSize: FONT_SIZE_SMALL,
       flexWrap: 'wrap',
@@ -247,7 +253,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       marginLeft: 0,
       marginTop: 1,
       flexWrap: 'wrap',
-      fontWeight: 'normal', // NOTAS EN NORMAL
+      fontWeight: 'normal',
     },
     calculations: {
       marginTop: 3,
@@ -257,7 +263,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       justifyContent: 'space-between',
       marginBottom: 1,
       fontSize: FONT_SIZE_SMALL,
-      fontWeight: 'normal', // CÁLCULOS EN NORMAL
+      fontWeight: 'normal',
     },
     total: {
       borderTop: '1pt solid #000000',
@@ -271,11 +277,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     footerDate: {
       marginTop: 6,
       fontSize: FONT_SIZE_SMALL - 1,
-      fontWeight: 'normal', // FECHA EN NORMAL
+      fontWeight: 'normal',
     }
   });
 
-  // Componente del documento PDF para COCINA
+  // Componente del documento PDF para COCINA - ACTUALIZADO
   const KitchenTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
@@ -287,7 +293,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         <View style={kitchenStyles.infoSection}>
           <View style={kitchenStyles.row}>
             <Text style={kitchenStyles.label}>CLIENTE:</Text>
-            <Text style={kitchenStyles.value}>{order.customerName.toUpperCase()}</Text>
+            <Text style={kitchenStyles.valueBold}>{order.customerName.toUpperCase()}</Text>
           </View>
           <View style={kitchenStyles.row}>
             <Text style={kitchenStyles.label}>AREA:</Text>
@@ -340,7 +346,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     </Document>
   );
 
-  // Componente del documento PDF normal
+  // Componente del documento PDF normal - ACTUALIZADO
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -393,7 +399,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.address}</Text>
             </View>
           )}
-          {/* MESA EN NEGRITA */}
           {order.tableNumber && (
             <View style={normalStyles.row}>
               <Text style={normalStyles.bold}>MESA:</Text>
@@ -671,7 +676,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     }
   };
 
-  // Generar contenido HTML para impresión
+  // Generar contenido HTML para impresión - ACTUALIZADO
   const generateTicketContent = () => {
     if (isPhoneOrder) {
       return `
@@ -684,7 +689,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="value">${order.customerName.toUpperCase()}</span>
+            <span class="value bold">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">AREA:</span>
