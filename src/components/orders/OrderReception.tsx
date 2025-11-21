@@ -307,7 +307,7 @@ const OrderReception: React.FC = () => {
     return sourceMap[sourceType] || sourceType;
   };
 
-  // Función para generar contenido HTML del ticket - OPTIMIZADA
+  // Función para generar contenido HTML del ticket - ACTUALIZADA CON HELVETICA
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
       // Obtener el nombre del usuario actual desde localStorage
@@ -327,30 +327,30 @@ const OrderReception: React.FC = () => {
       return `
         <div class="ticket">
           <div class="center">
-            <div class="bold uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
-            <div class="bold">** COCINA **</div>
+            <div class="header-title uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
+            <div class="header-title">** COCINA **</div>
             <div class="divider"></div>
           </div>
           
           <div class="info-row">
-            <span class="bold">CLIENTE:</span>
-            <span>${order.customerName.toUpperCase()}</span>
+            <span class="label">CLIENTE:</span>
+            <span class="value">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
-            <span class="bold">AREA:</span>
-            <span>COCINA</span>
+            <span class="label">AREA:</span>
+            <span class="value">COCINA</span>
           </div>
           <div class="info-row">
-            <span class="bold">COMANDA:</span>
-            <span>#${getDisplayKitchenNumber(order)}</span>
+            <span class="label">COMANDA:</span>
+            <span class="value">#${getDisplayKitchenNumber(order)}</span>
           </div>
           <div class="info-row">
-            <span class="bold">FECHA:</span>
-            <span>${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span class="label">FECHA:</span>
+            <span class="value">${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <div class="info-row">
-            <span class="bold">ATENDIDO POR:</span>
-            <span>${getCurrentUserName().toUpperCase()}</span>
+            <span class="label">ATENDIDO POR:</span>
+            <span class="value">${getCurrentUserName().toUpperCase()}</span>
           </div>
           
           <div class="divider"></div>
@@ -381,53 +381,53 @@ const OrderReception: React.FC = () => {
       return `
         <div class="ticket">
           <div class="center">
-            <div class="bold" style="font-size: 14px;">MARY'S RESTAURANT</div>
-            <div class="bold">Av. Isabel La Católica 1254</div>
-            <div class="bold">Tel: 941 778 599</div>
+            <div class="header-title" style="font-size: 14px;">MARY'S RESTAURANT</div>
+            <div class="header-title">Av. Isabel La Católica 1254</div>
+            <div class="header-subtitle">Tel: 941 778 599</div>
             <div class="divider"></div>
           </div>
           
           <div class="info-row">
-            <span class="bold">ORDEN:</span>
-            <span>${getDisplayOrderNumber(order)}</span>
+            <span class="label">ORDEN:</span>
+            <span class="value">${getDisplayOrderNumber(order)}</span>
           </div>
           <div class="info-row">
-            <span class="bold">TIPO:</span>
-            <span>${getSourceText(order.source.type)}</span>
+            <span class="label">TIPO:</span>
+            <span class="value">${getSourceText(order.source.type)}</span>
           </div>
           <div class="info-row">
-            <span class="bold">FECHA:</span>
-            <span>${order.createdAt.toLocaleDateString()}</span>
+            <span class="label">FECHA:</span>
+            <span class="value">${order.createdAt.toLocaleDateString()}</span>
           </div>
           <div class="info-row">
-            <span class="bold">HORA:</span>
-            <span>${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span class="label">HORA:</span>
+            <span class="value">${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <div class="info-row">
-            <span class="bold">PAGO:</span>
-            <span>${getPaymentText(order.paymentMethod)}</span>
+            <span class="label">PAGO:</span>
+            <span class="value">${getPaymentText(order.paymentMethod)}</span>
           </div>
           
           <div class="divider"></div>
           
-          <div class="info-row bold">
-            <span>CLIENTE:</span>
-            <span style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
+          <div class="info-row">
+            <span class="label">CLIENTE:</span>
+            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
-            <span class="bold">TELÉFONO:</span>
-            <span>${order.phone}</span>
+            <span class="label">TELÉFONO:</span>
+            <span class="value">${order.phone}</span>
           </div>
           ${order.address ? `
           <div class="info-row">
-            <span class="bold">DIRECCIÓN:</span>
-            <span style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
+            <span class="label">DIRECCIÓN:</span>
+            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
           </div>
           ` : ''}
           ${order.tableNumber ? `
           <div class="info-row">
-            <span class="bold">MESA:</span>
-            <span>${order.tableNumber}</span>
+            <span class="label">MESA:</span>
+            <span class="value">${order.tableNumber}</span>
           </div>
           ` : ''}
           
@@ -444,9 +444,9 @@ const OrderReception: React.FC = () => {
             <tbody>
               ${order.items.map(item => `
                 <tr>
-                  <td style="font-weight: bold; vertical-align: top;">${item.quantity}x</td>
+                  <td class="quantity" style="vertical-align: top;">${item.quantity}x</td>
                   <td style="vertical-align: top;">
-                    <div style="font-weight: bold; text-transform: uppercase;">${item.menuItem.name}</div>
+                    <div class="product-name">${item.menuItem.name}</div>
                     ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes">Nota: ${item.notes}</div>` : ''}
                   </td>
                   <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
@@ -459,25 +459,25 @@ const OrderReception: React.FC = () => {
           
           <div style="font-size: 11px;">
             <div class="info-row">
-              <span>Subtotal:</span>
-              <span>S/ ${subtotal.toFixed(2)}</span>
+              <span class="normal">Subtotal:</span>
+              <span class="normal">S/ ${subtotal.toFixed(2)}</span>
             </div>
             <div class="info-row">
-              <span>IGV (18%):</span>
-              <span>S/ ${igv.toFixed(2)}</span>
+              <span class="normal">IGV (18%):</span>
+              <span class="normal">S/ ${igv.toFixed(2)}</span>
             </div>
-            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px; font-weight: bold;">
-              <span>TOTAL:</span>
-              <span>S/ ${order.total.toFixed(2)}</span>
+            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
+              <span class="label">TOTAL:</span>
+              <span class="label">S/ ${order.total.toFixed(2)}</span>
             </div>
           </div>
           
           <div class="divider"></div>
           
           <div class="center">
-            <div class="bold">¡GRACIAS POR SU PEDIDO!</div>
-            <div>*** ${getSourceText(order.source.type)} ***</div>
-            <div style="margin-top: 10px; font-size: 10px;">
+            <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
+            <div class="normal">*** ${getSourceText(order.source.type)} ***</div>
+            <div class="normal" style="margin-top: 10px; font-size: 10px;">
               ${new Date().toLocaleString('es-ES', { 
                 year: 'numeric',
                 month: '2-digit',
@@ -492,7 +492,7 @@ const OrderReception: React.FC = () => {
     }
   };
 
-  // Función optimizada para imprimir inmediatamente
+  // Función optimizada para imprimir inmediatamente - ACTUALIZADA
   const printOrderImmediately = (order: Order) => {
     const isPhoneOrder = order.source.type === 'phone';
     
@@ -530,10 +530,17 @@ const OrderReception: React.FC = () => {
                   margin: 0 auto !important;
                   padding: 0 !important;
                   font-size: 12px !important;
+                  font-family: "Helvetica", "Arial", sans-serif !important;
+                  font-weight: normal !important;
+                }
+                * {
+                  font-family: inherit !important;
+                  font-weight: inherit !important;
                 }
               }
               body {
-                font-family: 'Courier New', monospace;
+                font-family: "Helvetica", "Arial", sans-serif;
+                font-weight: normal;
                 font-size: 12px;
                 line-height: 1.2;
                 width: 80mm;
@@ -542,15 +549,17 @@ const OrderReception: React.FC = () => {
                 background: white;
                 color: black;
               }
-              .ticket {
-                width: 100%;
-                max-width: 80mm;
+              .ticket, .ticket *, div, span, td, th {
+                font-family: "Helvetica", "Arial", sans-serif !important;
               }
               .center {
                 text-align: center;
               }
               .bold {
-                font-weight: bold;
+                font-weight: bold !important;
+              }
+              .normal {
+                font-weight: normal !important;
               }
               .uppercase {
                 text-transform: uppercase;
@@ -564,6 +573,18 @@ const OrderReception: React.FC = () => {
                 justify-content: space-between;
                 margin-bottom: 3px;
               }
+              .label {
+                font-weight: bold !important;
+              }
+              .value {
+                font-weight: normal !important;
+              }
+              .header-title {
+                font-weight: bold !important;
+              }
+              .header-subtitle {
+                font-weight: normal !important;
+              }
               .notes {
                 font-style: italic;
                 font-size: 10px;
@@ -571,6 +592,7 @@ const OrderReception: React.FC = () => {
                 margin-bottom: 3px;
                 display: block;
                 width: 85%;
+                font-weight: normal !important;
               }
               .table-notes {
                 font-style: italic;
@@ -578,10 +600,11 @@ const OrderReception: React.FC = () => {
                 margin-left: 0;
                 margin-top: 2px;
                 display: block;
+                font-weight: normal !important;
               }
               .products-header {
                 text-align: center;
-                font-weight: bold;
+                font-weight: bold !important;
                 margin: 6px 0;
                 text-transform: uppercase;
                 border-bottom: 1px solid #000;
@@ -593,11 +616,11 @@ const OrderReception: React.FC = () => {
               }
               .quantity {
                 width: 15%;
-                font-weight: bold;
+                font-weight: bold !important;
               }
               .product-name {
                 width: 85%;
-                font-weight: bold;
+                font-weight: normal !important;
                 text-transform: uppercase;
               }
               .asterisk-line {
@@ -605,6 +628,7 @@ const OrderReception: React.FC = () => {
                 font-size: 9px;
                 letter-spacing: 1px;
                 margin: 3px 0;
+                font-weight: normal !important;
               }
               table {
                 width: 100%;
@@ -618,7 +642,7 @@ const OrderReception: React.FC = () => {
               }
               th {
                 border-bottom: 1px solid #000;
-                font-weight: bold;
+                font-weight: bold !important;
               }
               .notes-row td {
                 padding-top: 0;
