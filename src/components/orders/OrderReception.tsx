@@ -334,7 +334,7 @@ const OrderReception: React.FC = () => {
           
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="value bold" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">AREA:</span>
@@ -414,7 +414,7 @@ const OrderReception: React.FC = () => {
           
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="value bold" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">TELÉFONO:</span>
@@ -537,7 +537,6 @@ const OrderReception: React.FC = () => {
                 }
                 * {
                   font-family: inherit !important;
-                  font-weight: inherit !important;
                 }
               }
               body {
@@ -581,6 +580,11 @@ const OrderReception: React.FC = () => {
               .value {
                 font-weight: normal !important;
               }
+              .customer-name-bold {
+                font-weight: bold !important;
+                max-width: 60%;
+                word-wrap: break-word;
+              }
               .header-title {
                 font-weight: bold !important;
               }
@@ -610,7 +614,7 @@ const OrderReception: React.FC = () => {
                 margin: 6px 0;
                 text-transform: uppercase;
                 border-bottom: 1px solid #000;
-                paddingBottom: 3px;
+                padding-bottom: 3px;
               }
               .product-row {
                 display: flex;
@@ -1026,7 +1030,7 @@ const OrderReception: React.FC = () => {
                   {[
                     { type: 'phone', label: '📞', title: 'Cocina' },
                     { type: 'walk-in', label: '👤', title: 'Local' },
-                    { type: 'delivery', label: '📍', title: 'Delivery' }
+                    { type: 'delivery', label: '🚚', title: 'Delivery' }
                   ].map(({ type, label, title }) => (
                     <button
                       key={type}
@@ -1300,7 +1304,7 @@ const OrderReception: React.FC = () => {
                     {[
                       { type: 'phone', label: '📞 Cocina' },
                       { type: 'walk-in', label: '👤 Local' },
-                      { type: 'delivery', label: '📍 Delivery' }
+                      { type: 'delivery', label: '🚚 Delivery' }
                     ].map(({ type, label }) => (
                       <button
                         key={type}
@@ -1845,5 +1849,3 @@ const OrderReception: React.FC = () => {
 };
 
 export default OrderReception;
-
-
