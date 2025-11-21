@@ -307,7 +307,7 @@ const OrderReception: React.FC = () => {
     return sourceMap[sourceType] || sourceType;
   };
 
-  // Función para generar contenido HTML del ticket - ACTUALIZADA CON HELVETICA
+  // Función para generar contenido HTML del ticket - ACTUALIZADA CON INFORMACIÓN ADICIONAL
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
       // Obtener el nombre del usuario actual desde localStorage
@@ -362,7 +362,7 @@ const OrderReception: React.FC = () => {
           ${order.items.map(item => `
             <div class="product-row">
               <div class="quantity">${item.quantity}x</div>
-              <div class="product-name">${item.menuItem.name.toUpperCase()}</div>
+              <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
             </div>
             ${item.notes && item.notes.trim() !== '' ? `<div class="notes">- ${item.notes}</div>` : ''}
           `).join('')}
@@ -382,7 +382,9 @@ const OrderReception: React.FC = () => {
         <div class="ticket">
           <div class="center">
             <div class="header-title" style="font-size: 14px;">MARY'S RESTAURANT</div>
-            <div class="header-title">Av. Isabel La Católica 1254</div>
+            <div class="header-subtitle">INVERSIONES AROMO S.A.C.</div>
+            <div class="header-subtitle">RUC: 20505262086</div>
+            <div class="header-subtitle">AV. ISABEL LA CATOLICA 1254</div>
             <div class="header-subtitle">Tel: 941 778 599</div>
             <div class="divider"></div>
           </div>
@@ -412,7 +414,7 @@ const OrderReception: React.FC = () => {
           
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
+            <span class="value bold" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">TELÉFONO:</span>
@@ -446,7 +448,7 @@ const OrderReception: React.FC = () => {
                 <tr>
                   <td class="quantity" style="vertical-align: top;">${item.quantity}x</td>
                   <td style="vertical-align: top;">
-                    <div class="product-name">${item.menuItem.name}</div>
+                    <div class="product-name bold">${item.menuItem.name}</div>
                     ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes">Nota: ${item.notes}</div>` : ''}
                   </td>
                   <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
