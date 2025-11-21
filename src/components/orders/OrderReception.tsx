@@ -307,7 +307,7 @@ const OrderReception: React.FC = () => {
     return sourceMap[sourceType] || sourceType;
   };
 
-  // Función para generar contenido HTML del ticket - ACTUALIZADA CON INFORMACIÓN ADICIONAL
+  // Función para generar contenido HTML del ticket - ACTUALIZADA CON NEGRITAS
   const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
     if (isKitchenTicket) {
       // Obtener el nombre del usuario actual desde localStorage
@@ -334,7 +334,7 @@ const OrderReception: React.FC = () => {
           
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="value">${order.customerName.toUpperCase()}</span>
+            <span class="value bold">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">AREA:</span>
@@ -610,7 +610,7 @@ const OrderReception: React.FC = () => {
                 margin: 6px 0;
                 text-transform: uppercase;
                 border-bottom: 1px solid #000;
-                padding-bottom: 3px;
+                paddingBottom: 3px;
               }
               .product-row {
                 display: flex;
@@ -622,7 +622,7 @@ const OrderReception: React.FC = () => {
               }
               .product-name {
                 width: 85%;
-                font-weight: normal !important;
+                font-weight: bold !important;
                 text-transform: uppercase;
               }
               .asterisk-line {
