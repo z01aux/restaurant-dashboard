@@ -334,7 +334,7 @@ const OrderReception: React.FC = () => {
           
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="value bold">${order.customerName.toUpperCase()}</span>
+            <span class="value bold" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">AREA:</span>
@@ -1845,3 +1845,4 @@ const OrderReception: React.FC = () => {
 };
 
 export default OrderReception;
+
