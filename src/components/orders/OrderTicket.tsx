@@ -128,7 +128,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
     },
     productName: {
       width: '85%',
-      fontWeight: 'normal', // NOMBRES DE PRODUCTO EN NORMAL
+      fontWeight: 'bold', // NOMBRES DE PRODUCTO EN NEGRITA
       textTransform: 'uppercase',
       fontSize: FONT_SIZE_SMALL,
       flexWrap: 'wrap',
@@ -236,7 +236,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       fontWeight: 'bold', // CANTIDAD EN NEGRITA
     },
     productName: {
-      fontWeight: 'normal', // NOMBRE DE PRODUCTO EN NORMAL
+      fontWeight: 'bold', // NOMBRE DE PRODUCTO EN NEGRITA
       textTransform: 'uppercase',
       fontSize: FONT_SIZE_SMALL,
       flexWrap: 'wrap',
@@ -346,7 +346,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
         <View style={normalStyles.header}>
           <Text style={normalStyles.title}>MARY'S RESTAURANT</Text>
-          <Text style={normalStyles.boldSubtitle}>Av. Isabel La Católica 1254</Text>
+          <Text style={normalStyles.subtitle}>INVERSIONES AROMO S.A.C.</Text>
+          <Text style={normalStyles.subtitle}>RUC: 20505262086</Text>
+          <Text style={normalStyles.subtitle}>AV. ISABEL LA CATOLICA 1254</Text>
           <Text style={normalStyles.subtitle}>Tel: 941 778 599</Text>
           <View style={normalStyles.divider} />
         </View>
@@ -621,7 +623,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
               }
               .product-name {
                 width: 85%;
-                font-weight: normal !important;
+                font-weight: bold !important;
                 text-transform: uppercase;
               }
               .asterisk-line {
@@ -710,7 +712,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           ${(order.items || []).map(item => `
             <div class="product-row">
               <div class="quantity">${item.quantity}x</div>
-              <div class="product-name">${item.menuItem.name.toUpperCase()}</div>
+              <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
             </div>
             ${item.notes?.trim() ? `<div class="notes">- ${item.notes}</div>` : ''}
           `).join('')}
@@ -730,7 +732,9 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
         <div class="ticket">
           <div class="center">
             <div class="header-title" style="font-size: 14px;">MARY'S RESTAURANT</div>
-            <div class="header-title">Av. Isabel La Católica 1254</div>
+            <div class="header-subtitle">INVERSIONES AROMO S.A.C.</div>
+            <div class="header-subtitle">RUC: 20505262086</div>
+            <div class="header-subtitle">AV. ISABEL LA CATOLICA 1254</div>
             <div class="header-subtitle">Tel: 941 778 599</div>
             <div class="divider"></div>
           </div>
@@ -760,7 +764,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
           
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
+            <span class="value bold" style="max-width: 60%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">TELÉFONO:</span>
@@ -794,7 +798,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
                 <tr>
                   <td class="quantity" style="vertical-align: top;">${item.quantity}x</td>
                   <td style="vertical-align: top;">
-                    <div class="product-name">${item.menuItem.name}</div>
+                    <div class="product-name bold">${item.menuItem.name}</div>
                     ${item.notes?.trim() ? `<div class="table-notes">Nota: ${item.notes}</div>` : ''}
                   </td>
                   <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
