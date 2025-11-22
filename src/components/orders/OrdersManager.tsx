@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Download } from 'lucide-react';
+import { Plus, Trash2, Download, CheckCircle } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -12,6 +12,7 @@ const OrdersManager: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState<string>('');
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentSort, setCurrentSort] = useState('status-time');
+  const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
   
   const { user } = useAuth();
   const { 
@@ -176,7 +177,13 @@ const OrdersManager: React.FC = () => {
     if (window.confirm(`¿Estás seguro de que quieres eliminar la orden ${orderNumber}? Esta acción no se puede deshacer.`)) {
       const result = await deleteOrder(orderId);
       if (result.success) {
-        alert('✅ Orden eliminada correctamente');
+        // Mostrar notificación de eliminación
+        setDeletedOrder({ id: orderId, number: orderNumber });
+        
+        // Ocultar la notificación después de 3 segundos
+        setTimeout(() => {
+          setDeletedOrder(null);
+        }, 3000);
       } else {
         alert('❌ Error al eliminar orden: ' + result.error);
       }
@@ -210,12 +217,23 @@ const OrdersManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Notificación de eliminación */}
+      {deletedOrder && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full">
+          <div className="flex items-center space-x-2">
+            <CheckCircle size={20} />
+            <div>
+              <div className="font-medium">✅ Orden eliminada</div>
+              <div className="text-sm opacity-90">Orden {deletedOrder.number} eliminada correctamente</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Órdenes</h2>
-          <p className="text-gray-600">
-            {filteredAndSortedOrders.length} de {orders.length} {orders.length === 1 ? 'orden' : 'órdenes'}
-          </p>
+          {/* ELIMINADO: El contador duplicado que estaba aquí */}
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <button 
@@ -242,7 +260,7 @@ const OrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Resumen de Pagos - MOVIDO ARRIBA */}
+      {/* Resumen de Pagos */}
       <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen de Pagos</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -397,9 +415,7 @@ const OrdersManager: React.FC = () => {
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Pago
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
+                  {/* ELIMINADO: Columna ESTADO */}
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
@@ -456,28 +472,21 @@ const OrdersManager: React.FC = () => {
                           {getPaymentText(order.paymentMethod)}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={order.status}
-                          onChange={(e) => handleStatusUpdate(order.id, e.target.value as Order['status'])}
-                          className={`text-xs font-semibold rounded-full px-2 py-1 border-0 ${getStatusColor(order.status)}`}
-                        >
-                          <option value="pending">Pendiente</option>
-                          <option value="preparing">Preparando</option>
-                          <option value="ready">Listo</option>
-                          <option value="delivered">Entregado</option>
-                          <option value="cancelled">Cancelado</option>
-                        </select>
-                      </td>
+                      {/* ELIMINADO: Celda del estado del select */}
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <OrderTicket order={order} />
                         {user?.role === 'admin' && (
                           <button
                             onClick={() => handleDeleteOrder(order.id, displayNumber)}
-                            className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                            className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors group relative"
                             title="Eliminar orden"
                           >
                             <Trash2 size={16} />
+                            {/* Tooltip elegante */}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                              Eliminar orden
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                            </div>
                           </button>
                         )}
                       </td>
