@@ -156,6 +156,36 @@ const OrdersManager: React.FC = () => {
     setPreviewOrder(null);
   };
 
+  // Componente para las acciones que no activa el preview
+  const OrderActions: React.FC<{ order: Order; displayNumber: string }> = ({ order, displayNumber }) => {
+    const handleDeleteClick = () => {
+      handleDeleteOrder(order.id, displayNumber);
+    };
+
+    return (
+      <div className="flex space-x-2">
+        <div onMouseEnter={(e) => e.stopPropagation()}>
+          <OrderTicket order={order} />
+        </div>
+        {user?.role === 'admin' && (
+          <button
+            onClick={handleDeleteClick}
+            className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors group relative"
+            title="Eliminar orden"
+            onMouseEnter={(e) => e.stopPropagation()}
+          >
+            🗑️
+            {/* Tooltip elegante */}
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+              Eliminar orden
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+            </div>
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const getPaymentColor = (paymentMethod?: string) => {
     const colors = {
       'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
@@ -510,22 +540,8 @@ const OrdersManager: React.FC = () => {
                           {getPaymentText(order.paymentMethod)}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <OrderTicket order={order} />
-                        {user?.role === 'admin' && (
-                          <button
-                            onClick={() => handleDeleteOrder(order.id, displayNumber)}
-                            className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors group relative"
-                            title="Eliminar orden"
-                          >
-                            🗑️
-                            {/* Tooltip elegante */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                              Eliminar orden
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-                            </div>
-                          </button>
-                        )}
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <OrderActions order={order} displayNumber={displayNumber} />
                       </td>
                     </tr>
                   );
@@ -540,4 +556,3 @@ const OrdersManager: React.FC = () => {
 };
 
 export default OrdersManager;
-
