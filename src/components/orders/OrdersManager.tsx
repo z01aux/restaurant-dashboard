@@ -18,7 +18,6 @@ const OrdersManager: React.FC = () => {
   const { 
     orders, 
     loading, 
-    updateOrderStatus, 
     deleteOrder,
     exportOrdersToCSV,
     getTodayOrders
@@ -113,17 +112,6 @@ const OrdersManager: React.FC = () => {
     onLoadMore: pagination.loadMore,
   } : {};
 
-  const getStatusColor = (status: Order['status']) => {
-    const colors = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      preparing: 'bg-blue-100 text-blue-800',
-      ready: 'bg-green-100 text-green-800',
-      delivered: 'bg-indigo-100 text-indigo-800',
-      cancelled: 'bg-red-100 text-red-800',
-    };
-    return colors[status];
-  };
-
   const getPaymentColor = (paymentMethod?: string) => {
     const colors = {
       'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
@@ -164,13 +152,6 @@ const OrdersManager: React.FC = () => {
   // Función para obtener el tipo de número (para estilos)
   const getNumberType = (order: Order) => {
     return order.source.type === 'phone' ? 'kitchen' : 'order';
-  };
-
-  const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
-    const result = await updateOrderStatus(orderId, newStatus);
-    if (!result.success) {
-      alert('Error al actualizar estado: ' + result.error);
-    }
   };
 
   const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
