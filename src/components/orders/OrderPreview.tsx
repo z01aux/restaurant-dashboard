@@ -1,6 +1,6 @@
 import React from 'react';
 import { Order } from '../../types';
-import { Clock, User, Phone, MapPin, Utensils } from 'lucide-react';
+import { Clock, User, Phone, MapPin, Utensils, CreditCard } from 'lucide-react';
 
 interface OrderPreviewProps {
   order: Order;
@@ -32,12 +32,54 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
     return `Hace ${diffMins} minutos`;
   };
 
+  const getPaymentText = (paymentMethod?: string) => {
+    const paymentMap = {
+      'EFECTIVO': '💵 Efectivo',
+      'YAPE/PLIN': '📱 Yape/Plin',
+      'TARJETA': '💳 Tarjeta',
+    };
+    return paymentMethod ? paymentMap[paymentMethod as keyof typeof paymentMap] : 'NO APLICA';
+  };
+
+  const getSourceText = (sourceType: Order['source']['type']) => {
+    const sourceMap = {
+      'phone': '📞 Teléfono',
+      'walk-in': '👤 Presencial',
+      'delivery': '🚚 Delivery',
+    };
+    return sourceMap[sourceType] || sourceType;
+  };
+
+  // Calcular posición mejorada para evitar que se salga de la pantalla
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const previewWidth = 384; // max-w-sm = 384px
+  const previewHeight = 400; // altura estimada
+
+  let adjustedX = position.x + 10;
+  let adjustedY = position.y;
+
+  // Si se sale por la derecha, mostrar a la izquierda
+  if (adjustedX + previewWidth > viewportWidth - 20) {
+    adjustedX = position.x - previewWidth - 10;
+  }
+
+  // Si se sale por abajo, ajustar hacia arriba
+  if (adjustedY + previewHeight > viewportHeight - 20) {
+    adjustedY = viewportHeight - previewHeight - 20;
+  }
+
+  // Si se sale por arriba, ajustar hacia abajo
+  if (adjustedY < 20) {
+    adjustedY = 20;
+  }
+
   return (
     <div 
       className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl max-w-sm w-full p-4 animate-in fade-in-0 zoom-in-95"
       style={{
-        left: `${position.x + 10}px`,
-        top: `${position.y + 10}px`,
+        left: `${adjustedX}px`,
+        top: `${adjustedY}px`,
       }}
     >
       {/* Header */}
@@ -48,7 +90,7 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 text-sm">
-              {getDisplayNumber(order)} - {order.customerName}
+              {getDisplayNumber(order)}
             </h3>
             <div className="flex items-center space-x-1 text-xs text-gray-500">
               <Clock size={12} />
@@ -56,17 +98,14 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
             </div>
           </div>
         </div>
-        <div className={`px-2 py-1 text-xs font-semibold rounded-full ${
-          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-          order.status === 'preparing' ? 'bg-blue-100 text-blue-800' :
-          order.status === 'ready' ? 'bg-green-100 text-green-800' :
-          order.status === 'delivered' ? 'bg-indigo-100 text-indigo-800' :
-          'bg-red-100 text-red-800'
-        }`}>
-          {order.status === 'pending' ? '⏳ Pendiente' :
-           order.status === 'preparing' ? '👨‍🍳 En Cocina' :
-           order.status === 'ready' ? '✅ Listo' :
-           order.status === 'delivered' ? '📦 Entregado' : '❌ Cancelado'}
+        <div className="text-right">
+          <div className="flex items-center space-x-1 text-xs text-gray-600">
+            <CreditCard size={12} />
+            <span className="font-semibold">{getPaymentText(order.paymentMethod)}</span>
+          </div>
+          <div className="text-xs text-gray-500">
+            {getSourceText(order.source.type)}
+          </div>
         </div>
       </div>
 
@@ -74,7 +113,7 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
       <div className="space-y-2 mb-3">
         <div className="flex items-center space-x-2 text-sm text-gray-600">
           <User size={14} />
-          <span>{order.customerName}</span>
+          <span className="font-medium">{order.customerName}</span>
         </div>
         <div className="flex items-center space-x-2 text-sm text-gray-600">
           <Phone size={14} />
@@ -129,11 +168,18 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
         )}
       </div>
 
-      {/* Flecha indicadora */}
-      <div 
-        className="absolute w-4 h-4 bg-white border-l border-t border-gray-200 transform rotate-45 -left-2 top-1/2 -translate-y-1/2"
-        style={{ top: `${position.y - 8}px` }}
-      />
+      {/* Flecha indicadora - Solo mostrar si está a la izquierda */}
+      {adjustedX < position.x && (
+        <div 
+          className="absolute w-4 h-4 bg-white border-r border-t border-gray-200 transform rotate-45 -right-2 top-1/2 -translate-y-1/2"
+        />
+      )}
+      {/* Flecha indicadora - Mostrar si está a la derecha */}
+      {adjustedX >= position.x && (
+        <div 
+          className="absolute w-4 h-4 bg-white border-l border-t border-gray-200 transform rotate-45 -left-2 top-1/2 -translate-y-1/2"
+        />
+      )}
     </div>
   );
 };
