@@ -147,7 +147,7 @@ const OrdersManager: React.FC = () => {
     const rect = event.currentTarget.getBoundingClientRect();
     setPreviewOrder(order);
     setPreviewPosition({
-      x: rect.right,
+      x: rect.left + (rect.width / 2), // Centro de la fila
       y: rect.top
     });
   };
@@ -540,3 +540,4 @@ const OrdersManager: React.FC = () => {
 };
 
 export default OrdersManager;
+
