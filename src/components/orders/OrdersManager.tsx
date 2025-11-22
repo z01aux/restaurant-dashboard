@@ -3,7 +3,7 @@ import { Plus, Trash2, Download } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
-import { usePagination } from '../../hooks/usePagination';
+import { usePagination, isDesktopPagination, isMobilePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../ui/PaginationControls';
 import OrderTicket from './OrderTicket';
 
@@ -94,6 +94,23 @@ const OrdersManager: React.FC = () => {
     itemsPerPage: itemsPerPage,
     mobileBreakpoint: 768
   });
+
+  // Extraer propiedades condicionalmente
+  const desktopProps = isDesktopPagination(pagination) ? {
+    currentPage: pagination.currentPage,
+    totalPages: pagination.totalPages,
+    totalItems: pagination.totalItems,
+    startIndex: pagination.startIndex,
+    endIndex: pagination.endIndex,
+    hasNextPage: pagination.hasNextPage,
+    hasPrevPage: pagination.hasPrevPage,
+  } : {};
+
+  const mobileProps = isMobilePagination(pagination) ? {
+    hasMoreItems: pagination.hasMoreItems,
+    loadedItems: pagination.loadedItems,
+    onLoadMore: pagination.loadMore,
+  } : {};
 
   const getStatusColor = (status: Order['status']) => {
     const colors = {
@@ -308,19 +325,11 @@ const OrdersManager: React.FC = () => {
       {/* CONTROLES DE PAGINACIÓN HÍBRIDA */}
       <PaginationControls
         // Desktop props
-        currentPage={pagination.currentPage}
-        totalPages={pagination.totalPages}
-        totalItems={pagination.totalItems}
-        startIndex={pagination.startIndex}
-        endIndex={pagination.endIndex}
-        hasNextPage={pagination.hasNextPage}
-        hasPrevPage={pagination.hasPrevPage}
+        {...desktopProps}
         onPageChange={pagination.goToPage}
         
         // Mobile props
-        hasMoreItems={pagination.hasMoreItems}
-        loadedItems={pagination.loadedItems}
-        onLoadMore={pagination.loadMore}
+        {...mobileProps}
         
         // Common props
         isMobile={pagination.isMobile}
