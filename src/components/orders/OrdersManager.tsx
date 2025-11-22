@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Download } from 'lucide-react';
 import { Order } from '../../types';
-import OrderTicket from './OrderTicket';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
+import { usePagination } from '../../hooks/usePagination';
+import { PaginationControls } from '../ui/PaginationControls';
+import OrderTicket from './OrderTicket';
 
 const OrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<string>('');
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [currentSort, setCurrentSort] = useState('status-time');
+  
   const { user } = useAuth();
   const { 
     orders, 
@@ -18,17 +23,76 @@ const OrdersManager: React.FC = () => {
     getTodayOrders
   } = useOrders();
 
-  // Filtrar órdenes por búsqueda Y por método de pago
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.kitchenNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.phone?.includes(searchTerm);
-    
-    const matchesPayment = paymentFilter === '' || order.paymentMethod === paymentFilter;
-    
-    return matchesSearch && matchesPayment;
+  // Opciones de ordenamiento
+  const sortOptions = [
+    { value: 'status-time', label: '🔄 Estado + Tiempo' },
+    { value: 'waiting-time', label: '⏱️ Tiempo Espera' },
+    { value: 'delivery-priority', label: '🚚 Delivery Priority' },
+    { value: 'total-desc', label: '💰 Mayor Monto' },
+    { value: 'created-desc', label: '📅 Más Recientes' },
+    { value: 'created-asc', label: '📅 Más Antiguas' }
+  ];
+
+  // Filtrar y ordenar órdenes
+  const filteredAndSortedOrders = useMemo(() => {
+    let filtered = orders.filter(order => {
+      const matchesSearch = 
+        order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.kitchenNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.phone?.includes(searchTerm);
+      
+      const matchesPayment = paymentFilter === '' || order.paymentMethod === paymentFilter;
+      
+      return matchesSearch && matchesPayment;
+    });
+
+    // Aplicar ordenamiento
+    filtered.sort((a, b) => {
+      switch (currentSort) {
+        case 'status-time':
+          // Pendientes → En Cocina → Listos → Entregados → Cancelados
+          const statusOrder = { pending: 1, preparing: 2, ready: 3, delivered: 4, cancelled: 5 };
+          if (statusOrder[a.status] !== statusOrder[b.status]) {
+            return statusOrder[a.status] - statusOrder[b.status];
+          }
+          // Mismo estado: más antiguos primero
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          
+        case 'waiting-time':
+          // Más tiempo esperando primero
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          
+        case 'delivery-priority':
+          // Delivery → Teléfono → Local
+          const typeOrder = { delivery: 1, phone: 2, 'walk-in': 3 };
+          return typeOrder[a.source.type] - typeOrder[b.source.type];
+          
+        case 'total-desc':
+          // Mayor monto primero
+          return b.total - a.total;
+          
+        case 'created-desc':
+          // Más recientes primero
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          
+        case 'created-asc':
+          // Más antiguos primero
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [orders, searchTerm, paymentFilter, currentSort]);
+
+  // Usar el hook de paginación híbrida
+  const pagination = usePagination({
+    items: filteredAndSortedOrders,
+    itemsPerPage: itemsPerPage,
+    mobileBreakpoint: 768
   });
 
   const getStatusColor = (status: Order['status']) => {
@@ -133,7 +197,7 @@ const OrdersManager: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Órdenes</h2>
           <p className="text-gray-600">
-            {filteredOrders.length} de {orders.length} {orders.length === 1 ? 'orden' : 'órdenes'}
+            {filteredAndSortedOrders.length} de {orders.length} {orders.length === 1 ? 'orden' : 'órdenes'}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -241,6 +305,35 @@ const OrdersManager: React.FC = () => {
         )}
       </div>
 
+      {/* CONTROLES DE PAGINACIÓN HÍBRIDA */}
+      <PaginationControls
+        // Desktop props
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        hasNextPage={pagination.hasNextPage}
+        hasPrevPage={pagination.hasPrevPage}
+        onPageChange={pagination.goToPage}
+        
+        // Mobile props
+        hasMoreItems={pagination.hasMoreItems}
+        loadedItems={pagination.loadedItems}
+        onLoadMore={pagination.loadMore}
+        
+        // Common props
+        isMobile={pagination.isMobile}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={(value) => {
+          setItemsPerPage(value);
+          pagination.resetPagination();
+        }}
+        onSortChange={setCurrentSort}
+        currentSort={currentSort}
+        sortOptions={sortOptions}
+      />
+
       {/* Lista de órdenes */}
       <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-sm border border-white/20 overflow-hidden">
         {loading ? (
@@ -248,7 +341,7 @@ const OrdersManager: React.FC = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
             <p className="text-gray-600 mt-2">Cargando órdenes...</p>
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg mb-2">
               {searchTerm || paymentFilter ? 'No se encontraron órdenes' : 'No hay órdenes registradas'}
@@ -304,7 +397,7 @@ const OrdersManager: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredOrders.map((order) => {
+                {pagination.currentItems.map((order) => {
                   const displayNumber = getDisplayNumber(order);
                   const numberType = getNumberType(order);
                   
