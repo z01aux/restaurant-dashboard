@@ -280,22 +280,6 @@ const OrdersManager: React.FC = () => {
         position={previewPosition}
       />
 
-      {/* Indicador de Shortcuts */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="text-blue-600">🎹</span>
-            <span className="text-sm text-blue-800 font-medium">Shortcuts disponibles:</span>
-          </div>
-          <div className="flex space-x-3 text-xs text-blue-700">
-            <span><kbd className="px-1.5 py-0.5 bg-white border border-blue-300 rounded text-xs">Ctrl/Cmd + F</kbd> Buscar</span>
-            <span><kbd className="px-1.5 py-0.5 bg-white border border-blue-300 rounded text-xs">Ctrl/Cmd + N</kbd> Nueva orden</span>
-            <span><kbd className="px-1.5 py-0.5 bg-white border border-blue-300 rounded text-xs">Ctrl/Cmd + E</kbd> Exportar</span>
-            <span><kbd className="px-1.5 py-0.5 bg-white border border-blue-300 rounded text-xs">1-9</kbd> Ir a página</span>
-          </div>
-        </div>
-      </div>
-
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Órdenes</h2>
@@ -556,3 +540,4 @@ const OrdersManager: React.FC = () => {
 };
 
 export default OrdersManager;
+
