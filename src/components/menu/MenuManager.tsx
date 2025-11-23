@@ -44,7 +44,7 @@ const ProductCard: React.FC<{
   }, [item.id, onDelete]);
 
   return (
-    <div key={item.id} className="bg-white rounded-xl p-6 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200 group relative">
+    <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200 group relative">
       {/* Badge de producto del día */}
       {item.isDailySpecial && (
         <div className="absolute -top-2 -left-2 bg-yellow-500 text-white px-2 py-1 rounded-lg text-xs font-bold shadow-lg flex items-center space-x-1">
@@ -524,8 +524,18 @@ const MenuManager: React.FC = React.memo(() => {
     setActiveCategory(category);
   }, []);
 
-  // Renderizado de productos memoizado
+  // Renderizado de productos memoizado - AHORA SÍ USANDO EL SKELETON
   const renderedProducts = useMemo(() => {
+    if (loading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <MenuItemSkeleton key={index} />
+          ))}
+        </div>
+      );
+    }
+
     if (filteredItems.length === 0) {
       return (
         <div className="text-center py-12">
@@ -559,7 +569,7 @@ const MenuManager: React.FC = React.memo(() => {
         ))}
       </div>
     );
-  }, [filteredItems, searchTerm, activeCategory, handleEditItem, handleToggleDailySpecial, handleDeleteClick]);
+  }, [loading, filteredItems, searchTerm, activeCategory, handleEditItem, handleToggleDailySpecial, handleDeleteClick]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 p-6">
@@ -632,14 +642,7 @@ const MenuManager: React.FC = React.memo(() => {
           </div>
 
           {/* Grid de Productos */}
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
-              <p className="text-gray-600 mt-2">Cargando productos...</p>
-            </div>
-          ) : (
-            renderedProducts
-          )}
+          {renderedProducts}
 
           {/* Estadísticas */}
           <div className="mt-8 pt-6 border-t border-gray-200">
