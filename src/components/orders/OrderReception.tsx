@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Plus, Minus, X, ShoppingBag, ArrowRight, Search, Trash2, User } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
@@ -17,12 +17,12 @@ const styles = `
   }
 `;
 
-// Componente de Notificación Toast
+// Componente de Notificación Toast - Memoizado
 const ToastNotification: React.FC<{
   message: string;
   type: 'success' | 'error';
   onClose: () => void;
-}> = ({ message, type, onClose }) => {
+}> = React.memo(({ message, type, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -45,9 +45,205 @@ const ToastNotification: React.FC<{
       <div className="font-medium">{message}</div>
     </div>
   );
-};
+});
 
-const OrderReception: React.FC = () => {
+// Componente Skeleton para productos - Memoizado
+const ProductSkeleton: React.FC = React.memo(() => (
+  <div className="bg-white rounded-lg p-3 border border-gray-200 animate-pulse">
+    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+    <div className="h-3 bg-gray-200 rounded w-full mb-3"></div>
+    <div className="flex justify-between items-center">
+      <div className="h-4 bg-gray-300 rounded w-16"></div>
+      <div className="h-8 bg-gray-300 rounded w-20"></div>
+    </div>
+  </div>
+));
+
+// Componente de Item del Carrito - Memoizado
+const CartItem: React.FC<{
+  item: OrderItem;
+  onUpdateQuantity: (itemId: string, quantity: number) => void;
+  onRemove: (itemId: string) => void;
+  onEnablePriceEdit: (itemId: string, currentPrice: number) => void;
+  onSavePriceEdit: (itemId: string) => void;
+  onCancelPriceEdit: (itemId: string) => void;
+  onTempPriceChange: (itemId: string, value: string) => void;
+  editingPrices: { [key: string]: boolean };
+  tempPrices: { [key: string]: number };
+  activeTab: string;
+}> = React.memo(({
+  item,
+  onUpdateQuantity,
+  onRemove,
+  onEnablePriceEdit,
+  onSavePriceEdit,
+  onCancelPriceEdit,
+  onTempPriceChange,
+  editingPrices,
+  tempPrices,
+  activeTab
+}) => {
+  const isPriceEditable = activeTab === 'walk-in' && 
+    (item.menuItem.category === 'Entradas' || item.menuItem.category === 'Platos de Fondo');
+
+  return (
+    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0 mr-3">
+          <div className="font-medium text-gray-900 text-sm break-words">
+            {item.menuItem.name}
+          </div>
+          
+          {isPriceEditable ? (
+            <div className="mt-2">
+              {editingPrices[item.menuItem.id] ? (
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={tempPrices[item.menuItem.id] || item.menuItem.price}
+                    onChange={(e) => onTempPriceChange(item.menuItem.id, e.target.value)}
+                    className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500"
+                    placeholder="Precio"
+                  />
+                  <button
+                    onClick={() => onSavePriceEdit(item.menuItem.id)}
+                    className="text-green-600 hover:text-green-800 text-sm font-medium"
+                  >
+                    ✅
+                  </button>
+                  <button
+                    onClick={() => onCancelPriceEdit(item.menuItem.id)}
+                    className="text-red-600 hover:text-red-800 text-sm font-medium"
+                  >
+                    ❌
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-600 text-xs">
+                    Precio: S/ {item.menuItem.price.toFixed(2)}
+                  </span>
+                  <button
+                    onClick={() => onEnablePriceEdit(item.menuItem.id, item.menuItem.price)}
+                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                  >
+                    ✏️ Editar
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-gray-600 text-xs mt-1">
+              S/ {item.menuItem.price.toFixed(2)} c/u
+            </div>
+          )}
+        </div>
+        
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
+            <button
+              onClick={() => onUpdateQuantity(item.menuItem.id, item.quantity - 1)}
+              className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+            >
+              <Minus size={12} />
+            </button>
+            <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
+            <button
+              onClick={() => onUpdateQuantity(item.menuItem.id, item.quantity + 1)}
+              className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+            >
+              <Plus size={12} />
+            </button>
+          </div>
+          <button
+            onClick={() => onRemove(item.menuItem.id)}
+            className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+      
+      <div className="text-right text-sm font-semibold text-red-600 mt-2">
+        S/ {(item.menuItem.price * item.quantity).toFixed(2)}
+      </div>
+    </div>
+  );
+});
+
+// Componente de Producto del Menú - Memoizado
+const MenuProduct: React.FC<{
+  item: MenuItem;
+  quantityInCart: number;
+  onAddToCart: (menuItem: MenuItem) => void;
+  onUpdateQuantity: (itemId: string, quantity: number) => void;
+}> = React.memo(({ item, quantityInCart, onAddToCart, onUpdateQuantity }) => {
+  const handleAdd = useCallback(() => {
+    onAddToCart(item);
+  }, [item, onAddToCart]);
+
+  const handleDecrement = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUpdateQuantity(item.id, quantityInCart - 1);
+  }, [item.id, quantityInCart, onUpdateQuantity]);
+
+  const handleIncrement = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUpdateQuantity(item.id, quantityInCart + 1);
+  }, [item.id, quantityInCart, onUpdateQuantity]);
+
+  return (
+    <div
+      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-red-300 transition-all relative cursor-pointer"
+      onClick={handleAdd}
+    >
+      {quantityInCart > 0 && (
+        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
+          {quantityInCart}
+        </div>
+      )}
+      
+      <div className="mb-2">
+        <div className="font-semibold text-gray-900 text-xs mb-1 line-clamp-2 min-h-[2rem]">
+          {item.name}
+        </div>
+        <div className="font-bold text-red-600 text-sm">
+          S/ {item.price.toFixed(2)}
+        </div>
+      </div>
+
+      {quantityInCart > 0 ? (
+        <div className="flex items-center justify-between space-x-1">
+          <button
+            onClick={handleDecrement}
+            className="w-7 h-7 flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg"
+          >
+            <Minus size={12} />
+          </button>
+          <span className="text-sm font-medium">{quantityInCart}</span>
+          <button
+            onClick={handleIncrement}
+            className="w-7 h-7 flex items-center justify-center bg-red-500 text-white rounded-lg"
+          >
+            <Plus size={12} />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleAdd}
+          className="w-full bg-red-500 text-white py-1.5 rounded-lg flex items-center justify-center space-x-1 text-xs font-medium"
+        >
+          <Plus size={12} />
+          <span>Agregar</span>
+        </button>
+      )}
+    </div>
+  );
+});
+
+const OrderReception: React.FC = React.memo(() => {
   const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery'>('phone');
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -80,21 +276,24 @@ const OrderReception: React.FC = () => {
   const { getDailySpecialsByCategory, getAllDailySpecials } = useMenu();
   const { createOrder } = useOrders();
 
-  // Efecto para cerrar sugerencias al hacer click fuera
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
-      }
-    };
+  // Memoizar datos del menú
+  const allMenuItems = useMemo(() => getAllDailySpecials(), [getAllDailySpecials]);
+  
+  // Definir categorías en el orden deseado - Memoizado
+  const categories = useMemo(() => ['Entradas', 'Platos de Fondo', 'Bebidas'], []);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  // Memoizar items filtrados
+  const currentItems = useMemo(() => {
+    if (searchTerm) {
+      return allMenuItems.filter((item: MenuItem) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.category.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    return getDailySpecialsByCategory(activeCategory) || [];
+  }, [allMenuItems, searchTerm, activeCategory, getDailySpecialsByCategory]);
 
-  // Efecto para filtrar sugerencias
+  // Memoizar sugerencias de clientes
   useEffect(() => {
     if (customerName.trim().length > 1) {
       const filtered = customers.filter(customer =>
@@ -110,34 +309,50 @@ const OrderReception: React.FC = () => {
     }
   }, [customerName, customers]);
 
-  // Función para seleccionar un cliente
-  const selectCustomer = (customer: any) => {
+  // Efecto para cerrar sugerencias al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Callbacks optimizados
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  }, []);
+
+  const selectCustomer = useCallback((customer: any) => {
     setCustomerName(customer.name);
     setPhone(customer.phone || '');
     setAddress(customer.address || '');
     setSelectedCustomer(customer);
     setShowSuggestions(false);
     
-    // Blur del input para cerrar el teclado en móvil
     if (inputRef.current) {
       inputRef.current.blur();
     }
     
     showToast(`Cliente ${customer.name} seleccionado`, 'success');
-  };
+  }, [showToast]);
 
-  // Función para limpiar selección de cliente
-  const clearCustomerSelection = () => {
+  const clearCustomerSelection = useCallback(() => {
     setSelectedCustomer(null);
     setCustomerName('');
     setPhone('');
     setAddress('');
     setTableNumber('');
     setShowSuggestions(false);
-  };
+  }, []);
 
-  // Manejadores para el input
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Manejadores para el input - Optimizados con useCallback
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomerName(value);
     setSelectedCustomer(null);
@@ -147,44 +362,22 @@ const OrderReception: React.FC = () => {
     } else {
       setShowSuggestions(false);
     }
-  };
+  }, []);
 
-  const handleInputFocus = () => {
+  const handleInputFocus = useCallback(() => {
     if (customerName.length > 1 && customerSuggestions.length > 0) {
       setShowSuggestions(true);
     }
-  };
+  }, [customerName.length, customerSuggestions.length]);
 
-  const handleInputBlur = () => {
+  const handleInputBlur = useCallback(() => {
     setTimeout(() => {
       setShowSuggestions(false);
     }, 300);
-  };
+  }, []);
 
-  // Obtener items del menú
-  const allMenuItems = getAllDailySpecials();
-  
-  // Definir categorías en el orden deseado
-  const categories = ['Entradas', 'Platos de Fondo', 'Bebidas'];
-
-  const getItemsToShow = () => {
-    if (searchTerm) {
-      return allMenuItems.filter((item: MenuItem) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    return getDailySpecialsByCategory(activeCategory) || [];
-  };
-
-  const currentItems = getItemsToShow();
-
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-  };
-
-  // Funciones del carrito
-  const addToCart = (menuItem: MenuItem) => {
+  // Funciones del carrito - Optimizadas con useCallback
+  const addToCart = useCallback((menuItem: MenuItem) => {
     setCart(prev => {
       const existing = prev.find(item => item.menuItem.id === menuItem.id);
       let newQuantity = 1;
@@ -205,9 +398,9 @@ const OrderReception: React.FC = () => {
       }
       return [...prev, { menuItem, quantity: 1, notes: '' }];
     });
-  };
+  }, [showToast]);
 
-  const removeFromCart = (itemId: string) => {
+  const removeFromCart = useCallback((itemId: string) => {
     setCart(prev => {
       const itemToRemove = prev.find(item => item.menuItem.id === itemId);
       if (itemToRemove) {
@@ -215,9 +408,9 @@ const OrderReception: React.FC = () => {
       }
       return prev.filter(item => item.menuItem.id !== itemId);
     });
-  };
+  }, [showToast]);
 
-  const updateQuantity = (itemId: string, quantity: number) => {
+  const updateQuantity = useCallback((itemId: string, quantity: number) => {
     if (quantity === 0) {
       removeFromCart(itemId);
       return;
@@ -239,19 +432,15 @@ const OrderReception: React.FC = () => {
         return item;
       })
     );
-  };
+  }, [allMenuItems, removeFromCart, showToast]);
 
-  const getTotal = () => {
-    return cart.reduce((total, item) => total + (item.menuItem.price * item.quantity), 0);
-  };
-
-  // Funciones para edición de precios
-  const enablePriceEdit = (itemId: string, currentPrice: number) => {
+  // Funciones para edición de precios - Optimizadas
+  const enablePriceEdit = useCallback((itemId: string, currentPrice: number) => {
     setEditingPrices(prev => ({ ...prev, [itemId]: true }));
     setTempPrices(prev => ({ ...prev, [itemId]: currentPrice }));
-  };
+  }, []);
 
-  const savePriceEdit = (itemId: string) => {
+  const savePriceEdit = useCallback((itemId: string) => {
     setCart(prev =>
       prev.map(item =>
         item.menuItem.id === itemId
@@ -267,50 +456,57 @@ const OrderReception: React.FC = () => {
     );
     setEditingPrices(prev => ({ ...prev, [itemId]: false }));
     showToast('Precio actualizado', 'success');
-  };
+  }, [tempPrices, showToast]);
 
-  const cancelPriceEdit = (itemId: string) => {
+  const cancelPriceEdit = useCallback((itemId: string) => {
     setEditingPrices(prev => ({ ...prev, [itemId]: false }));
-  };
+  }, []);
 
-  const handleTempPriceChange = (itemId: string, value: string) => {
+  const handleTempPriceChange = useCallback((itemId: string, value: string) => {
     const price = parseFloat(value) || 0;
     setTempPrices(prev => ({ ...prev, [itemId]: price }));
-  };
+  }, []);
 
-  // Funciones auxiliares para obtener números de display
-  const getDisplayOrderNumber = (order: Order) => {
-    return order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`;
-  };
+  // Cálculos memoizados
+  const getTotal = useCallback(() => {
+    return cart.reduce((total, item) => total + (item.menuItem.price * item.quantity), 0);
+  }, [cart]);
 
-  const getDisplayKitchenNumber = (order: Order) => {
-    return order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`;
-  };
+  const totalItems = useMemo(() => 
+    cart.reduce((total, item) => total + item.quantity, 0), 
+    [cart]
+  );
 
-  // Función para obtener texto del método de pago
-  const getPaymentText = (paymentMethod?: string) => {
-    const paymentMap = {
-      'EFECTIVO': 'EFECTIVO',
-      'YAPE/PLIN': 'YAPE/PLIN', 
-      'TARJETA': 'TARJETA'
-    };
-    return paymentMethod ? paymentMap[paymentMethod as keyof typeof paymentMap] : 'NO APLICA';
-  };
+  // Callbacks para cambios de estado - Optimizados
+  const handleActiveTabChange = useCallback((tab: 'phone' | 'walk-in' | 'delivery') => {
+    setActiveTab(tab);
+  }, []);
 
-  // Función para obtener texto del tipo de origen
-  const getSourceText = (sourceType: Order['source']['type']) => {
-    const sourceMap = {
-      'phone': 'COCINA',
-      'walk-in': 'LOCAL', 
-      'delivery': 'DELIVERY',
-    };
-    return sourceMap[sourceType] || sourceType;
-  };
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
 
-  // Función para generar contenido HTML del ticket - ACTUALIZADA CON NEGRITAS
-  const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
+  const handleCategoryChange = useCallback((category: string) => {
+    setActiveCategory(category);
+  }, []);
+
+  const handlePaymentMethodChange = useCallback((method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA') => {
+    setPaymentMethod(method);
+  }, []);
+
+  const handleShowCartDrawer = useCallback((show: boolean) => {
+    setShowCartDrawer(show);
+  }, []);
+
+  const clearCart = useCallback(() => {
+    setCart([]);
+  }, []);
+
+  // Función para generar contenido HTML del ticket - Memoizada
+  const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
+    // ... (mantener la misma función de generateTicketContent del código original)
+    // Por brevedad, mantengo la implementación original
     if (isKitchenTicket) {
-      // Obtener el nombre del usuario actual desde localStorage
       const getCurrentUserName = () => {
         try {
           const savedUser = localStorage.getItem('restaurant-user');
@@ -342,7 +538,7 @@ const OrderReception: React.FC = () => {
           </div>
           <div class="info-row">
             <span class="label">COMANDA:</span>
-            <span class="value">#${getDisplayKitchenNumber(order)}</span>
+            <span class="value">#${order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`}</span>
           </div>
           <div class="info-row">
             <span class="label">FECHA:</span>
@@ -391,11 +587,11 @@ const OrderReception: React.FC = () => {
           
           <div class="info-row">
             <span class="label">ORDEN:</span>
-            <span class="value">${getDisplayOrderNumber(order)}</span>
+            <span class="value">${order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`}</span>
           </div>
           <div class="info-row">
             <span class="label">TIPO:</span>
-            <span class="value">${getSourceText(order.source.type)}</span>
+            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : 'DELIVERY'}</span>
           </div>
           <div class="info-row">
             <span class="label">FECHA:</span>
@@ -407,7 +603,7 @@ const OrderReception: React.FC = () => {
           </div>
           <div class="info-row">
             <span class="label">PAGO:</span>
-            <span class="value">${getPaymentText(order.paymentMethod)}</span>
+            <span class="value">${order.paymentMethod || 'NO APLICA'}</span>
           </div>
           
           <div class="divider"></div>
@@ -478,7 +674,7 @@ const OrderReception: React.FC = () => {
           
           <div class="center">
             <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
-            <div class="normal">*** ${getSourceText(order.source.type)} ***</div>
+            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : 'DELIVERY'} ***</div>
             <div class="normal" style="margin-top: 10px; font-size: 10px;">
               ${new Date().toLocaleString('es-ES', { 
                 year: 'numeric',
@@ -492,13 +688,12 @@ const OrderReception: React.FC = () => {
         </div>
       `;
     }
-  };
+  }, []);
 
-  // Función optimizada para imprimir inmediatamente - ACTUALIZADA
-  const printOrderImmediately = (order: Order) => {
+  // Función optimizada para imprimir inmediatamente
+  const printOrderImmediately = useCallback((order: Order) => {
     const isPhoneOrder = order.source.type === 'phone';
     
-    // Crear iframe para impresión
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -509,7 +704,6 @@ const OrderReception: React.FC = () => {
     
     document.body.appendChild(iframe);
 
-    // Generar contenido del ticket
     const ticketContent = generateTicketContent(order, isPhoneOrder);
     
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -519,7 +713,7 @@ const OrderReception: React.FC = () => {
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Ticket ${isPhoneOrder ? getDisplayKitchenNumber(order) : getDisplayOrderNumber(order)}</title>
+            <title>Ticket ${isPhoneOrder ? (order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`) : (order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`)}</title>
             <style>
               @media print {
                 @page {
@@ -663,10 +857,8 @@ const OrderReception: React.FC = () => {
       `);
       iframeDoc.close();
 
-      // Imprimir inmediatamente
       setTimeout(() => {
         iframe.contentWindow?.print();
-        // Limpiar el iframe después de un tiempo
         setTimeout(() => {
           if (document.body.contains(iframe)) {
             document.body.removeChild(iframe);
@@ -674,10 +866,10 @@ const OrderReception: React.FC = () => {
         }, 1000);
       }, 50);
     }
-  };
+  }, [generateTicketContent]);
 
-  // Crear orden en Supabase - VERSIÓN SUPER OPTIMIZADA
-  const handleCreateOrder = async () => {
+  // Crear orden en Supabase - VERSIÓN OPTIMIZADA
+  const handleCreateOrder = useCallback(async () => {
     if (cart.length === 0) {
       showToast('El pedido está vacío', 'error');
       return;
@@ -719,7 +911,6 @@ const OrderReception: React.FC = () => {
       if (result.success) {
         showToast('✅ Orden creada exitosamente', 'success');
         
-        // Crear objeto Order inmediatamente
         const newOrder: Order = {
           id: result.order.id,
           orderNumber: result.order.order_number,
@@ -742,7 +933,6 @@ const OrderReception: React.FC = () => {
 
         setLastOrder(newOrder);
         
-        // GUARDAR TEMPORALMENTE PARA IMPRIMIR
         const tempOrderForPrint = { ...newOrder };
         
         // Limpiar formulario inmediatamente
@@ -758,7 +948,6 @@ const OrderReception: React.FC = () => {
         setShowCartDrawer(false);
         setPaymentMethod('EFECTIVO');
 
-        // IMPRIMIR INMEDIATAMENTE usando el objeto temporal
         printOrderImmediately(tempOrderForPrint);
         
       } else {
@@ -767,9 +956,174 @@ const OrderReception: React.FC = () => {
     } catch (error: any) {
       showToast('❌ Error: ' + error.message, 'error');
     }
-  };
+  }, [
+    cart, customerName, phone, activeTab, tableNumber, address, orderNotes, 
+    paymentMethod, createOrder, getTotal, showToast, printOrderImmediately
+  ]);
 
-  const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+  // Renderizado del carrito móvil memoizado
+  const mobileCartDrawer = useMemo(() => {
+    if (!showCartDrawer) return null;
+
+    return (
+      <div className="lg:hidden fixed inset-0 z-50">
+        <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => handleShowCartDrawer(false)} />
+        <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transform transition-transform">
+          <div className="p-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Tu Pedido</h3>
+                <p className="text-sm text-gray-600">Revisa los productos agregados</p>
+              </div>
+              <button
+                onClick={() => handleShowCartDrawer(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <ShoppingBag className="h-8 w-8 text-red-500" />
+                </div>
+                <div className="text-gray-500 text-sm mb-2">Tu pedido está vacío</div>
+                <div className="text-gray-400 text-xs">Agrega productos del menú</div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {activeTab === 'walk-in' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="text-blue-800 text-sm">
+                      <strong>💡 Precios ajustables:</strong> Puedes modificar el precio de Entradas y Platos de Fondo.
+                    </div>
+                  </div>
+                )}
+
+                {(activeTab === 'walk-in' || activeTab === 'delivery') && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                    <label className="block text-sm font-medium text-purple-800 mb-2">
+                      Método de Pago *
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'EFECTIVO', label: '💵', color: 'bg-green-500' },
+                        { value: 'YAPE/PLIN', label: '📱', color: 'bg-purple-500' },
+                        { value: 'TARJETA', label: '💳', color: 'bg-blue-500' }
+                      ].map((method) => (
+                        <button
+                          key={method.value}
+                          type="button"
+                          onClick={() => handlePaymentMethodChange(method.value as any)}
+                          className={`p-2 rounded-lg text-white font-medium text-sm transition-all ${
+                            paymentMethod === method.value 
+                              ? `${method.color} shadow-md transform scale-105` 
+                              : 'bg-gray-300 text-gray-600'
+                          }`}
+                        >
+                          {method.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="text-center text-purple-700 font-semibold mt-2">
+                      {paymentMethod}
+                    </div>
+                  </div>
+                )}
+
+                {cart.map((item, index) => (
+                  <CartItem
+                    key={`${item.menuItem.id}-${index}`}
+                    item={item}
+                    onUpdateQuantity={updateQuantity}
+                    onRemove={removeFromCart}
+                    onEnablePriceEdit={enablePriceEdit}
+                    onSavePriceEdit={savePriceEdit}
+                    onCancelPriceEdit={cancelPriceEdit}
+                    onTempPriceChange={handleTempPriceChange}
+                    editingPrices={editingPrices}
+                    tempPrices={tempPrices}
+                    activeTab={activeTab}
+                  />
+                ))}
+              </div>
+            )}
+
+            {cart.length > 0 && (
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-lg font-semibold">Total:</span>
+                  <span className="text-2xl font-bold text-red-600">
+                    S/ {getTotal().toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-blue-800 text-sm text-center">
+                      📝 Completa los datos del cliente arriba para continuar
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={clearCart}
+                    className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                  >
+                    Vaciar Carrito
+                  </button>
+                  <button
+                    onClick={handleCreateOrder}
+                    disabled={!customerName || !phone || (activeTab === 'walk-in' && !tableNumber)}
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold text-lg"
+                  >
+                    <span>Confirmar Pedido</span>
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }, [
+    showCartDrawer, cart, activeTab, paymentMethod, customerName, phone, tableNumber,
+    handleShowCartDrawer, handlePaymentMethodChange, updateQuantity, removeFromCart,
+    enablePriceEdit, savePriceEdit, cancelPriceEdit, handleTempPriceChange,
+    editingPrices, tempPrices, getTotal, clearCart, handleCreateOrder
+  ]);
+
+  // Renderizado de productos memoizado
+  const renderedProducts = useMemo(() => {
+    if (currentItems.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <div className="text-3xl text-gray-300 mb-2">🔍</div>
+          <div className="text-gray-500 text-sm">No se encontraron productos</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {currentItems.map((item: MenuItem) => {
+          const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
+          const quantityInCart = cartItem ? cartItem.quantity : 0;
+          
+          return (
+            <MenuProduct
+              key={item.id}
+              item={item}
+              quantityInCart={quantityInCart}
+              onAddToCart={addToCart}
+              onUpdateQuantity={updateQuantity}
+            />
+          );
+        })}
+      </div>
+    );
+  }, [currentItems, cart, addToCart, updateQuantity]);
 
   return (
     <>
@@ -803,7 +1157,7 @@ const OrderReception: React.FC = () => {
                 </div>
                 
                 <button
-                  onClick={() => setShowCartDrawer(true)}
+                  onClick={() => handleShowCartDrawer(true)}
                   className="relative bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center space-x-2"
                 >
                   <ShoppingBag size={20} />
@@ -822,201 +1176,7 @@ const OrderReception: React.FC = () => {
           </div>
 
           {/* Drawer del Carrito Móvil */}
-          {showCartDrawer && (
-            <div className="lg:hidden fixed inset-0 z-50">
-              <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowCartDrawer(false)} />
-              <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transform transition-transform">
-                <div className="p-4 max-h-[80vh] overflow-y-auto">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">Tu Pedido</h3>
-                      <p className="text-sm text-gray-600">Revisa los productos agregados</p>
-                    </div>
-                    <button
-                      onClick={() => setShowCartDrawer(false)}
-                      className="p-2 hover:bg-gray-100 rounded-lg"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  {cart.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                        <ShoppingBag className="h-8 w-8 text-red-500" />
-                      </div>
-                      <div className="text-gray-500 text-sm mb-2">Tu pedido está vacío</div>
-                      <div className="text-gray-400 text-xs">Agrega productos del menú</div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {/* Información de precios ajustables */}
-                      {activeTab === 'walk-in' && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <div className="text-blue-800 text-sm">
-                            <strong>💡 Precios ajustables:</strong> Puedes modificar el precio de Entradas y Platos de Fondo.
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Método de Pago - SOLO para Local y Delivery */}
-                      {(activeTab === 'walk-in' || activeTab === 'delivery') && (
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                          <label className="block text-sm font-medium text-purple-800 mb-2">
-                            Método de Pago *
-                          </label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {[
-                              { value: 'EFECTIVO', label: '💵', color: 'bg-green-500' },
-                              { value: 'YAPE/PLIN', label: '📱', color: 'bg-purple-500' },
-                              { value: 'TARJETA', label: '💳', color: 'bg-blue-500' }
-                            ].map((method) => (
-                              <button
-                                key={method.value}
-                                type="button"
-                                onClick={() => setPaymentMethod(method.value as any)}
-                                className={`p-2 rounded-lg text-white font-medium text-sm transition-all ${
-                                  paymentMethod === method.value 
-                                    ? `${method.color} shadow-md transform scale-105` 
-                                    : 'bg-gray-300 text-gray-600'
-                                }`}
-                              >
-                                {method.label}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="text-center text-purple-700 font-semibold mt-2">
-                            {paymentMethod}
-                          </div>
-                        </div>
-                      )}
-
-                      {cart.map((item, index) => (
-                        <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900 text-sm">
-                                {item.menuItem.name}
-                              </div>
-                              
-                              {/* Controles de precio móvil - SOLO para Entradas y Platos de Fondo en Local */}
-                              {activeTab === 'walk-in' && 
-                              (item.menuItem.category === 'Entradas' || item.menuItem.category === 'Platos de Fondo') ? (
-                                <div className="mt-2">
-                                  {editingPrices[item.menuItem.id] ? (
-                                    <div className="flex items-center space-x-2">
-                                      <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={tempPrices[item.menuItem.id] || item.menuItem.price}
-                                        onChange={(e) => handleTempPriceChange(item.menuItem.id, e.target.value)}
-                                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500"
-                                        placeholder="Precio"
-                                      />
-                                      <button
-                                        onClick={() => savePriceEdit(item.menuItem.id)}
-                                        className="text-green-600 hover:text-green-800 text-sm font-medium px-2"
-                                      >
-                                        ✅
-                                      </button>
-                                      <button
-                                        onClick={() => cancelPriceEdit(item.menuItem.id)}
-                                        className="text-red-600 hover:text-red-800 text-sm font-medium px-2"
-                                      >
-                                        ❌
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600 text-xs">
-                                        S/ {item.menuItem.price.toFixed(2)} c/u
-                                      </span>
-                                      <button
-                                        onClick={() => enablePriceEdit(item.menuItem.id, item.menuItem.price)}
-                                        className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                                      >
-                                        ✏️ Editar
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="text-gray-600 text-xs">
-                                  S/ {item.menuItem.price.toFixed(2)} c/u
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center space-x-3 ml-3">
-                              <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
-                                <button
-                                  onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
-                                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
-                                >
-                                  <Minus size={12} />
-                                </button>
-                                <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
-                                <button
-                                  onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
-                                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
-                                >
-                                  <Plus size={12} />
-                                </button>
-                              </div>
-                              <button
-                                onClick={() => removeFromCart(item.menuItem.id)}
-                                className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="text-right text-sm font-semibold text-red-600 mt-2">
-                            S/ {(item.menuItem.price * item.quantity).toFixed(2)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {cart.length > 0 && (
-                    <div className="border-t border-gray-200 pt-4 mt-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <span className="text-lg font-semibold">Total:</span>
-                        <span className="text-2xl font-bold text-red-600">
-                          S/ {getTotal().toFixed(2)}
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <p className="text-blue-800 text-sm text-center">
-                            📝 Completa los datos del cliente arriba para continuar
-                          </p>
-                        </div>
-                        
-                        <button
-                          onClick={() => setCart([])}
-                          className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-                        >
-                          Vaciar Carrito
-                        </button>
-                        <button
-                          onClick={handleCreateOrder}
-                          disabled={!customerName || !phone || (activeTab === 'walk-in' && !tableNumber)}
-                          className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center space-x-2 font-semibold text-lg"
-                        >
-                          <span>Confirmar Pedido</span>
-                          <ArrowRight size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          {mobileCartDrawer}
 
           {/* MENÚ MÓVIL */}
           <div className="lg:hidden px-3 pt-4">
@@ -1034,7 +1194,7 @@ const OrderReception: React.FC = () => {
                   ].map(({ type, label, title }) => (
                     <button
                       key={type}
-                      onClick={() => setActiveTab(type as any)}
+                      onClick={() => handleActiveTabChange(type as any)}
                       className={`flex-1 p-3 rounded-lg border-2 transition-all ${
                         activeTab === type
                           ? 'border-red-500 bg-red-50'
@@ -1150,7 +1310,7 @@ const OrderReception: React.FC = () => {
                         <button
                           key={method.value}
                           type="button"
-                          onClick={() => setPaymentMethod(method.value as any)}
+                          onClick={() => handlePaymentMethodChange(method.value as any)}
                           className={`p-2 rounded-lg text-white font-medium text-xs transition-all ${
                             paymentMethod === method.value 
                               ? `${method.color} shadow-md transform scale-105` 
@@ -1177,7 +1337,7 @@ const OrderReception: React.FC = () => {
                   <input
                     type="text"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={handleSearchChange}
                     className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                     placeholder="Buscar productos..."
                   />
@@ -1190,7 +1350,7 @@ const OrderReception: React.FC = () => {
                   {categories.map(category => (
                     <button
                       key={category}
-                      onClick={() => setActiveCategory(category)}
+                      onClick={() => handleCategoryChange(category)}
                       className={`px-3 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-colors ${
                         activeCategory === category
                           ? 'bg-red-500 text-white'
@@ -1204,77 +1364,14 @@ const OrderReception: React.FC = () => {
               )}
 
               {/* Grid de Productos */}
-              <div className="grid grid-cols-2 gap-3">
-                {currentItems.map((item: MenuItem) => {
-                  const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
-                  const quantityInCart = cartItem ? cartItem.quantity : 0;
-                  
-                  return (
-                    <div
-                      key={item.id}
-                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-red-300 transition-all relative"
-                      onClick={() => addToCart(item)}
-                    >
-                      {quantityInCart > 0 && (
-                        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
-                          {quantityInCart}
-                        </div>
-                      )}
-                      
-                      <div className="mb-2">
-                        <div className="font-semibold text-gray-900 text-xs mb-1 line-clamp-2 min-h-[2rem]">
-                          {item.name}
-                        </div>
-                        <div className="font-bold text-red-600 text-sm">
-                          S/ {item.price.toFixed(2)}
-                        </div>
-                      </div>
-
-                      {quantityInCart > 0 ? (
-                        <div className="flex items-center justify-between space-x-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(item.id, quantityInCart - 1);
-                            }}
-                            className="w-7 h-7 flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg"
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <span className="text-sm font-medium">{quantityInCart}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(item.id, quantityInCart + 1);
-                            }}
-                            className="w-7 h-7 flex items-center justify-center bg-red-500 text-white rounded-lg"
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(item);
-                          }}
-                          className="w-full bg-red-500 text-white py-1.5 rounded-lg flex items-center justify-center space-x-1 text-xs font-medium"
-                        >
-                          <Plus size={12} />
-                          <span>Agregar</span>
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Sin resultados */}
-              {currentItems.length === 0 && (
-                <div className="text-center py-8">
-                  <div className="text-3xl text-gray-300 mb-2">🔍</div>
-                  <div className="text-gray-500 text-sm">No se encontraron productos</div>
+              {customersLoading ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <ProductSkeleton key={index} />
+                  ))}
                 </div>
+              ) : (
+                renderedProducts
               )}
             </div>
           </div>
@@ -1308,7 +1405,7 @@ const OrderReception: React.FC = () => {
                     ].map(({ type, label }) => (
                       <button
                         key={type}
-                        onClick={() => setActiveTab(type as any)}
+                        onClick={() => handleActiveTabChange(type as any)}
                         className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
                           activeTab === type
                             ? 'border-red-500 bg-red-50 shadow-sm'
@@ -1335,7 +1432,7 @@ const OrderReception: React.FC = () => {
                           <button
                             key={method.value}
                             type="button"
-                            onClick={() => setPaymentMethod(method.value as any)}
+                            onClick={() => handlePaymentMethodChange(method.value as any)}
                             className={`w-full p-2 rounded-lg border-2 text-left transition-all ${
                               paymentMethod === method.value 
                                 ? `${method.color} shadow-sm` 
@@ -1529,7 +1626,7 @@ const OrderReception: React.FC = () => {
                       <input
                         type="text"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={handleSearchChange}
                         className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                         placeholder="Buscar productos..."
                       />
@@ -1542,7 +1639,7 @@ const OrderReception: React.FC = () => {
                       {categories.map(category => (
                         <button
                           key={category}
-                          onClick={() => setActiveCategory(category)}
+                          onClick={() => handleCategoryChange(category)}
                           className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                             activeCategory === category
                               ? 'bg-red-500 text-white shadow-sm'
@@ -1557,98 +1654,33 @@ const OrderReception: React.FC = () => {
 
                   {/* Grid de Productos */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {currentItems.map((item: MenuItem) => {
-                      const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
-                      const quantityInCart = cartItem ? cartItem.quantity : 0;
-                      
-                      return (
-                        <div
-                          key={item.id}
-                          className="bg-white rounded-xl p-4 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200 cursor-pointer relative"
-                          onClick={() => addToCart(item)}
-                        >
-                          {/* Badge de cantidad en carrito */}
-                          {quantityInCart > 0 && (
-                            <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
-                              {quantityInCart}
-                            </div>
-                          )}
-                          
-                          <div className="mb-3">
-                            <div className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2 min-h-[2.5rem]">
-                              {item.name}
-                            </div>
-                            {item.description && (
-                              <div className="text-gray-600 text-xs mb-2 line-clamp-2">
-                                {item.description}
-                              </div>
-                            )}
-                            <div className="font-bold text-red-600 text-sm">
-                              S/ {item.price.toFixed(2)}
-                            </div>
-                          </div>
-
-                          {/* Botones de cantidad */}
-                          <div className="flex items-center justify-between">
-                            {quantityInCart > 0 ? (
-                              <div className="flex items-center space-x-2 w-full">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateQuantity(item.id, quantityInCart - 1);
-                                  }}
-                                  className="w-8 h-8 flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex-1"
-                                >
-                                  <Minus size={14} />
-                                </button>
-                                <span className="text-sm font-medium w-8 text-center">
-                                  {quantityInCart}
-                                </span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateQuantity(item.id, quantityInCart + 1);
-                                  }}
-                                  className="w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex-1"
-                                >
-                                  <Plus size={14} />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  addToCart(item);
-                                }}
-                                className="w-full bg-red-500 text-white py-2 px-3 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-1 text-sm font-medium"
-                              >
-                                <Plus size={14} />
-                                <span>Agregar</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {customersLoading ? (
+                      Array.from({ length: 6 }).map((_, index) => (
+                        <ProductSkeleton key={index} />
+                      ))
+                    ) : currentItems.length === 0 ? (
+                      <div className="col-span-full text-center py-8">
+                        <div className="text-4xl text-gray-300 mb-3">🔍</div>
+                        <div className="text-gray-500 text-sm">No se encontraron productos</div>
+                        <div className="text-gray-400 text-xs">Intenta con otros términos</div>
+                      </div>
+                    ) : (
+                      currentItems.map((item: MenuItem) => {
+                        const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
+                        const quantityInCart = cartItem ? cartItem.quantity : 0;
+                        
+                        return (
+                          <MenuProduct
+                            key={item.id}
+                            item={item}
+                            quantityInCart={quantityInCart}
+                            onAddToCart={addToCart}
+                            onUpdateQuantity={updateQuantity}
+                          />
+                        );
+                      })
+                    )}
                   </div>
-
-                  {/* Resultados de Búsqueda */}
-                  {searchTerm && currentItems.length === 0 && (
-                    <div className="text-center py-8">
-                      <div className="text-4xl text-gray-300 mb-3">🔍</div>
-                      <div className="text-gray-500 text-sm">No se encontraron productos</div>
-                      <div className="text-gray-400 text-xs">Intenta con otros términos</div>
-                    </div>
-                  )}
-
-                  {/* Estado vacío cuando no hay productos en la categoría */}
-                  {!searchTerm && currentItems.length === 0 && (
-                    <div className="text-center py-8">
-                      <div className="text-4xl text-gray-300 mb-3">🍽️</div>
-                      <div className="text-gray-500 text-sm">No hay productos en esta categoría</div>
-                      <div className="text-gray-400 text-xs">Selecciona otra categoría</div>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -1675,7 +1707,6 @@ const OrderReception: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {/* Información de precios ajustables */}
                       {activeTab === 'walk-in' && (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                           <div className="text-blue-800 text-sm">
@@ -1684,7 +1715,6 @@ const OrderReception: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Método de Pago - SOLO para Local y Delivery */}
                       {(activeTab === 'walk-in' || activeTab === 'delivery') && (
                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
                           <label className="block text-sm font-medium text-purple-800 mb-2">
@@ -1699,7 +1729,7 @@ const OrderReception: React.FC = () => {
                               <button
                                 key={method.value}
                                 type="button"
-                                onClick={() => setPaymentMethod(method.value as any)}
+                                onClick={() => handlePaymentMethodChange(method.value as any)}
                                 className={`p-2 rounded-lg text-white font-medium text-sm transition-all ${
                                   paymentMethod === method.value 
                                     ? `${method.color} shadow-md transform scale-105` 
@@ -1719,91 +1749,19 @@ const OrderReception: React.FC = () => {
                       {/* Lista de Items */}
                       <div className="space-y-3 max-h-96 overflow-y-auto">
                         {cart.map((item, index) => (
-                          <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1 min-w-0 mr-3">
-                                <div className="font-medium text-gray-900 text-sm break-words">
-                                  {item.menuItem.name}
-                                </div>
-                                
-                                {/* Controles de precio - SOLO para Entradas y Platos de Fondo en Local */}
-                                {activeTab === 'walk-in' && 
-                                (item.menuItem.category === 'Entradas' || item.menuItem.category === 'Platos de Fondo') ? (
-                                  <div className="mt-2">
-                                    {editingPrices[item.menuItem.id] ? (
-                                      <div className="flex items-center space-x-2">
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          value={tempPrices[item.menuItem.id] || item.menuItem.price}
-                                          onChange={(e) => handleTempPriceChange(item.menuItem.id, e.target.value)}
-                                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500"
-                                          placeholder="Precio"
-                                        />
-                                        <button
-                                          onClick={() => savePriceEdit(item.menuItem.id)}
-                                          className="text-green-600 hover:text-green-800 text-sm font-medium"
-                                        >
-                                          ✅
-                                        </button>
-                                        <button
-                                          onClick={() => cancelPriceEdit(item.menuItem.id)}
-                                          className="text-red-600 hover:text-red-800 text-sm font-medium"
-                                        >
-                                          ❌
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center space-x-2">
-                                        <span className="text-gray-600 text-xs">
-                                          Precio: S/ {item.menuItem.price.toFixed(2)}
-                                        </span>
-                                        <button
-                                          onClick={() => enablePriceEdit(item.menuItem.id, item.menuItem.price)}
-                                          className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                                        >
-                                          ✏️ Editar
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="text-gray-600 text-xs mt-1">
-                                    S/ {item.menuItem.price.toFixed(2)} c/u
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="flex items-center space-x-2 flex-shrink-0">
-                                <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
-                                  <button
-                                    onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
-                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
-                                  >
-                                    <Minus size={12} />
-                                  </button>
-                                  <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
-                                  <button
-                                    onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
-                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
-                                  >
-                                    <Plus size={12} />
-                                  </button>
-                                </div>
-                                <button
-                                  onClick={() => removeFromCart(item.menuItem.id)}
-                                  className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </div>
-                            
-                            <div className="text-right text-sm font-semibold text-red-600">
-                              S/ {(item.menuItem.price * item.quantity).toFixed(2)}
-                            </div>
-                          </div>
+                          <CartItem
+                            key={`${item.menuItem.id}-${index}`}
+                            item={item}
+                            onUpdateQuantity={updateQuantity}
+                            onRemove={removeFromCart}
+                            onEnablePriceEdit={enablePriceEdit}
+                            onSavePriceEdit={savePriceEdit}
+                            onCancelPriceEdit={cancelPriceEdit}
+                            onTempPriceChange={handleTempPriceChange}
+                            editingPrices={editingPrices}
+                            tempPrices={tempPrices}
+                            activeTab={activeTab}
+                          />
                         ))}
                       </div>
 
@@ -1818,7 +1776,7 @@ const OrderReception: React.FC = () => {
 
                         <div className="space-y-3">
                           <button
-                            onClick={() => setCart([])}
+                            onClick={clearCart}
                             className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
                           >
                             Vaciar Carrito
@@ -1846,6 +1804,6 @@ const OrderReception: React.FC = () => {
       </div>
     </>
   );
-};
+});
 
 export default OrderReception;
