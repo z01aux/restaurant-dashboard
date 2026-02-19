@@ -6,12 +6,14 @@ interface OrderPreviewProps {
   order: Order;
   isVisible: boolean;
   position: { x: number; y: number };
+  shouldIgnoreEvents?: boolean; // Nueva propiedad para ignorar eventos
 }
 
 export const OrderPreview: React.FC<OrderPreviewProps> = ({ 
   order, 
   isVisible, 
-  position 
+  position,
+  shouldIgnoreEvents = false // Valor por defecto false
 }) => {
   if (!isVisible) return null;
 
@@ -76,7 +78,9 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
 
   return (
     <div 
-      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl max-w-sm w-full p-4 animate-in fade-in-0 zoom-in-95"
+      className={`fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl max-w-sm w-full p-4 animate-in fade-in-0 zoom-in-95 ${
+        shouldIgnoreEvents ? 'pointer-events-none' : ''
+      }`}
       style={{
         left: `${adjustedX}px`,
         top: `${adjustedY}px`,

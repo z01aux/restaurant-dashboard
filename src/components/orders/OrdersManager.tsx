@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Plus, Download, CheckCircle } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
@@ -17,6 +17,8 @@ const OrdersManager: React.FC = () => {
   const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
   const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  const [shouldIgnorePreview, setShouldIgnorePreview] = useState(false); // Nuevo estado
+  const previewTimeoutRef = useRef<NodeJS.Timeout>();
   
   const { user } = useAuth();
   const { 
@@ -144,10 +146,13 @@ const OrdersManager: React.FC = () => {
 
   // Funciones para manejar el hover de previsualización
   const handleRowMouseEnter = (order: Order, event: React.MouseEvent) => {
+    // No mostrar preview si estamos interactuando con botones
+    if (shouldIgnorePreview) return;
+    
     const rect = event.currentTarget.getBoundingClientRect();
     setPreviewOrder(order);
     setPreviewPosition({
-      x: rect.left + (rect.width / 2), // Centro de la fila
+      x: rect.left + (rect.width / 2),
       y: rect.top
     });
   };
@@ -156,15 +161,45 @@ const OrdersManager: React.FC = () => {
     setPreviewOrder(null);
   };
 
+  // Nuevas funciones para manejar la interacción con botones
+  const handleActionMouseEnter = () => {
+    setShouldIgnorePreview(true);
+    // Limpiar cualquier timeout pendiente
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+    }
+  };
+
+  const handleActionMouseLeave = () => {
+    // Usar un pequeño timeout para evitar parpadeos
+    previewTimeoutRef.current = setTimeout(() => {
+      setShouldIgnorePreview(false);
+    }, 100);
+  };
+
+  // Limpiar timeout al desmontar
+  React.useEffect(() => {
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Componente para las acciones que no activa el preview
   const OrderActions: React.FC<{ order: Order; displayNumber: string }> = ({ order, displayNumber }) => {
-    const handleDeleteClick = () => {
+    const handleDeleteClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
       handleDeleteOrder(order.id, displayNumber);
     };
 
     return (
-      <div className="flex space-x-2">
-        <div onMouseEnter={(e) => e.stopPropagation()}>
+      <div 
+        className="flex space-x-2"
+        onMouseEnter={handleActionMouseEnter}
+        onMouseLeave={handleActionMouseLeave}
+      >
+        <div>
           <OrderTicket order={order} />
         </div>
         {user?.role === 'admin' && (
@@ -172,11 +207,10 @@ const OrdersManager: React.FC = () => {
             onClick={handleDeleteClick}
             className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors group relative"
             title="Eliminar orden"
-            onMouseEnter={(e) => e.stopPropagation()}
           >
             🗑️
             {/* Tooltip elegante */}
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
               Eliminar orden
               <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
             </div>
@@ -198,7 +232,7 @@ const OrdersManager: React.FC = () => {
   const getPaymentText = (paymentMethod?: string) => {
     const paymentMap = {
       'EFECTIVO': 'EFECTIVO',
-      'YAPE/PLIN': 'YAPE/PLIN',
+      'YAPE/PLIN': 'YAPE/PLIN', 
       'TARJETA': 'TARJETA',
     };
     return paymentMethod ? paymentMap[paymentMethod as keyof typeof paymentMap] : 'NO APLICA';
@@ -243,12 +277,16 @@ const OrdersManager: React.FC = () => {
   };
 
   const handleExportTodayOrders = () => {
+    setShouldIgnorePreview(true);
     const todayOrders = getTodayOrders();
     exportOrdersToCSV(todayOrders);
+    setTimeout(() => setShouldIgnorePreview(false), 200);
   };
 
   const handleExportAllOrders = () => {
+    setShouldIgnorePreview(true);
     exportOrdersToCSV(orders);
+    setTimeout(() => setShouldIgnorePreview(false), 200);
   };
 
   const handleNewOrder = () => {
@@ -278,6 +316,7 @@ const OrdersManager: React.FC = () => {
         order={previewOrder!}
         isVisible={!!previewOrder}
         position={previewPosition}
+        shouldIgnoreEvents={shouldIgnorePreview}
       />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -287,6 +326,8 @@ const OrdersManager: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-2">
           <button 
             onClick={handleExportTodayOrders}
+            onMouseEnter={handleActionMouseEnter}
+            onMouseLeave={handleActionMouseLeave}
             className="bg-green-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
           >
             <Download size={16} />
@@ -294,6 +335,8 @@ const OrdersManager: React.FC = () => {
           </button>
           <button 
             onClick={handleExportAllOrders}
+            onMouseEnter={handleActionMouseEnter}
+            onMouseLeave={handleActionMouseLeave}
             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
           >
             <Download size={16} />
@@ -301,6 +344,8 @@ const OrdersManager: React.FC = () => {
           </button>
           <button 
             onClick={handleNewOrder}
+            onMouseEnter={handleActionMouseEnter}
+            onMouseLeave={handleActionMouseLeave}
             className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
           >
             <Plus size={20} />
@@ -333,6 +378,8 @@ const OrdersManager: React.FC = () => {
                     : 'bg-gray-50 hover:bg-gray-100'
                 }`}
                 onClick={() => setPaymentFilter(paymentFilter === method ? '' : method || '')}
+                onMouseEnter={handleActionMouseEnter}
+                onMouseLeave={handleActionMouseLeave}
               >
                 <div className={`text-2xl font-bold ${color.split(' ')[1]}`}>
                   {count}
@@ -381,6 +428,8 @@ const OrdersManager: React.FC = () => {
             </span>
             <button
               onClick={() => setPaymentFilter('')}
+              onMouseEnter={handleActionMouseEnter}
+              onMouseLeave={handleActionMouseLeave}
               className="text-xs text-red-500 hover:text-red-700"
             >
               ✕ Limpiar
@@ -438,6 +487,8 @@ const OrdersManager: React.FC = () => {
                   setSearchTerm('');
                   setPaymentFilter('');
                 }}
+                onMouseEnter={handleActionMouseEnter}
+                onMouseLeave={handleActionMouseLeave}
                 className="mt-4 text-red-500 hover:text-red-700 text-sm font-medium"
               >
                 Limpiar todos los filtros
@@ -540,4 +591,3 @@ const OrdersManager: React.FC = () => {
 };
 
 export default OrdersManager;
-

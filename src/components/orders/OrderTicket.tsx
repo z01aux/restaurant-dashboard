@@ -4,9 +4,11 @@ import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer
 
 interface OrderTicketProps {
   order: Order;
+  onMouseEnter?: () => void; // Nuevo
+  onMouseLeave?: () => void; // Nuevo
 }
 
-const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
+const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseLeave }) => {
   // Verificar si es un pedido por teléfono para ticket de cocina
   const isPhoneOrder = order.source.type === 'phone';
   
@@ -483,7 +485,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   );
 
   // Función para descargar PDF
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       if (!order || !order.items) {
         console.error('Orden inválida para generar PDF');
@@ -511,7 +514,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   };
 
   // Función para imprimir - ACTUALIZADA CON NOMBRE EN NEGRITA
-  const handlePrint = () => {
+  const handlePrint = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -884,46 +888,44 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order }) => {
   };
 
   return (
-    <>
-      <div style={{ display: 'flex', gap: '10px', margin: '10px 0' }}>
-        <button
-          onClick={handlePrint}
-          data-order-id={order.id}
-          className="print-button"
-          style={{
-            padding: '10px 20px',
-            backgroundColor: isPhoneOrder ? '#10b981' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          {isPhoneOrder ? '📋 Ticket Cocina' : '🧾 Ticket Cliente'} #{isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}
-        </button>
+    <div 
+      style={{ display: 'flex', gap: '10px', margin: '10px 0' }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <button
+        onClick={handlePrint}
+        data-order-id={order.id}
+        className="print-button"
+        style={{
+          padding: '10px 20px',
+          backgroundColor: isPhoneOrder ? '#10b981' : '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}
+      >
+        {isPhoneOrder ? '📋 Ticket Cocina' : '🧾 Ticket Cliente'} #{isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}
+      </button>
 
-        <button
-          onClick={handleDownloadPDF}
-          className="download-pdf-button"
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          Descargar PDF
-        </button>
-      </div>
-
-      <div id={`ticket-${order.id}`} style={{ display: 'none' }}>
-        <div>Ticket content for printing</div>
-      </div>
-    </>
+      <button
+        onClick={handleDownloadPDF}
+        className="download-pdf-button"
+        style={{
+          padding: '10px 20px',
+          backgroundColor: '#28a745',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}
+      >
+        Descargar PDF
+      </button>
+    </div>
   );
 };
 
