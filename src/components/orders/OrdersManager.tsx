@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react'; // Eliminado useRef que no se usaba
 import { Plus, Download, CheckCircle } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
@@ -17,7 +17,7 @@ const OrdersManager: React.FC = () => {
   const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
   const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-  const [isMouseOverActions, setIsMouseOverActions] = useState(false); // Nuevo estado para detectar si el mouse está sobre acciones
+  const [isMouseOverActions, setIsMouseOverActions] = useState(false); // Estado para detectar si el mouse está sobre acciones
   
   const { user } = useAuth();
   const { 
