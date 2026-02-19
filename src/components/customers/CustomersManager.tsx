@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react'; // Eliminado useCallback que no se usaba
 import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, X, RefreshCw } from 'lucide-react';
 import { useCustomers } from '../../hooks/useCustomers';
 
