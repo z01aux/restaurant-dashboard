@@ -137,28 +137,47 @@ export const useCustomers = () => {
     }
   };
 
-  // Función para actualizar estadísticas manualmente (por si acaso)
+  // Función para actualizar estadísticas manualmente - CORREGIDA
   const refreshCustomerStats = async (customerId: string) => {
     try {
-      // Obtener todas las órdenes del cliente
+      // Primero obtener el cliente para saber su teléfono
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .single();
+
+      if (customerError) throw customerError;
+      if (!customer) throw new Error('Cliente no encontrado');
+
+      console.log('📞 Actualizando estadísticas para teléfono:', customer.phone);
+
+      // Obtener todas las órdenes del cliente por su número de teléfono
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('total')
-        .eq('customer_id', customerId);
+        .select('total, created_at')
+        .eq('phone', customer.phone); // Usamos 'phone' en lugar de 'customer_id'
 
       if (ordersError) throw ordersError;
 
+      console.log('📊 Órdenes encontradas:', orders?.length);
+
       const totalSpent = orders?.reduce((sum, order) => sum + parseFloat(order.total), 0) || 0;
       const ordersCount = orders?.length || 0;
-      const lastOrder = orders && orders.length > 0 
-        ? await supabase
-            .from('orders')
-            .select('created_at')
-            .eq('customer_id', customerId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .then(res => res.data?.[0]?.created_at || null)
-        : null;
+      
+      // Obtener la última orden
+      let lastOrder = null;
+      if (orders && orders.length > 0) {
+        const { data: lastOrderData } = await supabase
+          .from('orders')
+          .select('created_at')
+          .eq('phone', customer.phone)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        lastOrder = lastOrderData?.created_at || null;
+      }
 
       // Actualizar cliente
       const { error: updateError } = await supabase
@@ -173,9 +192,12 @@ export const useCustomers = () => {
 
       if (updateError) throw updateError;
 
+      console.log('✅ Estadísticas actualizadas:', { ordersCount, totalSpent, lastOrder });
+
       await fetchCustomers();
       return { success: true };
     } catch (error: any) {
+      console.error('Error en refreshCustomerStats:', error);
       return { success: false, error: error.message };
     }
   };
