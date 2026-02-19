@@ -6,6 +6,69 @@ export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Función para actualizar estadísticas del cliente
+  const updateCustomerStats = async (customerName: string, phone: string, orderTotal: number) => {
+    try {
+      console.log('🔄 Actualizando estadísticas para cliente:', customerName, phone);
+      
+      // Buscar si el cliente ya existe
+      const { data: existingCustomers, error: searchError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', phone);
+
+      if (searchError) {
+        console.error('Error buscando cliente:', searchError);
+        return;
+      }
+
+      if (existingCustomers && existingCustomers.length > 0) {
+        // Cliente existe - actualizar sus estadísticas
+        const customer = existingCustomers[0];
+        console.log('✅ Cliente encontrado, actualizando estadísticas:', customer);
+
+        const { error: updateError } = await supabase
+          .from('customers')
+          .update({
+            orders_count: (customer.orders_count || 0) + 1,
+            total_spent: (customer.total_spent || 0) + orderTotal,
+            last_order: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', customer.id);
+
+        if (updateError) {
+          console.error('Error actualizando estadísticas del cliente:', updateError);
+        } else {
+          console.log('✅ Estadísticas de cliente actualizadas correctamente');
+        }
+      } else {
+        // Cliente nuevo - crear registro
+        console.log('🆕 Cliente nuevo, creando registro');
+        
+        const { error: insertError } = await supabase
+          .from('customers')
+          .insert([{
+            name: customerName,
+            phone: phone,
+            orders_count: 1,
+            total_spent: orderTotal,
+            last_order: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }]);
+
+        if (insertError) {
+          console.error('Error creando nuevo cliente:', insertError);
+        } else {
+          console.log('✅ Nuevo cliente creado correctamente');
+        }
+      }
+    } catch (error) {
+      console.error('Error en updateCustomerStats:', error);
+    }
+  };
+
   // Función para convertir de DatabaseOrder a Order
   const convertDatabaseOrderToOrder = async (dbOrder: DatabaseOrder): Promise<Order> => {
     // Obtener los items de la orden
@@ -32,8 +95,8 @@ export const useOrders = () => {
 
     return {
       id: dbOrder.id,
-      orderNumber: dbOrder.order_number,      // Nuevo campo
-      kitchenNumber: dbOrder.kitchen_number,  // Nuevo campo
+      orderNumber: dbOrder.order_number,
+      kitchenNumber: dbOrder.kitchen_number,
       customerName: dbOrder.customer_name,
       phone: dbOrder.phone,
       address: dbOrder.address,
@@ -45,7 +108,7 @@ export const useOrders = () => {
       status: dbOrder.status,
       total: parseFloat(dbOrder.total as any),
       notes: dbOrder.notes,
-      paymentMethod: dbOrder.payment_method, // Nuevo campo
+      paymentMethod: dbOrder.payment_method,
       items: items,
       createdAt: new Date(dbOrder.created_at),
       updatedAt: new Date(dbOrder.updated_at)
@@ -85,7 +148,7 @@ export const useOrders = () => {
       deliveryAddress?: string;
     };
     notes?: string;
-    paymentMethod?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA'; // Nuevo campo
+    paymentMethod?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
     items: Array<{
       menuItem: {
         id: string;
@@ -102,7 +165,7 @@ export const useOrders = () => {
         0
       );
 
-      // Crear la orden en Supabase - INCLUIR payment_method
+      // Crear la orden en Supabase
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -112,11 +175,11 @@ export const useOrders = () => {
           table_number: orderData.tableNumber,
           source_type: orderData.source.type,
           notes: orderData.notes,
-          payment_method: orderData.paymentMethod, // Nuevo campo
+          payment_method: orderData.paymentMethod,
           total: total,
           status: 'pending',
         }])
-        .select('*, order_number, kitchen_number')  // Asegurar que incluya los números generados
+        .select('*, order_number, kitchen_number')
         .single();
 
       if (orderError) throw orderError;
@@ -137,9 +200,13 @@ export const useOrders = () => {
 
       if (itemsError) throw itemsError;
 
+      // ACTUALIZAR ESTADÍSTICAS DEL CLIENTE
+      await updateCustomerStats(orderData.customerName, orderData.phone, total);
+
       await fetchOrders();
       return { success: true, order };
     } catch (error: any) {
+      console.error('Error en createOrder:', error);
       return { success: false, error: error.message };
     }
   };
@@ -169,7 +236,7 @@ export const useOrders = () => {
     try {
       console.log('🔄 Intentando eliminar orden:', orderId);
       
-      // Primero eliminar los items de la orden (debido a la foreign key constraint)
+      // Primero eliminar los items de la orden
       const { error: itemsError } = await supabase
         .from('order_items')
         .delete()

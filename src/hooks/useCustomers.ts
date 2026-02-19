@@ -28,6 +28,7 @@ export const useCustomers = () => {
 
       if (error) throw error;
       setCustomers(data || []);
+      console.log('✅ Clientes cargados:', data?.length);
     } catch (error) {
       console.error('Error fetching customers:', error);
     } finally {
@@ -42,6 +43,22 @@ export const useCustomers = () => {
     email?: string;
   }) => {
     try {
+      // Verificar si ya existe un cliente con el mismo teléfono
+      const { data: existing, error: checkError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', customerData.phone.trim());
+
+      if (checkError) throw checkError;
+
+      if (existing && existing.length > 0) {
+        return { 
+          success: false, 
+          error: 'Ya existe un cliente con este número de teléfono',
+          data: existing[0]
+        };
+      }
+
       const { data, error } = await supabase
         .from('customers')
         .insert([{
@@ -104,6 +121,65 @@ export const useCustomers = () => {
     }
   };
 
+  // Función para buscar cliente por teléfono
+  const findCustomerByPhone = async (phone: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', phone.trim())
+        .maybeSingle();
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Función para actualizar estadísticas manualmente (por si acaso)
+  const refreshCustomerStats = async (customerId: string) => {
+    try {
+      // Obtener todas las órdenes del cliente
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('total')
+        .eq('customer_id', customerId);
+
+      if (ordersError) throw ordersError;
+
+      const totalSpent = orders?.reduce((sum, order) => sum + parseFloat(order.total), 0) || 0;
+      const ordersCount = orders?.length || 0;
+      const lastOrder = orders && orders.length > 0 
+        ? await supabase
+            .from('orders')
+            .select('created_at')
+            .eq('customer_id', customerId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .then(res => res.data?.[0]?.created_at || null)
+        : null;
+
+      // Actualizar cliente
+      const { error: updateError } = await supabase
+        .from('customers')
+        .update({
+          orders_count: ordersCount,
+          total_spent: totalSpent,
+          last_order: lastOrder,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', customerId);
+
+      if (updateError) throw updateError;
+
+      await fetchCustomers();
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
   useEffect(() => {
     fetchCustomers();
   }, []);
@@ -115,5 +191,7 @@ export const useCustomers = () => {
     createCustomer,
     updateCustomer,
     deleteCustomer,
+    findCustomerByPhone,
+    refreshCustomerStats
   };
 };

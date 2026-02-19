@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, X } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, X, RefreshCw } from 'lucide-react';
 import { useCustomers } from '../../hooks/useCustomers';
 
 const CustomersManager: React.FC = () => {
@@ -7,6 +7,7 @@ const CustomersManager: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -20,6 +21,7 @@ const CustomersManager: React.FC = () => {
     createCustomer, 
     updateCustomer,
     deleteCustomer,
+    refreshCustomerStats,
     fetchCustomers 
   } = useCustomers();
 
@@ -88,7 +90,11 @@ const CustomersManager: React.FC = () => {
         // Recargar la lista para asegurar que se vean los cambios
         await fetchCustomers();
       } else {
-        alert(`❌ Error al ${editingCustomer ? 'actualizar' : 'crear'} cliente: ` + result.error);
+        if (result.error?.includes('Ya existe')) {
+          alert('❌ ' + result.error);
+        } else {
+          alert(`❌ Error al ${editingCustomer ? 'actualizar' : 'crear'} cliente: ` + result.error);
+        }
       }
     } catch (error: any) {
       alert('❌ Error: ' + error.message);
@@ -105,6 +111,23 @@ const CustomersManager: React.FC = () => {
       } else {
         alert('❌ Error al eliminar cliente: ' + result.error);
       }
+    }
+  };
+
+  // Función para refrescar estadísticas de un cliente
+  const handleRefreshStats = async (customerId: string, customerName: string) => {
+    setRefreshingId(customerId);
+    try {
+      const result = await refreshCustomerStats(customerId);
+      if (result.success) {
+        alert(`✅ Estadísticas de ${customerName} actualizadas correctamente`);
+      } else {
+        alert('❌ Error al actualizar estadísticas: ' + result.error);
+      }
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
+    } finally {
+      setRefreshingId(null);
     }
   };
 
@@ -268,7 +291,7 @@ const CustomersManager: React.FC = () => {
                 <p className="text-gray-500 text-sm">
                   {searchTerm 
                     ? 'Intenta con otros términos de búsqueda' 
-                    : 'Los clientes aparecerán aquí cuando los agregues'}
+                    : 'Los clientes aparecerán aquí cuando se registren pedidos'}
                 </p>
               </div>
             ) : (
@@ -279,6 +302,16 @@ const CustomersManager: React.FC = () => {
                 >
                   {/* Botones de acción */}
                   <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button 
+                      onClick={() => handleRefreshStats(customer.id, customer.name)}
+                      disabled={refreshingId === customer.id}
+                      className={`text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200 ${
+                        refreshingId === customer.id ? 'animate-spin' : ''
+                      }`}
+                      title="Actualizar estadísticas"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
                     <button 
                       onClick={() => handleEditCustomer(customer)}
                       className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200"
