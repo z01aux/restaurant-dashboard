@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus, Minus, X, ShoppingBag, ArrowRight, Search, Trash2, User } from 'lucide-react';
+import { Plus, Minus, X, ShoppingBag, ArrowRight, Search, Trash2, User, Edit2, Check, DollarSign } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
@@ -20,7 +20,7 @@ const styles = `
 // Componente de Notificación Toast - Memoizado
 const ToastNotification: React.FC<{
   message: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'info';
   onClose: () => void;
 }> = React.memo(({ message, type, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
@@ -34,7 +34,7 @@ const ToastNotification: React.FC<{
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  const bgColor = type === 'success' ? 'bg-blue-500' : 'bg-red-500';
+  const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
 
   return (
     <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
@@ -59,114 +59,150 @@ const ProductSkeleton: React.FC = React.memo(() => (
   </div>
 ));
 
-// Componente de Item del Carrito - Memoizado
+// Componente de Item del Carrito con Edición de Precio - MEJORADO
 const CartItem: React.FC<{
   item: OrderItem;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
   onRemove: (itemId: string) => void;
-  onEnablePriceEdit: (itemId: string, currentPrice: number) => void;
-  onSavePriceEdit: (itemId: string) => void;
-  onCancelPriceEdit: (itemId: string) => void;
-  onTempPriceChange: (itemId: string, value: string) => void;
-  editingPrices: { [key: string]: boolean };
-  tempPrices: { [key: string]: number };
-  activeTab: string;
+  onPriceChange: (itemId: string, newPrice: number) => void;
 }> = React.memo(({
   item,
   onUpdateQuantity,
   onRemove,
-  onEnablePriceEdit,
-  onSavePriceEdit,
-  onCancelPriceEdit,
-  onTempPriceChange,
-  editingPrices,
-  tempPrices,
-  activeTab
+  onPriceChange
 }) => {
-  const isPriceEditable = activeTab === 'walk-in' && 
-    (item.menuItem.category === 'Entradas' || item.menuItem.category === 'Platos de Fondo');
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempPrice, setTempPrice] = useState(item.menuItem.price.toString());
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleStartEdit = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(true);
+    setTempPrice(item.menuItem.price.toString());
+  }, [item.menuItem.price]);
+
+  const handleCancelEdit = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(false);
+    setTempPrice(item.menuItem.price.toString());
+  }, [item.menuItem.price]);
+
+  const handleSavePrice = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newPrice = parseFloat(tempPrice);
+    if (!isNaN(newPrice) && newPrice > 0) {
+      onPriceChange(item.menuItem.id, newPrice);
+      setIsEditing(false);
+    }
+  }, [tempPrice, item.menuItem.id, onPriceChange]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      const newPrice = parseFloat(tempPrice);
+      if (!isNaN(newPrice) && newPrice > 0) {
+        onPriceChange(item.menuItem.id, newPrice);
+        setIsEditing(false);
+      }
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setTempPrice(item.menuItem.price.toString());
+    }
+  }, [tempPrice, item.menuItem.id, item.menuItem.price, onPriceChange]);
+
+  const handlePriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setTempPrice(e.target.value);
+  }, []);
 
   return (
-    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0 mr-3">
-          <div className="font-medium text-gray-900 text-sm break-words">
+          <div className="font-medium text-gray-900 text-base break-words flex items-center gap-2">
             {item.menuItem.name}
+            <button
+              onClick={handleStartEdit}
+              className="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded transition-colors"
+              title="Editar precio"
+            >
+              <Edit2 size={14} />
+            </button>
           </div>
           
-          {isPriceEditable ? (
-            <div className="mt-2">
-              {editingPrices[item.menuItem.id] ? (
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={tempPrices[item.menuItem.id] || item.menuItem.price}
-                    onChange={(e) => onTempPriceChange(item.menuItem.id, e.target.value)}
-                    className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500"
-                    placeholder="Precio"
-                  />
-                  <button
-                    onClick={() => onSavePriceEdit(item.menuItem.id)}
-                    className="text-green-600 hover:text-green-800 text-sm font-medium"
-                  >
-                    ✅
-                  </button>
-                  <button
-                    onClick={() => onCancelPriceEdit(item.menuItem.id)}
-                    className="text-red-600 hover:text-red-800 text-sm font-medium"
-                  >
-                    ❌
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <span className="text-gray-600 text-xs">
-                    Precio: S/ {item.menuItem.price.toFixed(2)}
-                  </span>
-                  <button
-                    onClick={() => onEnablePriceEdit(item.menuItem.id, item.menuItem.price)}
-                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                  >
-                    ✏️ Editar
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-gray-600 text-xs mt-1">
-              S/ {item.menuItem.price.toFixed(2)} c/u
-            </div>
-          )}
+          <div className="mt-2">
+            {isEditing ? (
+              <div className="flex items-center space-x-2 bg-blue-50 p-2 rounded-lg border border-blue-200">
+                <DollarSign size={16} className="text-blue-600" />
+                <input
+                  ref={inputRef}
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={tempPrice}
+                  onChange={handlePriceChange}
+                  onKeyDown={handleKeyDown}
+                  className="w-24 px-2 py-1 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Precio"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <button
+                  onClick={handleSavePrice}
+                  className="text-green-600 hover:text-green-800 p-1 hover:bg-green-100 rounded transition-colors"
+                  title="Guardar"
+                >
+                  <Check size={16} />
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-red-600 hover:text-red-800 p-1 hover:bg-red-100 rounded transition-colors"
+                  title="Cancelar"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-600 text-sm">
+                  Precio: <span className="font-semibold text-gray-900">S/ {item.menuItem.price.toFixed(2)}</span>
+                </span>
+              </div>
+            )}
+          </div>
         </div>
         
         <div className="flex items-center space-x-2 flex-shrink-0">
           <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-2 py-1">
             <button
               onClick={() => onUpdateQuantity(item.menuItem.id, item.quantity - 1)}
-              className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+              className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700 transition-colors"
             >
-              <Minus size={12} />
+              <Minus size={14} />
             </button>
-            <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
+            <span className="w-8 text-center font-medium text-sm">{item.quantity}</span>
             <button
               onClick={() => onUpdateQuantity(item.menuItem.id, item.quantity + 1)}
-              className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700"
+              className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700 transition-colors"
             >
-              <Plus size={12} />
+              <Plus size={14} />
             </button>
           </div>
           <button
             onClick={() => onRemove(item.menuItem.id)}
-            className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg"
+            className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+            title="Eliminar"
           >
             <Trash2 size={16} />
           </button>
         </div>
       </div>
       
-      <div className="text-right text-sm font-semibold text-red-600 mt-2">
+      <div className="text-right text-lg font-bold text-red-600 mt-2">
         S/ {(item.menuItem.price * item.quantity).toFixed(2)}
       </div>
     </div>
@@ -196,20 +232,20 @@ const MenuProduct: React.FC<{
 
   return (
     <div
-      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-red-300 transition-all relative cursor-pointer"
+      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all relative cursor-pointer group"
       onClick={handleAdd}
     >
       {quantityInCart > 0 && (
-        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
+        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white animate-bounce">
           {quantityInCart}
         </div>
       )}
       
       <div className="mb-2">
-        <div className="font-semibold text-gray-900 text-xs mb-1 line-clamp-2 min-h-[2rem]">
+        <div className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2 min-h-[2.5rem]">
           {item.name}
         </div>
-        <div className="font-bold text-red-600 text-sm">
+        <div className="font-bold text-red-600 text-base">
           S/ {item.price.toFixed(2)}
         </div>
       </div>
@@ -218,24 +254,24 @@ const MenuProduct: React.FC<{
         <div className="flex items-center justify-between space-x-1">
           <button
             onClick={handleDecrement}
-            className="w-7 h-7 flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg"
+            className="w-8 h-8 flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
           >
-            <Minus size={12} />
+            <Minus size={14} />
           </button>
-          <span className="text-sm font-medium">{quantityInCart}</span>
+          <span className="text-sm font-medium w-8 text-center">{quantityInCart}</span>
           <button
             onClick={handleIncrement}
-            className="w-7 h-7 flex items-center justify-center bg-red-500 text-white rounded-lg"
+            className="w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
           >
-            <Plus size={12} />
+            <Plus size={14} />
           </button>
         </div>
       ) : (
         <button
           onClick={handleAdd}
-          className="w-full bg-red-500 text-white py-1.5 rounded-lg flex items-center justify-center space-x-1 text-xs font-medium"
+          className="w-full bg-red-500 text-white py-2 rounded-lg flex items-center justify-center space-x-1 text-sm font-medium hover:bg-red-600 transition-colors"
         >
-          <Plus size={12} />
+          <Plus size={14} />
           <span>Agregar</span>
         </button>
       )}
@@ -255,17 +291,13 @@ const OrderReception: React.FC = React.memo(() => {
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('Entradas');
   const [showCartDrawer, setShowCartDrawer] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA'>('EFECTIVO');
   
   // Estado para autocompletado
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-
-  // Estado para edición de precios
-  const [editingPrices, setEditingPrices] = useState<{ [key: string]: boolean }>({});
-  const [tempPrices, setTempPrices] = useState<{ [key: string]: number }>({});
 
   // Refs para manejar clicks
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -324,7 +356,7 @@ const OrderReception: React.FC = React.memo(() => {
   }, []);
 
   // Callbacks optimizados
-  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
   }, []);
 
@@ -423,7 +455,7 @@ const OrderReception: React.FC = React.memo(() => {
         if (item.menuItem.id === itemId) {
           const menuItem = updatedMenuItem || item.menuItem;
           if (menuItem && quantity < item.quantity) {
-            showToast(`${menuItem.name} (${quantity})`, 'error');
+            showToast(`${menuItem.name} (${quantity})`, 'info');
           } else if (menuItem && quantity > item.quantity) {
             showToast(`${menuItem.name} (${quantity})`, 'success');
           }
@@ -434,38 +466,29 @@ const OrderReception: React.FC = React.memo(() => {
     );
   }, [allMenuItems, removeFromCart, showToast]);
 
-  // Funciones para edición de precios - Optimizadas
-  const enablePriceEdit = useCallback((itemId: string, currentPrice: number) => {
-    setEditingPrices(prev => ({ ...prev, [itemId]: true }));
-    setTempPrices(prev => ({ ...prev, [itemId]: currentPrice }));
-  }, []);
-
-  const savePriceEdit = useCallback((itemId: string) => {
+  // NUEVA FUNCIÓN: Cambiar precio de un producto en el carrito
+  const handlePriceChange = useCallback((itemId: string, newPrice: number) => {
     setCart(prev =>
-      prev.map(item =>
-        item.menuItem.id === itemId
-          ? {
-              ...item,
-              menuItem: {
-                ...item.menuItem,
-                price: tempPrices[itemId]
-              }
+      prev.map(item => {
+        if (item.menuItem.id === itemId) {
+          const oldPrice = item.menuItem.price;
+          const newTotal = (newPrice * item.quantity).toFixed(2);
+          showToast(
+            `💰 Precio actualizado: ${item.menuItem.name}\nS/ ${oldPrice.toFixed(2)} → S/ ${newPrice.toFixed(2)}\nNuevo subtotal: S/ ${newTotal}`,
+            'info'
+          );
+          return {
+            ...item,
+            menuItem: {
+              ...item.menuItem,
+              price: newPrice
             }
-          : item
-      )
+          };
+        }
+        return item;
+      })
     );
-    setEditingPrices(prev => ({ ...prev, [itemId]: false }));
-    showToast('Precio actualizado', 'success');
-  }, [tempPrices, showToast]);
-
-  const cancelPriceEdit = useCallback((itemId: string) => {
-    setEditingPrices(prev => ({ ...prev, [itemId]: false }));
-  }, []);
-
-  const handleTempPriceChange = useCallback((itemId: string, value: string) => {
-    const price = parseFloat(value) || 0;
-    setTempPrices(prev => ({ ...prev, [itemId]: price }));
-  }, []);
+  }, [showToast]);
 
   // Cálculos memoizados
   const getTotal = useCallback(() => {
@@ -499,13 +522,14 @@ const OrderReception: React.FC = React.memo(() => {
   }, []);
 
   const clearCart = useCallback(() => {
-    setCart([]);
-  }, []);
+    if (cart.length > 0 && window.confirm('¿Estás seguro de vaciar el carrito?')) {
+      setCart([]);
+      showToast('Carrito vaciado', 'info');
+    }
+  }, [cart.length, showToast]);
 
   // Función para generar contenido HTML del ticket - Memoizada
   const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
-    // ... (mantener la misma función de generateTicketContent del código original)
-    // Por brevedad, mantengo la implementación original
     if (isKitchenTicket) {
       const getCurrentUserName = () => {
         try {
@@ -943,8 +967,6 @@ const OrderReception: React.FC = React.memo(() => {
         setTableNumber('');
         setOrderNotes('');
         setSelectedCustomer(null);
-        setEditingPrices({});
-        setTempPrices({});
         setShowCartDrawer(false);
         setPaymentMethod('EFECTIVO');
 
@@ -993,13 +1015,16 @@ const OrderReception: React.FC = React.memo(() => {
               </div>
             ) : (
               <div className="space-y-3">
-                {activeTab === 'walk-in' && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="text-blue-800 text-sm">
-                      <strong>💡 Precios ajustables:</strong> Puedes modificar el precio de Entradas y Platos de Fondo.
+                {/* Indicador de edición de precios */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-start space-x-2">
+                    <Edit2 size={16} className="text-blue-600 mt-0.5" />
+                    <div className="text-blue-800 text-xs">
+                      <strong className="block mb-1">✏️ Precios editables:</strong>
+                      Puedes modificar el precio de cualquier producto haciendo clic en el ícono de lápiz.
                     </div>
                   </div>
-                )}
+                </div>
 
                 {(activeTab === 'walk-in' || activeTab === 'delivery') && (
                   <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
@@ -1038,13 +1063,7 @@ const OrderReception: React.FC = React.memo(() => {
                     item={item}
                     onUpdateQuantity={updateQuantity}
                     onRemove={removeFromCart}
-                    onEnablePriceEdit={enablePriceEdit}
-                    onSavePriceEdit={savePriceEdit}
-                    onCancelPriceEdit={cancelPriceEdit}
-                    onTempPriceChange={handleTempPriceChange}
-                    editingPrices={editingPrices}
-                    tempPrices={tempPrices}
-                    activeTab={activeTab}
+                    onPriceChange={handlePriceChange}
                   />
                 ))}
               </div>
@@ -1090,8 +1109,7 @@ const OrderReception: React.FC = React.memo(() => {
   }, [
     showCartDrawer, cart, activeTab, paymentMethod, customerName, phone, tableNumber,
     handleShowCartDrawer, handlePaymentMethodChange, updateQuantity, removeFromCart,
-    enablePriceEdit, savePriceEdit, cancelPriceEdit, handleTempPriceChange,
-    editingPrices, tempPrices, getTotal, clearCart, handleCreateOrder
+    handlePriceChange, getTotal, clearCart, handleCreateOrder
   ]);
 
   // Renderizado de productos memoizado
@@ -1707,13 +1725,16 @@ const OrderReception: React.FC = React.memo(() => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {activeTab === 'walk-in' && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      {/* Indicador de edición de precios */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-start space-x-2">
+                          <Edit2 size={16} className="text-blue-600 mt-0.5" />
                           <div className="text-blue-800 text-sm">
-                            <strong>💡 Precios ajustables:</strong> Puedes modificar el precio de Entradas y Platos de Fondo para pedidos en local.
+                            <strong className="block mb-1">✏️ Precios editables:</strong>
+                            Puedes modificar el precio de cualquier producto haciendo clic en el ícono de lápiz.
                           </div>
                         </div>
-                      )}
+                      </div>
 
                       {(activeTab === 'walk-in' || activeTab === 'delivery') && (
                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
@@ -1747,20 +1768,14 @@ const OrderReception: React.FC = React.memo(() => {
                       )}
 
                       {/* Lista de Items */}
-                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
                         {cart.map((item, index) => (
                           <CartItem
                             key={`${item.menuItem.id}-${index}`}
                             item={item}
                             onUpdateQuantity={updateQuantity}
                             onRemove={removeFromCart}
-                            onEnablePriceEdit={enablePriceEdit}
-                            onSavePriceEdit={savePriceEdit}
-                            onCancelPriceEdit={cancelPriceEdit}
-                            onTempPriceChange={handleTempPriceChange}
-                            editingPrices={editingPrices}
-                            tempPrices={tempPrices}
-                            activeTab={activeTab}
+                            onPriceChange={handlePriceChange}
                           />
                         ))}
                       </div>
