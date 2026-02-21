@@ -1,9 +1,9 @@
 // ============================================
-// ARCHIVO COMPLETO CORREGIDO: src/components/orders/OrdersManager.tsx
+// ARCHIVO OPTIMIZADO: src/components/orders/OrdersManager.tsx
 // ============================================
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Download, CheckCircle, FileSpreadsheet, FileText, Unlock, Lock, History, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Order } from '../../types';
 import { DailySummary } from '../../types/sales';
 import { useOrders } from '../../hooks/useOrders';
@@ -16,6 +16,9 @@ import { exportOrdersToExcel, exportOrdersWithSummary } from '../../utils/export
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
+import { HeaderStats } from './HeaderStats';
+import { PaymentSummary } from './PaymentSummary';
+import { ActionButtons } from './ActionButtons';
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -119,7 +122,7 @@ const OrderRow = React.memo(({
 });
 
 // ============================================
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL OPTIMIZADO
 // ============================================
 const OrdersManager: React.FC = () => {
   // Estados
@@ -155,10 +158,9 @@ const OrdersManager: React.FC = () => {
   } = useSalesClosure();
 
   // ============================================
-  // MEMOIZACIONES PESADAS
+  // MEMOIZACIONES
   // ============================================
   
-  // Opciones de ordenamiento (estático)
   const sortOptions = useMemo(() => [
     { value: 'status-time', label: '🔄 Estado + Tiempo' },
     { value: 'waiting-time', label: '⏱️ Tiempo Espera' },
@@ -168,7 +170,7 @@ const OrdersManager: React.FC = () => {
     { value: 'created-asc', label: '📅 Más Antiguas' }
   ], []);
 
-  // Cargar resumen del día
+  // Cargar resumen del día (solo cuando cambia la cantidad de órdenes)
   useEffect(() => {
     let isMounted = true;
     
@@ -186,10 +188,7 @@ const OrdersManager: React.FC = () => {
     };
   }, [orders.length, getTodaySummary]);
 
-  // ============================================
-  // FILTRADO: SOLO ÓRDENES DEL DÍA (si showOnlyToday está activado)
-  // ============================================
-  
+  // Filtrar órdenes del día
   const todayOrders = useMemo(() => {
     if (!showOnlyToday) return orders;
     
@@ -203,15 +202,10 @@ const OrdersManager: React.FC = () => {
     });
   }, [orders, showOnlyToday]);
 
-  // ============================================
-  // FILTRADO Y ORDENAMIENTO OPTIMIZADO
-  // ============================================
-  
+  // Filtrar y ordenar
   const filteredAndSortedOrders = useMemo(() => {
-    // Si no hay órdenes, retornar array vacío
     if (!todayOrders.length) return [];
     
-    // 1. Filtrar
     let filtered = todayOrders;
     
     if (searchTerm) {
@@ -228,7 +222,6 @@ const OrdersManager: React.FC = () => {
       filtered = filtered.filter(order => order.paymentMethod === paymentFilter);
     }
 
-    // 2. Ordenar (solo si hay elementos)
     if (filtered.length > 1) {
       filtered = [...filtered].sort((a, b) => {
         switch (currentSort) {
@@ -238,23 +231,17 @@ const OrdersManager: React.FC = () => {
               return statusOrder[a.status] - statusOrder[b.status];
             }
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-            
           case 'waiting-time':
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-            
           case 'delivery-priority':
             const typeOrder = { delivery: 1, phone: 2, 'walk-in': 3 };
             return typeOrder[a.source.type] - typeOrder[b.source.type];
-            
           case 'total-desc':
             return b.total - a.total;
-            
           case 'created-desc':
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            
           case 'created-asc':
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-            
           default:
             return 0;
         }
@@ -264,10 +251,7 @@ const OrdersManager: React.FC = () => {
     return filtered;
   }, [todayOrders, searchTerm, paymentFilter, currentSort]);
 
-  // ============================================
-  // RESUMEN DE PAGOS
-  // ============================================
-  
+  // Resumen de pagos
   const paymentSummary = useMemo(() => {
     const summary = {
       EFECTIVO: { count: 0, total: 0 },
@@ -285,10 +269,13 @@ const OrdersManager: React.FC = () => {
     return summary;
   }, [todayOrders]);
 
-  // ============================================
-  // PAGINACIÓN
-  // ============================================
-  
+  // Total del día
+  const todayTotal = useMemo(() => 
+    todayOrders.reduce((sum, o) => sum + o.total, 0), 
+    [todayOrders]
+  );
+
+  // Paginación
   const pagination = usePagination({
     items: filteredAndSortedOrders,
     itemsPerPage: itemsPerPage,
@@ -382,7 +369,7 @@ const OrdersManager: React.FC = () => {
     exportOrdersToExcel(orders, 'all');
   }, [orders]);
 
-  const handleExportWithSummary = useCallback(() => {
+  const handleExportSummary = useCallback(() => {
     exportOrdersWithSummary(orders);
   }, [orders]);
 
@@ -420,6 +407,10 @@ const OrdersManager: React.FC = () => {
     }
   }, [cashModalType, openCashRegister, closeCashRegister, orders]);
 
+  const handleToggleHistory = useCallback(() => {
+    setShowHistory(prev => !prev);
+  }, []);
+
   // Props para paginación
   const desktopProps = isDesktopPagination(pagination) ? {
     currentPage: pagination.currentPage,
@@ -447,10 +438,7 @@ const OrdersManager: React.FC = () => {
       {/* Notificación de eliminación */}
       {deletedOrder && (
         <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full">
-          <div className="flex items-center space-x-2">
-            <CheckCircle size={20} />
-            <span>Orden {deletedOrder.number} eliminada</span>
-          </div>
+          <span>Orden {deletedOrder.number} eliminada</span>
         </div>
       )}
 
@@ -463,173 +451,35 @@ const OrdersManager: React.FC = () => {
         />
       )}
 
-      {/* HEADER PRINCIPAL */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestión de Órdenes</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            {filteredAndSortedOrders.length} órdenes encontradas
-          </p>
-        </div>
-        
-        {/* Estado de caja y filtro de hoy */}
-        <div className="flex items-center space-x-3">
-          {/* Toggle para mostrar solo hoy */}
-          <button
-            onClick={() => setShowOnlyToday(!showOnlyToday)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showOnlyToday 
-                ? 'bg-red-100 text-red-700 border border-red-300' 
-                : 'bg-gray-100 text-gray-700 border border-gray-300'
-            }`}
-          >
-            {showOnlyToday ? '📅 Solo Hoy' : '📅 Todas las fechas'}
-          </button>
+      {/* HEADER CON ESTADO DE CAJA */}
+      <HeaderStats
+        totalOrders={filteredAndSortedOrders.length}
+        showOnlyToday={showOnlyToday}
+        setShowOnlyToday={setShowOnlyToday}
+        cashRegister={cashRegister}
+        onOpenCash={handleOpenCashRegister}
+        onCloseCash={handleCloseCashRegister}
+        onShowHistory={handleToggleHistory}
+        showHistory={showHistory}
+      />
 
-          {/* Estado de caja */}
-          <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 shadow-sm border">
-            <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-            <span className="text-sm font-medium">
-              Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ============================================ */}
       {/* RESUMEN DE PAGOS */}
-      {/* ============================================ */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="mr-2">💰</span> Resumen de Pagos - Hoy
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {/* Efectivo */}
-          <div 
-            className={`text-center p-4 rounded-lg cursor-pointer transition-all border-2 ${
-              paymentFilter === 'EFECTIVO' 
-                ? 'border-green-500 bg-green-50 shadow-md' 
-                : 'border-gray-200 bg-gray-50 hover:border-green-300'
-            }`}
-            onClick={() => setPaymentFilter(paymentFilter === 'EFECTIVO' ? '' : 'EFECTIVO')}
-          >
-            <div className="text-3xl font-bold text-green-600">
-              {paymentSummary.EFECTIVO.count}
-            </div>
-            <div className="text-sm font-medium text-gray-700 mt-1">Efectivo</div>
-            <div className="text-xs font-semibold text-green-600 mt-1">
-              S/ {paymentSummary.EFECTIVO.total.toFixed(2)}
-            </div>
-          </div>
+      <PaymentSummary
+        paymentSummary={paymentSummary}
+        todayTotal={todayTotal}
+        paymentFilter={paymentFilter}
+        setPaymentFilter={setPaymentFilter}
+      />
 
-          {/* Yape/Plin */}
-          <div 
-            className={`text-center p-4 rounded-lg cursor-pointer transition-all border-2 ${
-              paymentFilter === 'YAPE/PLIN' 
-                ? 'border-purple-500 bg-purple-50 shadow-md' 
-                : 'border-gray-200 bg-gray-50 hover:border-purple-300'
-            }`}
-            onClick={() => setPaymentFilter(paymentFilter === 'YAPE/PLIN' ? '' : 'YAPE/PLIN')}
-          >
-            <div className="text-3xl font-bold text-purple-600">
-              {paymentSummary['YAPE/PLIN'].count}
-            </div>
-            <div className="text-sm font-medium text-gray-700 mt-1">Yape/Plin</div>
-            <div className="text-xs font-semibold text-purple-600 mt-1">
-              S/ {paymentSummary['YAPE/PLIN'].total.toFixed(2)}
-            </div>
-          </div>
-
-          {/* Tarjeta */}
-          <div 
-            className={`text-center p-4 rounded-lg cursor-pointer transition-all border-2 ${
-              paymentFilter === 'TARJETA' 
-                ? 'border-blue-500 bg-blue-50 shadow-md' 
-                : 'border-gray-200 bg-gray-50 hover:border-blue-300'
-            }`}
-            onClick={() => setPaymentFilter(paymentFilter === 'TARJETA' ? '' : 'TARJETA')}
-          >
-            <div className="text-3xl font-bold text-blue-600">
-              {paymentSummary.TARJETA.count}
-            </div>
-            <div className="text-sm font-medium text-gray-700 mt-1">Tarjeta</div>
-            <div className="text-xs font-semibold text-blue-600 mt-1">
-              S/ {paymentSummary.TARJETA.total.toFixed(2)}
-            </div>
-          </div>
-
-          {/* No Aplica */}
-          <div 
-            className={`text-center p-4 rounded-lg cursor-pointer transition-all border-2 ${
-              paymentFilter === '' 
-                ? 'border-gray-500 bg-gray-100 shadow-md' 
-                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-            }`}
-            onClick={() => setPaymentFilter('')}
-          >
-            <div className="text-3xl font-bold text-gray-600">
-              {paymentSummary.undefined.count}
-            </div>
-            <div className="text-sm font-medium text-gray-700 mt-1">No Aplica</div>
-            <div className="text-xs font-semibold text-gray-600 mt-1">
-              S/ {paymentSummary.undefined.total.toFixed(2)}
-            </div>
-          </div>
-        </div>
-        
-        {/* Total general */}
-        <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center">
-          <span className="font-semibold text-gray-700">Total del día:</span>
-          <span className="text-xl font-bold text-red-600">
-            S/ {todayOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
-          </span>
-        </div>
-      </div>
-
-      {/* BARRA DE ACCIONES */}
-      <div className="flex flex-wrap gap-2">
-        
-        {/* Botones de caja */}
-        {!cashRegister?.is_open ? (
-          <button onClick={handleOpenCashRegister} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm flex items-center space-x-1">
-            <Unlock size={16} /><span>Abrir Caja</span>
-          </button>
-        ) : (
-          <button onClick={handleCloseCashRegister} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm flex items-center space-x-1">
-            <Lock size={16} /><span>Cerrar Caja</span>
-          </button>
-        )}
-
-        <button onClick={() => setShowHistory(!showHistory)} className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm flex items-center space-x-1">
-          <History size={16} /><span>Historial</span>
-        </button>
-
-        {/* Botones CSV */}
-        <button onClick={handleExportTodayCSV} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm flex items-center space-x-1">
-          <Download size={16} /><span>CSV Hoy</span>
-        </button>
-        
-        <button onClick={handleExportAllCSV} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm flex items-center space-x-1">
-          <Download size={16} /><span>CSV Todo</span>
-        </button>
-
-        {/* Botones Excel */}
-        <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm flex items-center space-x-1">
-          <FileSpreadsheet size={16} /><span>Excel Hoy</span>
-        </button>
-
-        <button onClick={handleExportAllExcel} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm flex items-center space-x-1">
-          <FileSpreadsheet size={16} /><span>Excel Todo</span>
-        </button>
-
-        <button onClick={handleExportWithSummary} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm flex items-center space-x-1">
-          <FileText size={16} /><span>Resumen</span>
-        </button>
-
-        <button onClick={handleNewOrder} className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm flex items-center space-x-1">
-          <Plus size={16} /><span>Nueva Orden</span>
-        </button>
-      </div>
+      {/* BOTONES DE ACCIÓN */}
+      <ActionButtons
+        onExportTodayCSV={handleExportTodayCSV}
+        onExportAllCSV={handleExportAllCSV}
+        onExportTodayExcel={handleExportTodayExcel}
+        onExportAllExcel={handleExportAllExcel}
+        onExportSummary={handleExportSummary}
+        onNewOrder={handleNewOrder}
+      />
 
       {/* MODAL DE CAJA */}
       <CashRegisterModal
@@ -760,11 +610,6 @@ const OrdersManager: React.FC = () => {
             <div>
               <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
             </div>
-            {showOnlyToday && (
-              <div className="text-xs text-gray-400">
-                *Ocultando órdenes de días anteriores
-              </div>
-            )}
           </div>
         </div>
       )}
