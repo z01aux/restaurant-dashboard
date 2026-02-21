@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Download, CheckCircle, FileSpreadsheet, FileText, Unlock, Lock, History, Search, Filter } from 'lucide-react';
+import { Plus, Download, CheckCircle, FileSpreadsheet, FileText, Unlock, Lock, History, Search } from 'lucide-react';
 import { Order } from '../../types';
 import { DailySummary } from '../../types/sales';
 import { useOrders } from '../../hooks/useOrders';
