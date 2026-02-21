@@ -1,5 +1,6 @@
 // ============================================
-// ARCHIVO OPTIMIZADO: src/components/orders/OrdersManager.tsx
+// ARCHIVO: src/components/orders/OrdersManager.tsx
+// (VERSIÓN COMPLETA CON RESUMEN DE PAGOS RESTAURADO)
 // ============================================
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -134,6 +135,7 @@ const OrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [todaySummary, setTodaySummary] = useState<DailySummary | null>(null);
+  const [showOnlyToday, setShowOnlyToday] = useState(true); // NUEVO: mostrar solo órdenes de hoy
   
   // Hooks
   const { user } = useAuth();
@@ -167,7 +169,7 @@ const OrdersManager: React.FC = () => {
     { value: 'created-asc', label: '📅 Más Antiguas' }
   ], []);
 
-  // Cargar resumen del día (solo cuando cambien las órdenes)
+  // Cargar resumen del día
   useEffect(() => {
     let isMounted = true;
     
@@ -183,7 +185,24 @@ const OrdersManager: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [orders.length]); // Solo depende de la longitud, no de orders completo
+  }, [orders.length, getTodaySummary]);
+
+  // ============================================
+  // FILTRADO: SOLO ÓRDENES DEL DÍA (si showOnlyToday está activado)
+  // ============================================
+  
+  const todayOrders = useMemo(() => {
+    if (!showOnlyToday) return orders;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      orderDate.setHours(0, 0, 0, 0);
+      return orderDate.getTime() === today.getTime();
+    });
+  }, [orders, showOnlyToday]);
 
   // ============================================
   // FILTRADO Y ORDENAMIENTO OPTIMIZADO
@@ -191,12 +210,10 @@ const OrdersManager: React.FC = () => {
   
   const filteredAndSortedOrders = useMemo(() => {
     // Si no hay órdenes, retornar array vacío
-    if (!orders.length) return [];
-    
-    const startTime = performance.now();
+    if (!todayOrders.length) return [];
     
     // 1. Filtrar
-    let filtered = orders;
+    let filtered = todayOrders;
     
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -245,13 +262,29 @@ const OrdersManager: React.FC = () => {
       });
     }
 
-    const endTime = performance.now();
-    if (filtered.length > 100) {
-      console.log(`⏱️ Filtrado y ordenamiento: ${(endTime - startTime).toFixed(2)}ms`);
-    }
-
     return filtered;
-  }, [orders, searchTerm, paymentFilter, currentSort]);
+  }, [todayOrders, searchTerm, paymentFilter, currentSort]);
+
+  // ============================================
+  // NUEVO: RESUMEN DE PAGOS RESTAURADO
+  // ============================================
+  
+  const paymentSummary = useMemo(() => {
+    const summary = {
+      EFECTIVO: { count: 0, total: 0 },
+      'YAPE/PLIN': { count: 0, total: 0 },
+      TARJETA: { count: 0, total: 0 },
+      undefined: { count: 0, total: 0 }
+    };
+
+    todayOrders.forEach(order => {
+      const method = order.paymentMethod || 'undefined';
+      summary[method as keyof typeof summary].count++;
+      summary[method as keyof typeof summary].total += order.total;
+    });
+
+    return summary;
+  }, [todayOrders]);
 
   // ============================================
   // PAGINACIÓN
@@ -440,11 +473,116 @@ const OrdersManager: React.FC = () => {
           </p>
         </div>
         
-        {/* Estado de caja */}
-        <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 shadow-sm border">
-          <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-          <span className="text-sm font-medium">
-            Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
+        {/* Estado de caja y filtro de hoy */}
+        <div className="flex items-center space-x-3">
+          {/* Toggle para mostrar solo hoy */}
+          <button
+            onClick={() => setShowOnlyToday(!showOnlyToday)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showOnlyToday 
+                ? 'bg-red-100 text-red-700 border border-red-300' 
+                : 'bg-gray-100 text-gray-700 border border-gray-300'
+            }`}
+          >
+            {showOnlyToday ? '📅 Solo Hoy' : '📅 Todas las fechas'}
+          </button>
+
+          {/* Estado de caja */}
+          <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 shadow-sm border">
+            <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+            <span className="text-sm font-medium">
+              Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================ */}
+      {/* RESUMEN DE PAGOS RESTAURADO */}
+      {/* ============================================ */}
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <span className="mr-2">💰</span> Resumen de Pagos - Hoy
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* Efectivo */}
+          <div 
+            className={`text-center p-4 rounded-lg cursor-pointer transition-all border-2 ${
+              paymentFilter === 'EFECTIVO' 
+                ? 'border-green-500 bg-green-50 shadow-md' 
+                : 'border-gray-200 bg-gray-50 hover:border-green-300'
+            }`}
+            onClick={() => setPaymentFilter(paymentFilter === 'EFECTIVO' ? '' : 'EFECTIVO')}
+          >
+            <div className="text-3xl font-bold text-green-600">
+              {paymentSummary.EFECTIVO.count}
+            </div>
+            <div className="text-sm font-medium text-gray-700 mt-1">Efectivo</div>
+            <div className="text-xs font-semibold text-green-600 mt-1">
+              S/ {paymentSummary.EFECTIVO.total.toFixed(2)}
+            </div>
+          </div>
+
+          {/* Yape/Plin */}
+          <div 
+            className={`text-center p-4 rounded-lg cursor-pointer transition-all border-2 ${
+              paymentFilter === 'YAPE/PLIN' 
+                ? 'border-purple-500 bg-purple-50 shadow-md' 
+                : 'border-gray-200 bg-gray-50 hover:border-purple-300'
+            }`}
+            onClick={() => setPaymentFilter(paymentFilter === 'YAPE/PLIN' ? '' : 'YAPE/PLIN')}
+          >
+            <div className="text-3xl font-bold text-purple-600">
+              {paymentSummary['YAPE/PLIN'].count}
+            </div>
+            <div className="text-sm font-medium text-gray-700 mt-1">Yape/Plin</div>
+            <div className="text-xs font-semibold text-purple-600 mt-1">
+              S/ {paymentSummary['YAPE/PLIN'].total.toFixed(2)}
+            </div>
+          </div>
+
+          {/* Tarjeta */}
+          <div 
+            className={`text-center p-4 rounded-lg cursor-pointer transition-all border-2 ${
+              paymentFilter === 'TARJETA' 
+                ? 'border-blue-500 bg-blue-50 shadow-md' 
+                : 'border-gray-200 bg-gray-50 hover:border-blue-300'
+            }`}
+            onClick={() => setPaymentFilter(paymentFilter === 'TARJETA' ? '' : 'TARJETA')}
+          >
+            <div className="text-3xl font-bold text-blue-600">
+              {paymentSummary.TARJETA.count}
+            </div>
+            <div className="text-sm font-medium text-gray-700 mt-1">Tarjeta</div>
+            <div className="text-xs font-semibold text-blue-600 mt-1">
+              S/ {paymentSummary.TARJETA.total.toFixed(2)}
+            </div>
+          </div>
+
+          {/* No Aplica */}
+          <div 
+            className={`text-center p-4 rounded-lg cursor-pointer transition-all border-2 ${
+              paymentFilter === '' && paymentFilter !== 'EFECTIVO' && paymentFilter !== 'YAPE/PLIN' && paymentFilter !== 'TARJETA'
+                ? 'border-gray-500 bg-gray-100 shadow-md' 
+                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+            }`}
+            onClick={() => setPaymentFilter('')}
+          >
+            <div className="text-3xl font-bold text-gray-600">
+              {paymentSummary.undefined.count}
+            </div>
+            <div className="text-sm font-medium text-gray-700 mt-1">No Aplica</div>
+            <div className="text-xs font-semibold text-gray-600 mt-1">
+              S/ {paymentSummary.undefined.total.toFixed(2)}
+            </div>
+          </div>
+        </div>
+        
+        {/* Total general */}
+        <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center">
+          <span className="font-semibold text-gray-700">Total del día:</span>
+          <span className="text-xl font-bold text-red-600">
+            S/ {todayOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
           </span>
         </div>
       </div>
@@ -532,6 +670,20 @@ const OrdersManager: React.FC = () => {
             <option value="TARJETA">💳 Tarjeta</option>
           </select>
         </div>
+        {paymentFilter && (
+          <div className="mt-2 flex items-center space-x-2">
+            <span className="text-xs text-gray-500">Filtro activo:</span>
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${getPaymentColor(paymentFilter)}`}>
+              {getPaymentText(paymentFilter)}
+            </span>
+            <button
+              onClick={() => setPaymentFilter('')}
+              className="text-xs text-red-500 hover:text-red-700"
+            >
+              Limpiar
+            </button>
+          </div>
+        )}
       </div>
 
       {/* CONTROLES DE PAGINACIÓN */}
@@ -556,15 +708,17 @@ const OrdersManager: React.FC = () => {
           </div>
         ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            No hay órdenes para mostrar
+            {showOnlyToday 
+              ? 'No hay órdenes para hoy' 
+              : 'No hay órdenes para mostrar'}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo/Pago</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente / Monto</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo / Pago</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productos</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -595,9 +749,18 @@ const OrdersManager: React.FC = () => {
       {/* ESTADÍSTICAS RÁPIDAS */}
       {filteredAndSortedOrders.length > 0 && (
         <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
-          <div className="flex justify-between">
-            <span>Total: {filteredAndSortedOrders.length} órdenes</span>
-            <span>Ventas: S/ {filteredAndSortedOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}</span>
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="font-semibold">Mostrando:</span> {pagination.startIndex || 0}-{pagination.endIndex || 0} de {filteredAndSortedOrders.length} órdenes
+            </div>
+            <div>
+              <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
+            </div>
+            {showOnlyToday && (
+              <div className="text-xs text-gray-400">
+                *Ocultando órdenes de días anteriores
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/utils/exportUtils.ts
+// ARCHIVO: src/utils/exportUtils.ts (ACTUALIZADO)
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -58,7 +58,7 @@ export const exportOrdersToExcel = (orders: Order[], tipo: 'today' | 'all' = 'to
 };
 
 /**
- * Exporta órdenes a Excel con resumen
+ * Exporta órdenes a Excel con resumen (incluye todos los métodos de pago)
  */
 export const exportOrdersWithSummary = (orders: Order[]) => {
   if (orders.length === 0) {
@@ -66,19 +66,42 @@ export const exportOrdersWithSummary = (orders: Order[]) => {
     return;
   }
 
+  // Calcular resúmenes por método de pago
+  const totalEfectivo = orders
+    .filter(o => o.paymentMethod === 'EFECTIVO')
+    .reduce((sum, o) => sum + o.total, 0);
+    
+  const totalYapePlin = orders
+    .filter(o => o.paymentMethod === 'YAPE/PLIN')
+    .reduce((sum, o) => sum + o.total, 0);
+    
+  const totalTarjeta = orders
+    .filter(o => o.paymentMethod === 'TARJETA')
+    .reduce((sum, o) => sum + o.total, 0);
+    
+  const totalNoAplica = orders
+    .filter(o => !o.paymentMethod)
+    .reduce((sum, o) => sum + o.total, 0);
+
   const totalVentas = orders.reduce((sum, order) => sum + order.total, 0);
   const totalPedidos = orders.length;
   const promedio = totalVentas / totalPedidos;
 
   const wb = XLSX.utils.book_new();
 
-  // Hoja de resumen
+  // Hoja de resumen con todos los métodos de pago
   const resumenData = [
-    ['📊 REPORTE DE VENTAS', ''],
+    ['📊 REPORTE DE VENTAS COMPLETO', ''],
     ['Fecha', new Date().toLocaleDateString('es-PE')],
     ['Total Pedidos', totalPedidos],
     ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
     ['Promedio por Pedido', `S/ ${promedio.toFixed(2)}`],
+    ['', ''],
+    ['💰 VENTAS POR MÉTODO DE PAGO', ''],
+    ['EFECTIVO', `S/ ${totalEfectivo.toFixed(2)}`],
+    ['YAPE/PLIN', `S/ ${totalYapePlin.toFixed(2)}`],
+    ['TARJETA', `S/ ${totalTarjeta.toFixed(2)}`],
+    ['NO APLICA', `S/ ${totalNoAplica.toFixed(2)}`],
   ];
 
   const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
@@ -92,6 +115,7 @@ export const exportOrdersWithSummary = (orders: Order[]) => {
     'Tipo': order.source.type === 'phone' ? 'COCINA' : 
             order.source.type === 'walk-in' ? 'LOCAL' : 'DELIVERY',
     'Fecha': order.createdAt.toLocaleDateString('es-PE'),
+    'Hora': order.createdAt.toLocaleTimeString('es-PE'),
   }));
 
   const wsDetalle = XLSX.utils.json_to_sheet(detalleData);
