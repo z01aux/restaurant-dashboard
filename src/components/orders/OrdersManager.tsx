@@ -1,6 +1,11 @@
-import React, { useState, useMemo } from 'react'; // Eliminado useRef que no se usaba
-import { Plus, Download, CheckCircle } from 'lucide-react';
+// ============================================
+// ARCHIVO COMPLETO: src/components/orders/OrdersManager.tsx
+// ============================================
+
+import React, { useState, useMemo, useEffect } from 'react';
+import { Plus, Download, CheckCircle, FileSpreadsheet, FileText, Unlock, Lock, History } from 'lucide-react';
 import { Order } from '../../types';
+import { DailySummary } from '../../types/sales';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { usePagination, isDesktopPagination, isMobilePagination } from '../../hooks/usePagination';
@@ -8,6 +13,10 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { PaginationControls } from '../ui/PaginationControls';
 import { OrderPreview } from './OrderPreview';
 import OrderTicket from './OrderTicket';
+import { exportOrdersToExcel, exportOrdersWithSummary } from '../../utils/exportUtils';
+import { useSalesClosure } from '../../hooks/useSalesClosure';
+import { CashRegisterModal } from '../sales/CashRegisterModal';
+import { SalesHistory } from '../sales/SalesHistory';
 
 const OrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,7 +26,11 @@ const OrdersManager: React.FC = () => {
   const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
   const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-  const [isMouseOverActions, setIsMouseOverActions] = useState(false); // Estado para detectar si el mouse está sobre acciones
+  const [isMouseOverActions, setIsMouseOverActions] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showCashModal, setShowCashModal] = useState(false);
+  const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
+  const [todaySummary, setTodaySummary] = useState<DailySummary | null>(null);
   
   const { user } = useAuth();
   const { 
@@ -27,6 +40,25 @@ const OrdersManager: React.FC = () => {
     exportOrdersToCSV,
     getTodayOrders
   } = useOrders();
+
+  const { 
+    cashRegister, 
+    loading: salesLoading, 
+    openCashRegister, 
+    closeCashRegister,
+    getTodaySummary 
+  } = useSalesClosure();
+
+  // Cargar resumen del día cuando cambien las órdenes
+  useEffect(() => {
+    const loadSummary = async () => {
+      if (orders.length > 0) {
+        const summary = await getTodaySummary(orders);
+        setTodaySummary(summary);
+      }
+    };
+    loadSummary();
+  }, [orders, getTodaySummary]);
 
   // Opciones de ordenamiento
   const sortOptions = [
@@ -95,7 +127,6 @@ const OrdersManager: React.FC = () => {
 
   // Shortcuts de teclado
   useKeyboardShortcuts({
-    // Navegación de páginas
     '1': () => pagination.goToPage(1),
     '2': () => pagination.goToPage(2),
     '3': () => pagination.goToPage(3),
@@ -105,8 +136,6 @@ const OrdersManager: React.FC = () => {
     '7': () => pagination.goToPage(7),
     '8': () => pagination.goToPage(8),
     '9': () => pagination.goToPage(9),
-
-    // Acciones rápidas con Ctrl/Cmd
     'ctrl+f': (e: KeyboardEvent) => {
       e.preventDefault();
       const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
@@ -143,9 +172,67 @@ const OrdersManager: React.FC = () => {
     onLoadMore: pagination.loadMore,
   } : {};
 
-  // Funciones para manejar el hover de previsualización
+  // Funciones de exportación
+  const handleExportTodayCSV = () => {
+    const todayOrders = getTodayOrders();
+    exportOrdersToCSV(todayOrders);
+  };
+
+  const handleExportAllCSV = () => {
+    exportOrdersToCSV(orders);
+  };
+
+  const handleExportTodayExcel = () => {
+    const todayOrders = getTodayOrders();
+    exportOrdersToExcel(todayOrders, 'today');
+  };
+
+  const handleExportAllExcel = () => {
+    exportOrdersToExcel(orders, 'all');
+  };
+
+  const handleExportWithSummary = () => {
+    exportOrdersWithSummary(orders);
+  };
+
+  // Funciones de caja
+  const handleOpenCashRegister = () => {
+    setCashModalType('open');
+    setShowCashModal(true);
+  };
+
+  const handleCloseCashRegister = () => {
+    if (!todaySummary) return;
+    setCashModalType('close');
+    setShowCashModal(true);
+  };
+
+  const handleCashConfirm = async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
+    if (cashModalType === 'open') {
+      const result = await openCashRegister(data.initialCash!);
+      if (result.success) {
+        alert('✅ Caja abierta correctamente');
+        setShowCashModal(false);
+      } else {
+        alert('❌ Error: ' + result.error);
+      }
+    } else {
+      const result = await closeCashRegister(orders, data.finalCash!, data.notes || '');
+      if (result.success) {
+        alert('✅ Caja cerrada correctamente');
+        setShowCashModal(false);
+        const shouldExport = window.confirm('¿Deseas exportar el resumen del cierre?');
+        if (shouldExport) {
+          handleExportWithSummary();
+        }
+      } else {
+        alert('❌ Error: ' + result.error);
+      }
+    }
+  };
+
+  // Funciones de manejo de órdenes
   const handleRowMouseEnter = (order: Order, event: React.MouseEvent) => {
-    // NO mostrar preview si el mouse está sobre la columna de acciones
     if (isMouseOverActions) return;
     
     const rect = event.currentTarget.getBoundingClientRect();
@@ -160,17 +247,37 @@ const OrdersManager: React.FC = () => {
     setPreviewOrder(null);
   };
 
-  // Manejadores para la columna de acciones
   const handleActionsMouseEnter = () => {
     setIsMouseOverActions(true);
-    setPreviewOrder(null); // Ocultar preview inmediatamente
+    setPreviewOrder(null);
   };
 
   const handleActionsMouseLeave = () => {
     setIsMouseOverActions(false);
   };
 
-  // Componente para las acciones que no activa el preview
+  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
+    if (window.confirm(`¿Estás seguro de que quieres eliminar la orden ${orderNumber}? Esta acción no se puede deshacer.`)) {
+      const result = await deleteOrder(orderId);
+      if (result.success) {
+        setDeletedOrder({ id: orderId, number: orderNumber });
+        setTimeout(() => {
+          setDeletedOrder(null);
+        }, 3000);
+      } else {
+        alert('❌ Error al eliminar orden: ' + result.error);
+      }
+    }
+  };
+
+  const handleNewOrder = () => {
+    window.location.hash = '#reception';
+    if (window.location.hash === '#reception') {
+      window.location.reload();
+    }
+  };
+
+  // Componente de acciones de orden
   const OrderActions: React.FC<{ order: Order; displayNumber: string }> = ({ order, displayNumber }) => {
     const handleDeleteClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -193,8 +300,7 @@ const OrdersManager: React.FC = () => {
             title="Eliminar orden"
           >
             🗑️
-            {/* Tooltip elegante */}
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
               Eliminar orden
               <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
             </div>
@@ -204,6 +310,7 @@ const OrdersManager: React.FC = () => {
     );
   };
 
+  // Funciones auxiliares de estilos
   const getPaymentColor = (paymentMethod?: string) => {
     const colors = {
       'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
@@ -242,40 +349,7 @@ const OrdersManager: React.FC = () => {
     return order.source.type === 'phone' ? 'kitchen' : 'order';
   };
 
-  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar la orden ${orderNumber}? Esta acción no se puede deshacer.`)) {
-      const result = await deleteOrder(orderId);
-      if (result.success) {
-        setDeletedOrder({ id: orderId, number: orderNumber });
-        setTimeout(() => {
-          setDeletedOrder(null);
-        }, 3000);
-      } else {
-        alert('❌ Error al eliminar orden: ' + result.error);
-      }
-    }
-  };
-
-  const handlePaymentFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setPaymentFilter(e.target.value);
-  };
-
-  const handleExportTodayOrders = () => {
-    const todayOrders = getTodayOrders();
-    exportOrdersToCSV(todayOrders);
-  };
-
-  const handleExportAllOrders = () => {
-    exportOrdersToCSV(orders);
-  };
-
-  const handleNewOrder = () => {
-    window.location.hash = '#reception';
-    if (window.location.hash === '#reception') {
-      window.location.reload();
-    }
-  };
-
+  // Renderizado principal
   return (
     <div className="space-y-6">
       {/* Notificación de eliminación */}
@@ -291,7 +365,7 @@ const OrdersManager: React.FC = () => {
         </div>
       )}
 
-      {/* Previsualización de órdenes - Solo mostrar si NO estamos sobre acciones */}
+      {/* Previsualización de órdenes */}
       {!isMouseOverActions && (
         <OrderPreview 
           order={previewOrder!}
@@ -300,36 +374,148 @@ const OrdersManager: React.FC = () => {
         />
       )}
 
+      {/* HEADER PRINCIPAL */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Órdenes</h2>
+          <p className="text-gray-600 text-sm mt-1">Administra y exporta todas las ventas</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button 
-            onClick={handleExportTodayOrders}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
-          >
-            <Download size={16} />
-            <span>Exportar Hoy</span>
-          </button>
-          <button 
-            onClick={handleExportAllOrders}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
-          >
-            <Download size={16} />
-            <span>Exportar Todo</span>
-          </button>
-          <button 
-            onClick={handleNewOrder}
-            className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
-          >
-            <Plus size={20} />
-            <span>Nueva Orden</span>
-          </button>
+        
+        {/* ESTADO DE CAJA */}
+        <div className="flex items-center space-x-2 bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+          <div className={`w-3 h-3 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+          <span className="text-sm font-medium">
+            Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
+          </span>
+          {cashRegister?.is_open && (
+            <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+              S/ {cashRegister.current_cash?.toFixed(2)}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Resumen de Pagos */}
+      {/* BOTONES DE ACCIÓN */}
+      <div className="flex flex-wrap gap-2">
+        
+        {/* BOTONES DE CAJA */}
+        {!cashRegister?.is_open ? (
+          <button
+            onClick={handleOpenCashRegister}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+          >
+            <Unlock size={16} />
+            <span className="hidden sm:inline">Abrir Caja</span>
+            <span className="sm:hidden">🔓</span>
+          </button>
+        ) : (
+          <button
+            onClick={handleCloseCashRegister}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+            disabled={!todaySummary || todaySummary.total_orders === 0}
+            title={!todaySummary?.total_orders ? 'No hay ventas para cerrar' : 'Cerrar caja'}
+          >
+            <Lock size={16} />
+            <span className="hidden sm:inline">Cerrar Caja</span>
+            <span className="sm:hidden">🔒</span>
+            {todaySummary && todaySummary.total_orders > 0 && (
+              <span className="bg-white text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                {todaySummary.total_orders}
+              </span>
+            )}
+          </button>
+        )}
+
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+        >
+          <History size={16} />
+          <span className="hidden sm:inline">Historial</span>
+          <span className="sm:hidden">📜</span>
+        </button>
+
+        {/* BOTONES CSV */}
+        <button 
+          onClick={handleExportTodayCSV}
+          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+          title="Exportar ventas del día a CSV"
+        >
+          <Download size={16} />
+          <span className="hidden sm:inline">CSV Hoy</span>
+          <span className="sm:hidden">📥 Hoy</span>
+        </button>
+        
+        <button 
+          onClick={handleExportAllCSV}
+          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+          title="Exportar todas las ventas a CSV"
+        >
+          <Download size={16} />
+          <span className="hidden sm:inline">CSV Todo</span>
+          <span className="sm:hidden">📥 Todo</span>
+        </button>
+
+        {/* BOTONES EXCEL */}
+        <button 
+          onClick={handleExportTodayExcel}
+          className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+          title="Exportar ventas del día a Excel"
+        >
+          <FileSpreadsheet size={16} />
+          <span className="hidden sm:inline">Excel Hoy</span>
+          <span className="sm:hidden">📊 Hoy</span>
+        </button>
+
+        <button 
+          onClick={handleExportAllExcel}
+          className="bg-emerald-700 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+          title="Exportar todas las ventas a Excel"
+        >
+          <FileSpreadsheet size={16} />
+          <span className="hidden sm:inline">Excel Todo</span>
+          <span className="sm:hidden">📊 Todo</span>
+        </button>
+
+        <button 
+          onClick={handleExportWithSummary}
+          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+          title="Exportar con resumen incluido (Recomendado)"
+        >
+          <FileText size={16} />
+          <span className="hidden sm:inline">Excel + Resumen</span>
+          <span className="sm:hidden">📈 Completo</span>
+        </button>
+
+        <button 
+          onClick={handleNewOrder}
+          className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 flex items-center space-x-2"
+        >
+          <Plus size={20} />
+          <span className="hidden sm:inline">Nueva Orden</span>
+          <span className="sm:hidden">➕</span>
+        </button>
+      </div>
+
+      {/* MODAL DE APERTURA/CIERRE DE CAJA */}
+      <CashRegisterModal
+        isOpen={showCashModal}
+        onClose={() => setShowCashModal(false)}
+        type={cashModalType}
+        cashRegister={cashRegister}
+        todaySummary={todaySummary || undefined}
+        onConfirm={handleCashConfirm}
+        loading={salesLoading}
+      />
+
+      {/* HISTORIAL DE CIERRES */}
+      {showHistory && (
+        <div className="mt-6">
+          <SalesHistory />
+        </div>
+      )}
+
+      {/* RESUMEN DE PAGOS */}
       <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen de Pagos</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -367,7 +553,7 @@ const OrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Barra de búsqueda y filtros */}
+      {/* BARRA DE BÚSQUEDA Y FILTROS */}
       <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
@@ -376,23 +562,22 @@ const OrdersManager: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar órdenes por cliente, número de orden..."
+              placeholder="Buscar por cliente, teléfono o número de orden..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
             />
           </div>
           <select 
             value={paymentFilter}
-            onChange={handlePaymentFilterChange}
+            onChange={(e) => setPaymentFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
             <option value="">Todos los pagos</option>
-            <option value="EFECTIVO">Efectivo</option>
-            <option value="YAPE/PLIN">Yape/Plin</option>
-            <option value="TARJETA">Tarjeta</option>
+            <option value="EFECTIVO">💵 Efectivo</option>
+            <option value="YAPE/PLIN">📱 Yape/Plin</option>
+            <option value="TARJETA">💳 Tarjeta</option>
           </select>
         </div>
         
-        {/* Mostrar filtro activo */}
         {paymentFilter && (
           <div className="mt-3 flex items-center space-x-2">
             <span className="text-sm text-gray-600">Filtro activo:</span>
@@ -409,16 +594,11 @@ const OrdersManager: React.FC = () => {
         )}
       </div>
 
-      {/* CONTROLES DE PAGINACIÓN HÍBRIDA */}
+      {/* CONTROLES DE PAGINACIÓN */}
       <PaginationControls
-        // Desktop props
         {...desktopProps}
         onPageChange={pagination.goToPage}
-        
-        // Mobile props
         {...mobileProps}
-        
-        // Common props
         isMobile={pagination.isMobile}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={(value) => {
@@ -430,7 +610,7 @@ const OrdersManager: React.FC = () => {
         sortOptions={sortOptions}
       />
 
-      {/* Lista de órdenes */}
+      {/* LISTA DE ÓRDENES */}
       <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-sm border border-white/20 overflow-hidden">
         {loading ? (
           <div className="text-center py-12">
@@ -470,19 +650,16 @@ const OrdersManager: React.FC = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Orden
+                    Cliente / Monto
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Tipo / Pago
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo
+                    Fecha / Hora
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pago
+                    Productos
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
@@ -501,7 +678,7 @@ const OrdersManager: React.FC = () => {
                       onMouseEnter={(e) => handleRowMouseEnter(order, e)}
                       onMouseLeave={handleRowMouseLeave}
                     >
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 sm:px-6 py-4">
                         <div className="flex items-center space-x-2 mb-1">
                           <div className={`text-sm font-medium ${
                             numberType === 'kitchen' ? 'text-green-600' : 'text-blue-600'
@@ -518,33 +695,38 @@ const OrdersManager: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {order.createdAt.toLocaleDateString()} {order.createdAt.toLocaleTimeString()}
-                        </div>
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
-                        <div className="text-sm text-gray-500">{order.phone}</div>
-                        {order.tableNumber && (
-                          <div className="text-sm text-gray-500">Mesa {order.tableNumber}</div>
-                        )}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                          {getSourceText(order.source.type)}
-                        </span>
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="font-medium text-gray-900">{order.customerName}</div>
+                        <div className="text-sm font-bold text-red-600">
                           S/ {order.total.toFixed(2)}
                         </div>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 sm:px-6 py-4">
+                        <div className="mb-1">
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                            {getSourceText(order.source.type)}
+                          </span>
+                        </div>
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.paymentMethod)}`}>
                           {getPaymentText(order.paymentMethod)}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-4 sm:px-6 py-4">
+                        <div className="text-sm text-gray-900">
+                          {order.createdAt.toLocaleDateString()}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {order.createdAt.toLocaleTimeString()}
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4">
+                        <div className="text-sm text-gray-900">
+                          {order.items.length} producto(s)
+                        </div>
+                        <div className="text-xs text-gray-500 truncate max-w-xs">
+                          {order.items.map(item => item.menuItem.name).join(', ')}
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 text-sm font-medium">
                         <OrderActions order={order} displayNumber={displayNumber} />
                       </td>
                     </tr>
@@ -554,6 +736,21 @@ const OrdersManager: React.FC = () => {
             </table>
           </div>
         )}
+      </div>
+
+      {/* PIE DE PÁGINA CON ESTADÍSTICAS */}
+      <div className="bg-white/80 backdrop-blur-lg rounded-xl p-4 border border-white/20 text-sm text-gray-600">
+        <div className="flex flex-wrap justify-between items-center">
+          <div>
+            <span className="font-semibold">Total de órdenes:</span> {orders.length}
+          </div>
+          <div>
+            <span className="font-semibold">Ventas totales:</span> S/ {orders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
+          </div>
+          <div>
+            <span className="font-semibold">Hoy:</span> {getTodayOrders().length} órdenes
+          </div>
+        </div>
       </div>
     </div>
   );
