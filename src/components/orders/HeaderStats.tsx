@@ -1,9 +1,8 @@
 // ============================================
-// ARCHIVO: src/components/orders/HeaderStats.tsx
+// ARCHIVO CORREGIDO: src/components/orders/HeaderStats.tsx
 // ============================================
 
 import React from 'react';
-import { Order } from '../../types';
 
 interface HeaderStatsProps {
   totalOrders: number;
