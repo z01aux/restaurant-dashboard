@@ -3,7 +3,7 @@
 // (VERSIÓN SIN RESUMEN DE PAGOS PARA PROBAR)
 // ============================================
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
@@ -618,3 +618,4 @@ const OrdersManager: React.FC = () => {
 };
 
 export default OrdersManager;
+
