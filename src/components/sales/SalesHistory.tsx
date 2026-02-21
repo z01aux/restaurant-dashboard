@@ -1,9 +1,9 @@
 // ============================================
-// ARCHIVO COMPLETO: src/components/sales/SalesHistory.tsx
+// ARCHIVO: src/components/sales/SalesHistory.tsx
 // ============================================
 
 import React, { useState } from 'react';
-import { Calendar, Download, Eye, ChevronDown, ChevronUp, DollarSign, ShoppingBag, CreditCard } from 'lucide-react';
+import { Calendar, Download, Eye, ChevronDown, ChevronUp, DollarSign, ShoppingBag, CreditCard, X } from 'lucide-react';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { SalesClosure } from '../../types/sales';
 import * as XLSX from 'xlsx';
@@ -27,48 +27,19 @@ export const SalesHistory: React.FC = () => {
   const exportClosureToExcel = (closure: SalesClosure) => {
     const wb = XLSX.utils.book_new();
 
-    // Hoja de resumen
     const resumenData = [
       ['CIERRE DE CAJA', ''],
       ['Número', closure.closure_number],
       ['Fecha Apertura', new Date(closure.opened_at).toLocaleString('es-PE')],
       ['Fecha Cierre', new Date(closure.closed_at).toLocaleString('es-PE')],
-      ['Abierto por', (closure as any).opened_by?.name || 'N/A'],
-      ['Cerrado por', (closure as any).closed_by?.name || 'N/A'],
       ['', ''],
       ['RESUMEN DE VENTAS', ''],
       ['Total Órdenes', closure.total_orders],
       ['Total Ventas', `S/ ${closure.total_amount.toFixed(2)}`],
-      ['', ''],
-      ['VENTAS POR MÉTODO DE PAGO', ''],
-      ['Efectivo', `S/ ${closure.total_efectivo.toFixed(2)}`],
-      ['Yape/Plin', `S/ ${closure.total_yape_plin.toFixed(2)}`],
-      ['Tarjeta', `S/ ${closure.total_tarjeta.toFixed(2)}`],
-      ['No Aplica', `S/ ${closure.total_no_aplica.toFixed(2)}`],
-      ['', ''],
-      ['VENTAS POR TIPO DE PEDIDO', ''],
-      ['Delivery', `S/ ${closure.total_delivery.toFixed(2)}`],
-      ['Local', `S/ ${closure.total_walk_in.toFixed(2)}`],
-      ['Cocina', `S/ ${closure.total_phone.toFixed(2)}`],
     ];
 
     const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
     XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
-
-    // Hoja de productos más vendidos
-    if (closure.top_products && closure.top_products.length > 0) {
-      const productosData = [
-        ['Producto', 'Categoría', 'Cantidad', 'Total'],
-        ...closure.top_products.map(p => [
-          p.name,
-          p.category,
-          p.quantity,
-          `S/ ${p.total.toFixed(2)}`,
-        ]),
-      ];
-      const wsProductos = XLSX.utils.aoa_to_sheet(productosData);
-      XLSX.utils.book_append_sheet(wb, wsProductos, 'Top Productos');
-    }
 
     XLSX.writeFile(wb, `cierre_${closure.closure_number}.xlsx`);
   };
@@ -127,10 +98,6 @@ export const SalesHistory: React.FC = () => {
                       <ShoppingBag size={14} className="mr-1" />
                       {closure.total_orders} pedidos
                     </span>
-                    <span className="flex items-center">
-                      <CreditCard size={14} className="mr-1" />
-                      Efectivo: S/ {closure.total_efectivo.toFixed(2)}
-                    </span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -174,18 +141,6 @@ export const SalesHistory: React.FC = () => {
                       <div className="text-xs text-gray-500">Cierre</div>
                       <div className="font-semibold">S/ {closure.final_cash.toFixed(2)}</div>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <div className="text-xs text-gray-500">Diferencia</div>
-                      <div className={`font-semibold ${(closure.final_cash - closure.initial_cash - closure.total_amount).toFixed(2) === '0.00' ? 'text-green-600' : 'text-red-600'}`}>
-                        S/ {(closure.final_cash - closure.initial_cash - closure.total_amount).toFixed(2)}
-                      </div>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <div className="text-xs text-gray-500">Abierto por</div>
-                      <div className="font-semibold text-sm truncate">
-                        {(closure as any).opened_by?.name || 'N/A'}
-                      </div>
-                    </div>
                   </div>
 
                   {closure.notes && (
@@ -216,8 +171,7 @@ export const SalesHistory: React.FC = () => {
               </button>
             </div>
             <div className="p-6">
-              {/* Aquí puedes mostrar más detalles si lo deseas */}
-              <pre className="bg-gray-50 p-4 rounded-lg overflow-auto">
+              <pre className="bg-gray-50 p-4 rounded-lg overflow-auto text-sm">
                 {JSON.stringify(selectedClosure, null, 2)}
               </pre>
             </div>

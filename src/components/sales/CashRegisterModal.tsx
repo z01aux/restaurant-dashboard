@@ -1,10 +1,9 @@
 // ============================================
-// ARCHIVO COMPLETO: src/components/sales/CashRegisterModal.tsx
+// ARCHIVO: src/components/sales/CashRegisterModal.tsx
 // ============================================
 
 import React, { useState, useEffect } from 'react';
 import { X, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { Order } from '../../types';
 import { DailySummary } from '../../types/sales';
 
 interface CashRegisterModalProps {
@@ -181,25 +180,6 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                   </div>
                 </div>
               </div>
-
-              {/* Top productos */}
-              {todaySummary.top_products.length > 0 && (
-                <div className="bg-amber-50 rounded-lg p-4">
-                  <h4 className="font-medium text-amber-700 mb-3">🔥 Productos Más Vendidos</h4>
-                  <div className="space-y-2">
-                    {todaySummary.top_products.slice(0, 5).map((product, index) => (
-                      <div key={product.id} className="flex justify-between text-sm">
-                        <span className="text-amber-800">
-                          {index + 1}. {product.name}
-                        </span>
-                        <span className="font-semibold text-amber-900">
-                          {product.quantity} und • S/ {product.total.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

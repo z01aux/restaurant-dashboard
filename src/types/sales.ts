@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO COMPLETO: src/types/sales.ts
+// ARCHIVO: src/types/sales.ts
 // ============================================
 
 export interface TopProduct {
@@ -23,13 +23,11 @@ export interface SalesClosure {
   initial_cash: number;
   final_cash: number;
   
-  // Totales por método de pago
   total_efectivo: number;
   total_yape_plin: number;
   total_tarjeta: number;
   total_no_aplica: number;
   
-  // Totales por tipo de pedido
   total_phone: number;
   total_walk_in: number;
   total_delivery: number;
@@ -37,7 +35,6 @@ export interface SalesClosure {
   total_orders: number;
   total_amount: number;
   
-  // Estadísticas por estado
   orders_pending: number;
   orders_preparing: number;
   orders_ready: number;
