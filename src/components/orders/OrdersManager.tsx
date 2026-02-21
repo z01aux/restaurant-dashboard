@@ -1,6 +1,5 @@
 // ============================================
-// ARCHIVO: src/components/orders/OrdersManager.tsx
-// (VERSIÓN COMPLETA CON RESUMEN DE PAGOS RESTAURADO)
+// ARCHIVO COMPLETO CORREGIDO: src/components/orders/OrdersManager.tsx
 // ============================================
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -135,7 +134,7 @@ const OrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [todaySummary, setTodaySummary] = useState<DailySummary | null>(null);
-  const [showOnlyToday, setShowOnlyToday] = useState(true); // NUEVO: mostrar solo órdenes de hoy
+  const [showOnlyToday, setShowOnlyToday] = useState(true);
   
   // Hooks
   const { user } = useAuth();
@@ -266,7 +265,7 @@ const OrdersManager: React.FC = () => {
   }, [todayOrders, searchTerm, paymentFilter, currentSort]);
 
   // ============================================
-  // NUEVO: RESUMEN DE PAGOS RESTAURADO
+  // RESUMEN DE PAGOS
   // ============================================
   
   const paymentSummary = useMemo(() => {
@@ -498,7 +497,7 @@ const OrdersManager: React.FC = () => {
       </div>
 
       {/* ============================================ */}
-      {/* RESUMEN DE PAGOS RESTAURADO */}
+      {/* RESUMEN DE PAGOS */}
       {/* ============================================ */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -562,7 +561,7 @@ const OrdersManager: React.FC = () => {
           {/* No Aplica */}
           <div 
             className={`text-center p-4 rounded-lg cursor-pointer transition-all border-2 ${
-              paymentFilter === '' && paymentFilter !== 'EFECTIVO' && paymentFilter !== 'YAPE/PLIN' && paymentFilter !== 'TARJETA'
+              paymentFilter === '' 
                 ? 'border-gray-500 bg-gray-100 shadow-md' 
                 : 'border-gray-200 bg-gray-50 hover:border-gray-300'
             }`}
@@ -751,7 +750,12 @@ const OrdersManager: React.FC = () => {
         <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
           <div className="flex justify-between items-center">
             <div>
-              <span className="font-semibold">Mostrando:</span> {pagination.startIndex || 0}-{pagination.endIndex || 0} de {filteredAndSortedOrders.length} órdenes
+              <span className="font-semibold">Mostrando:</span>{' '}
+              {isDesktopPagination(pagination) ? (
+                <>{pagination.startIndex || 0}-{pagination.endIndex || 0} de {filteredAndSortedOrders.length} órdenes</>
+              ) : (
+                <>{pagination.loadedItems || 0} de {filteredAndSortedOrders.length} órdenes</>
+              )}
             </div>
             <div>
               <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
