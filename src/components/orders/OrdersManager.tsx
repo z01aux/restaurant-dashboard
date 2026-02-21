@@ -142,7 +142,7 @@ const OrdersManager: React.FC = () => {
       searchInput?.focus();
     },
     'ctrl+n': () => handleNewOrder(),
-    'ctrl+e': () => handleExportAllOrders(),
+    'ctrl+e': () => handleExportAllCSV(),
     'ctrl+arrowleft': () => {
       if (isDesktopPagination(pagination) && pagination.hasPrevPage) {
         pagination.prevPage();
@@ -723,7 +723,7 @@ const OrdersManager: React.FC = () => {
                           {order.items.length} producto(s)
                         </div>
                         <div className="text-xs text-gray-500 truncate max-w-xs">
-                          {order.items.map(item => item.menuItem.name).join(', ')}
+                          {order.items.map((item: any) => item.menuItem.name).join(', ')}
                         </div>
                       </td>
                       <td className="px-4 sm:px-6 py-4 text-sm font-medium">

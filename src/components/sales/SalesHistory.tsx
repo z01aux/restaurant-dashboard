@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { Calendar, Download, Eye, ChevronDown, ChevronUp, DollarSign, ShoppingBag, CreditCard, X } from 'lucide-react';
+import { Calendar, Download, Eye, ChevronDown, ChevronUp, DollarSign, ShoppingBag, X } from 'lucide-react';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { SalesClosure } from '../../types/sales';
 import * as XLSX from 'xlsx';
