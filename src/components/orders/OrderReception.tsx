@@ -281,7 +281,6 @@ const OrderReception: React.FC = React.memo(() => {
   // Estado para autocompletado
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
   // Refs para manejar clicks
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -350,7 +349,6 @@ const OrderReception: React.FC = React.memo(() => {
     setCustomerName(customer.name);
     setPhone(customer.phone || '');
     setAddress(customer.address || '');
-    setSelectedCustomer(customer);
     setShowSuggestions(false);
     showToast(`Cliente seleccionado`, 'success');
   }, [showToast]);
@@ -358,7 +356,6 @@ const OrderReception: React.FC = React.memo(() => {
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomerName(value);
-    setSelectedCustomer(null);
     
     if (value.length > 1) {
       setShowSuggestions(true);
@@ -620,7 +617,6 @@ const OrderReception: React.FC = React.memo(() => {
       setAddress('');
       setTableNumber('');
       setOrderNotes('');
-      setSelectedCustomer(null);
       setShowCartDrawer(false);
       
       showToast('✅ Creando orden...', 'success');
@@ -939,7 +935,7 @@ const OrderReception: React.FC = React.memo(() => {
             </div>
           )}
 
-          {/* Versión Desktop (simplificada) */}
+          {/* Versión Desktop */}
           <div className="hidden lg:block">
             <div className="grid grid-cols-3 gap-6">
               {/* Columna izquierda: Formulario */}
@@ -965,13 +961,33 @@ const OrderReception: React.FC = React.memo(() => {
                     {/* Cliente */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
-                      <input
-                        type="text"
-                        value={customerName}
-                        onChange={handleInputChange}
-                        placeholder="Nombre *"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2"
-                      />
+                      <div className="relative mb-2">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={customerName}
+                          onChange={handleInputChange}
+                          placeholder="Nombre *"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        />
+                        {showSuggestions && customerSuggestions.length > 0 && (
+                          <div 
+                            ref={suggestionsRef}
+                            className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                          >
+                            {customerSuggestions.map((customer) => (
+                              <div
+                                key={customer.id}
+                                onMouseDown={() => selectCustomer(customer)}
+                                className="p-2 hover:bg-red-50 cursor-pointer border-b border-gray-100"
+                              >
+                                <div className="font-medium text-gray-900 text-sm">{customer.name}</div>
+                                <div className="text-gray-600 text-xs">📞 {customer.phone}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <input
                         type="tel"
                         value={phone}
