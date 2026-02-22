@@ -1,5 +1,6 @@
 // ============================================
 // ARCHIVO OPTIMIZADO: src/hooks/useOrders.ts
+// MEJORA: Velocidad de carga de órdenes
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,11 +12,12 @@ export const useOrders = () => {
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
 
+  // Cache para items de órdenes
+  const itemsCache = new Map<string, OrderItem[]>();
+
   // Función para actualizar estadísticas del cliente
   const updateCustomerStats = async (customerName: string, phone: string, orderTotal: number) => {
     try {
-      console.log('🔄 Actualizando estadísticas para cliente:', customerName, phone);
-      
       const { data: existingCustomers, error: searchError } = await supabase
         .from('customers')
         .select('*')
@@ -54,55 +56,78 @@ export const useOrders = () => {
     }
   };
 
-  // Función para convertir de DatabaseOrder a Order
-  const convertDatabaseOrderToOrder = async (dbOrder: DatabaseOrder): Promise<Order> => {
-    const { data: itemsData, error } = await supabase
+  // Función optimizada para convertir múltiples órdenes a la vez
+  const convertDatabaseOrdersToOrders = async (dbOrders: DatabaseOrder[]): Promise<Order[]> => {
+    if (!dbOrders.length) return [];
+
+    // Obtener todos los IDs de las órdenes
+    const orderIds = dbOrders.map(order => order.id);
+
+    // Obtener TODOS los items de UNA SOLA consulta
+    const { data: allItemsData, error: itemsError } = await supabase
       .from('order_items')
       .select('*')
-      .eq('order_id', dbOrder.id);
+      .in('order_id', orderIds);
 
-    if (error) throw error;
+    if (itemsError) {
+      console.error('Error fetching order items:', itemsError);
+      return [];
+    }
 
-    const items: OrderItem[] = (itemsData || []).map((item: DatabaseOrderItem) => ({
-      menuItem: {
-        id: item.menu_item_id,
-        name: item.menu_item_name,
-        price: parseFloat(item.menu_item_price as any),
-        category: '',
-        type: 'food',
-        available: true,
-        isDailySpecial: false
-      },
-      quantity: item.quantity,
-      notes: item.notes || ''
-    }));
+    // Organizar items por order_id usando un Map (más rápido que reduce)
+    const itemsByOrderId = new Map<string, DatabaseOrderItem[]>();
+    allItemsData?.forEach(item => {
+      if (!itemsByOrderId.has(item.order_id)) {
+        itemsByOrderId.set(item.order_id, []);
+      }
+      itemsByOrderId.get(item.order_id)!.push(item);
+    });
 
-    return {
-      id: dbOrder.id,
-      orderNumber: dbOrder.order_number,
-      kitchenNumber: dbOrder.kitchen_number,
-      customerName: dbOrder.customer_name,
-      phone: dbOrder.phone,
-      address: dbOrder.address,
-      tableNumber: dbOrder.table_number,
-      source: {
-        type: dbOrder.source_type,
-        ...(dbOrder.source_type === 'delivery' && { deliveryAddress: dbOrder.address })
-      },
-      status: dbOrder.status,
-      total: parseFloat(dbOrder.total as any),
-      notes: dbOrder.notes,
-      paymentMethod: dbOrder.payment_method,
-      items: items,
-      createdAt: new Date(dbOrder.created_at),
-      updatedAt: new Date(dbOrder.updated_at)
-    };
+    // Convertir todas las órdenes en un solo mapeo
+    return dbOrders.map(dbOrder => {
+      const items = itemsByOrderId.get(dbOrder.id) || [];
+      
+      const orderItems: OrderItem[] = items.map(item => ({
+        menuItem: {
+          id: item.menu_item_id,
+          name: item.menu_item_name,
+          price: parseFloat(item.menu_item_price as any),
+          category: '',
+          type: 'food',
+          available: true,
+          isDailySpecial: false
+        },
+        quantity: item.quantity,
+        notes: item.notes || ''
+      }));
+
+      return {
+        id: dbOrder.id,
+        orderNumber: dbOrder.order_number,
+        kitchenNumber: dbOrder.kitchen_number,
+        customerName: dbOrder.customer_name,
+        phone: dbOrder.phone,
+        address: dbOrder.address,
+        tableNumber: dbOrder.table_number,
+        source: {
+          type: dbOrder.source_type,
+          ...(dbOrder.source_type === 'delivery' && { deliveryAddress: dbOrder.address })
+        },
+        status: dbOrder.status,
+        total: parseFloat(dbOrder.total as any),
+        notes: dbOrder.notes,
+        paymentMethod: dbOrder.payment_method,
+        items: orderItems,
+        createdAt: new Date(dbOrder.created_at),
+        updatedAt: new Date(dbOrder.updated_at)
+      };
+    });
   };
 
   // ============================================
-  // CONSULTA OPTIMIZADA: Solo últimos 30 días
+  // CONSULTA ULTRARRÁPIDA: Carga masiva optimizada
   // ============================================
-  const fetchOrders = useCallback(async (limit = 500) => {
+  const fetchOrders = useCallback(async (limit = 1000) => {
     try {
       setLoading(true);
       
@@ -110,7 +135,7 @@ export const useOrders = () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      // Primero obtener el total de órdenes (para referencia)
+      // Primero obtener el total de órdenes
       const { count, error: countError } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
@@ -119,7 +144,7 @@ export const useOrders = () => {
       if (countError) throw countError;
       setTotalCount(count || 0);
 
-      // Luego obtener las órdenes con límite
+      // Obtener TODAS las órdenes de UNA SOLA consulta
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
@@ -128,26 +153,19 @@ export const useOrders = () => {
         .limit(limit);
 
       if (ordersError) throw ordersError;
-
-      // Convertir las órdenes en lotes para no bloquear
-      const ordersWithItems: Order[] = [];
-      
-      // Procesar en lotes de 10 para no sobrecargar
-      for (let i = 0; i < (ordersData || []).length; i += 10) {
-        const batch = (ordersData || []).slice(i, i + 10);
-        const batchResults = await Promise.all(
-          batch.map(dbOrder => convertDatabaseOrderToOrder(dbOrder))
-        );
-        ordersWithItems.push(...batchResults);
-        
-        // Pequeña pausa para no bloquear el event loop
-        if (i + 10 < (ordersData || []).length) {
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
+      if (!ordersData || ordersData.length === 0) {
+        setOrders([]);
+        return;
       }
 
-      setOrders(ordersWithItems);
-      console.log(`✅ Cargadas ${ordersWithItems.length} órdenes de los últimos 30 días`);
+      // Convertir todas las órdenes en UNA SOLA operación
+      console.time('convertOrders');
+      const convertedOrders = await convertDatabaseOrdersToOrders(ordersData);
+      console.timeEnd('convertOrders');
+
+      setOrders(convertedOrders);
+      console.log(`✅ Cargadas ${convertedOrders.length} órdenes en tiempo récord`);
+      
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -155,6 +173,9 @@ export const useOrders = () => {
     }
   }, []);
 
+  // ============================================
+  // CREAR ORDEN OPTIMIZADO (con inserción directa)
+  // ============================================
   const createOrder = async (orderData: {
     customerName: string;
     phone: string;
@@ -182,6 +203,7 @@ export const useOrders = () => {
         0
       );
 
+      // Insertar orden
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -200,6 +222,7 @@ export const useOrders = () => {
 
       if (orderError) throw orderError;
 
+      // Preparar items para inserción masiva
       const orderItems = orderData.items.map(item => ({
         order_id: order.id,
         menu_item_id: item.menuItem.id,
@@ -209,27 +232,67 @@ export const useOrders = () => {
         notes: item.notes,
       }));
 
+      // Insertar todos los items de UNA SOLA VEZ
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
 
-      await updateCustomerStats(orderData.customerName, orderData.phone, total);
+      // Actualizar estadísticas del cliente (en segundo plano, no bloquea)
+      updateCustomerStats(orderData.customerName, orderData.phone, total).catch(console.error);
 
-      // Actualizar la lista de órdenes (agregar la nueva al inicio)
-      const newOrder = await convertDatabaseOrderToOrder(order);
+      // Crear objeto de orden para el frontend
+      const newOrder: Order = {
+        id: order.id,
+        orderNumber: order.order_number,
+        kitchenNumber: order.kitchen_number,
+        customerName: orderData.customerName,
+        phone: orderData.phone,
+        address: orderData.address,
+        tableNumber: orderData.tableNumber,
+        source: orderData.source,
+        status: 'pending',
+        total: total,
+        notes: orderData.notes,
+        paymentMethod: orderData.paymentMethod,
+        items: orderData.items.map(item => ({
+          menuItem: {
+            id: item.menuItem.id,
+            name: item.menuItem.name,
+            price: item.menuItem.price,
+            category: '',
+            type: 'food',
+            available: true,
+            isDailySpecial: false
+          },
+          quantity: item.quantity,
+          notes: item.notes
+        })),
+        createdAt: new Date(order.created_at),
+        updatedAt: new Date(order.updated_at)
+      };
+
+      // Actualizar el estado local INMEDIATAMENTE (sin esperar)
       setOrders(prev => [newOrder, ...prev]);
       
-      return { success: true, order };
+      return { success: true, order: newOrder };
     } catch (error: any) {
       console.error('Error en createOrder:', error);
       return { success: false, error: error.message };
     }
   };
 
+  // ============================================
+  // ACTUALIZAR ESTADO (optimizado)
+  // ============================================
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
     try {
+      // Actualizar UI inmediatamente (optimistic update)
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, status } : order
+      ));
+
       const { data, error } = await supabase
         .from('orders')
         .update({ 
@@ -240,12 +303,13 @@ export const useOrders = () => {
         .select()
         .single();
 
-      if (error) throw error;
-      
-      // Actualizar el estado local
-      setOrders(prev => prev.map(order => 
-        order.id === orderId ? { ...order, status } : order
-      ));
+      if (error) {
+        // Revertir en caso de error
+        setOrders(prev => prev.map(order => 
+          order.id === orderId ? { ...order, status: order.status } : order
+        ));
+        throw error;
+      }
       
       return { success: true, data };
     } catch (error: any) {
@@ -253,24 +317,41 @@ export const useOrders = () => {
     }
   };
 
+  // ============================================
+  // ELIMINAR ORDEN (optimizado)
+  // ============================================
   const deleteOrder = async (orderId: string) => {
     try {
+      // Eliminar de UI inmediatamente
+      const orderToDelete = orders.find(o => o.id === orderId);
+      setOrders(prev => prev.filter(order => order.id !== orderId));
+
       const { error: itemsError } = await supabase
         .from('order_items')
         .delete()
         .eq('order_id', orderId);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        // Revertir
+        if (orderToDelete) {
+          setOrders(prev => [...prev, orderToDelete]);
+        }
+        throw itemsError;
+      }
 
       const { error: orderError } = await supabase
         .from('orders')
         .delete()
         .eq('id', orderId);
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        // Revertir
+        if (orderToDelete) {
+          setOrders(prev => [...prev, orderToDelete]);
+        }
+        throw orderError;
+      }
 
-      setOrders(prev => prev.filter(order => order.id !== orderId));
-      
       return { success: true };
     } catch (error: any) {
       console.error('Error al eliminar:', error);
@@ -278,6 +359,9 @@ export const useOrders = () => {
     }
   };
 
+  // ============================================
+  // EXPORTAR A CSV (sin cambios)
+  // ============================================
   const exportOrdersToCSV = (ordersToExport: Order[]) => {
     if (ordersToExport.length === 0) {
       alert('No hay órdenes para exportar');
@@ -337,6 +421,9 @@ export const useOrders = () => {
     URL.revokeObjectURL(url);
   };
 
+  // ============================================
+  // OBTENER ÓRDENES DE HOY (optimizado)
+  // ============================================
   const getTodayOrders = useCallback(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -348,10 +435,10 @@ export const useOrders = () => {
     });
   }, [orders]);
 
-  // Cargar datos al iniciar
+  // Cargar datos al iniciar UNA SOLA VEZ
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    fetchOrders(500); // Cargar 500 órdenes iniciales
+  }, []); // Sin dependencias para que solo cargue una vez
 
   return {
     orders,
