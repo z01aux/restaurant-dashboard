@@ -281,7 +281,42 @@ const MenuProduct: React.FC<{
 });
 
 // ============================================
-// MODAL DE GESTIÓN DE CATEGORÍAS (FUNCIONAL)
+// HOOK PERSONALIZADO PARA CATEGORÍAS
+// ============================================
+const useCategories = () => {
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('categories')
+        .select('name')
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      
+      const categoryNames = data?.map(item => item.name) || [];
+      setCategories(categoryNames);
+      console.log('✅ Categorías cargadas:', categoryNames);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  return { categories, loading, refreshCategories: fetchCategories };
+};
+
+// ============================================
+// MODAL DE GESTIÓN DE CATEGORÍAS
 // ============================================
 const CategoryManagerModal: React.FC<{
   isOpen: boolean;
@@ -326,21 +361,21 @@ const CategoryManagerModal: React.FC<{
     setError(null);
     
     try {
-      console.log('Creando categoría:', newCategory.trim());
+      console.log('📝 Creando categoría:', newCategory.trim());
       
-      // INSERTAR EN SUPABASE - usando tu tabla 'categories'
+      // INSERTAR EN SUPABASE
       const { data, error } = await supabase
         .from('categories')
         .insert([{ 
           name: newCategory.trim(),
-          sort_order: categories.length + 1 // Opcional: asignar orden
+          sort_order: categories.length + 1
         }])
         .select();
 
       if (error) {
-        console.error('Error detallado:', error);
+        console.error('❌ Error detallado:', error);
         
-        if (error.code === '23505') { // Código de error por duplicado
+        if (error.code === '23505') {
           setError('Esta categoría ya existe en la base de datos');
         } else {
           setError(`Error al crear la categoría: ${error.message}`);
@@ -349,13 +384,13 @@ const CategoryManagerModal: React.FC<{
         return;
       }
 
-      console.log('Categoría creada:', data);
+      console.log('✅ Categoría creada:', data);
       setSuccess('Categoría creada exitosamente');
       setNewCategory('');
       onCategoryCreated(); // Actualizar la lista
       
     } catch (error: any) {
-      console.error('Error inesperado:', error);
+      console.error('❌ Error inesperado:', error);
       setError(`Error inesperado: ${error.message}`);
     } finally {
       setLoading(false);
@@ -381,7 +416,6 @@ const CategoryManagerModal: React.FC<{
     setError(null);
     
     try {
-      // ACTUALIZAR EN SUPABASE
       const { error } = await supabase
         .from('categories')
         .update({ name: newName.trim() })
@@ -571,6 +605,7 @@ const QuickMenuManager: React.FC<{
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const { getAllItems, getCategories, createItem, updateItem, deleteItem, refreshMenu } = useMenu();
+  const { categories: dbCategories, refreshCategories } = useCategories(); // Usar nuestro hook personalizado
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [newProduct, setNewProduct] = useState({
@@ -676,6 +711,13 @@ const QuickMenuManager: React.FC<{
       onRefresh();
     }
     setLoading(false);
+  };
+
+  // Función para manejar la creación de categorías
+  const handleCategoryCreated = async () => {
+    await refreshCategories(); // Actualizar categorías del hook personalizado
+    await refreshMenu(); // Actualizar menú
+    onRefresh(); // Notificar al padre
   };
 
   if (!isOpen) return null;
@@ -947,11 +989,8 @@ const QuickMenuManager: React.FC<{
       <CategoryManagerModal
         isOpen={showCategoryManager}
         onClose={() => setShowCategoryManager(false)}
-        categories={categories}
-        onCategoryCreated={() => {
-          refreshMenu();
-          onRefresh();
-        }}
+        categories={dbCategories} // Usar las categorías de nuestro hook
+        onCategoryCreated={handleCategoryCreated}
       />
     </>
   );
@@ -989,20 +1028,21 @@ const OrderReception: React.FC = React.memo(() => {
   const { user } = useAuth();
   const { customers } = useCustomers();
   const { getDailySpecialsByCategory, getAllDailySpecials, getCategories, refreshMenu } = useMenu();
+  const { categories: dbCategories, refreshCategories } = useCategories(); // Usar nuestro hook personalizado
   const { createOrder } = useOrders();
   const { addNewOrder } = useOrderContext();
 
   const isAdmin = user?.role === 'admin';
 
   // Obtener categorías de la base de datos
-  const dbCategories = useMemo(() => getCategories(), [getCategories, showMenuManager]);
+  const categories = useMemo(() => dbCategories, [dbCategories]);
   
   // Establecer categoría activa por defecto
   useEffect(() => {
-    if (dbCategories.length > 0 && !activeCategory) {
-      setActiveCategory(dbCategories[0]);
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0]);
     }
-  }, [dbCategories]);
+  }, [categories]);
 
   // Memoizar datos del menú
   const allMenuItems = useMemo(() => getAllDailySpecials(), [getAllDailySpecials, showMenuManager]);
@@ -1790,9 +1830,9 @@ const OrderReception: React.FC = React.memo(() => {
               />
 
               {/* Categorías desde la BD */}
-              {!searchTerm && dbCategories.length > 0 && (
+              {!searchTerm && categories.length > 0 && (
                 <div className="flex space-x-2 mb-4 overflow-x-auto pb-2 hide-scrollbar">
-                  {dbCategories.map(category => (
+                  {categories.map(category => (
                     <button
                       key={category}
                       onClick={() => handleCategoryChange(category)}
@@ -2028,9 +2068,9 @@ const OrderReception: React.FC = React.memo(() => {
                   />
 
                   {/* Categorías desde la BD */}
-                  {!searchTerm && dbCategories.length > 0 && (
+                  {!searchTerm && categories.length > 0 && (
                     <div className="flex space-x-2 mb-4 overflow-x-auto">
-                      {dbCategories.map(category => (
+                      {categories.map(category => (
                         <button
                           key={category}
                           onClick={() => handleCategoryChange(category)}
