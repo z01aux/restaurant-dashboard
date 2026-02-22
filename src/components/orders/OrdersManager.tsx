@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, CreditCard } from 'lucide-react'; // Añadimos CreditCard
+import { Search, CreditCard, Pencil } from 'lucide-react'; // Añadimos Pencil
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -11,7 +11,7 @@ import { exportOrdersToExcel, exportOrdersWithSummary } from '../../utils/export
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
-import { PaymentMethodModal } from './PaymentMethodModal'; // Nuevo componente
+import { PaymentMethodModal } from './PaymentMethodModal';
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -21,7 +21,7 @@ const OrderRow = React.memo(({
   onMouseEnter, 
   onMouseLeave,
   onDelete,
-  onEditPayment, // Nueva prop
+  onEditPayment,
   user,
   getDisplayNumber,
   getNumberType,
@@ -33,7 +33,7 @@ const OrderRow = React.memo(({
   onMouseEnter: (e: React.MouseEvent) => void;
   onMouseLeave: () => void;
   onDelete: (orderId: string, displayNumber: string) => void;
-  onEditPayment: (order: Order) => void; // Nueva función
+  onEditPayment: (order: Order) => void;
   user: any;
   getDisplayNumber: (order: Order) => string;
   getNumberType: (order: Order) => string;
@@ -44,9 +44,17 @@ const OrderRow = React.memo(({
   const displayNumber = getDisplayNumber(order);
   const numberType = getNumberType(order);
 
+  // Función para manejar el clic en el botón de edición
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar que el evento se propague a la fila
+    e.preventDefault();
+    console.log('📝 Editando pago para orden:', order.id, order.orderNumber);
+    onEditPayment(order);
+  };
+
   return (
     <tr 
-      className="hover:bg-gray-50 cursor-pointer"
+      className="hover:bg-gray-50 cursor-pointer group relative"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -82,17 +90,15 @@ const OrderRow = React.memo(({
           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.paymentMethod)}`}>
             {getPaymentText(order.paymentMethod)}
           </span>
-          {/* Botón de edición de pago - visible para admins y al hacer hover */}
+          
+          {/* Botón de edición de pago - Siempre visible para admins y managers */}
           {(user?.role === 'admin' || user?.role === 'manager') && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditPayment(order);
-              }}
-              className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded-lg transition-all"
+              onClick={handleEditClick}
+              className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
               title="Cambiar método de pago"
             >
-              <CreditCard size={14} />
+              <Pencil size={14} />
             </button>
           )}
         </div>
@@ -162,7 +168,7 @@ const OrdersManager: React.FC = () => {
     orders, 
     loading, 
     deleteOrder,
-    updateOrderPayment, // Nuevo método
+    updateOrderPayment,
     exportOrdersToCSV,
     getTodayOrders,
     fetchOrders
@@ -172,7 +178,8 @@ const OrdersManager: React.FC = () => {
     cashRegister, 
     loading: salesLoading, 
     openCashRegister, 
-    closeCashRegister
+    closeCashRegister,
+    getTodaySummary
   } = useSalesClosure();
 
   // Inicializar órdenes locales cuando se cargan las de la BD
@@ -189,7 +196,6 @@ const OrdersManager: React.FC = () => {
       const newOrder = event.detail;
       console.log('📦 Nueva orden recibida en OrdersManager:', newOrder);
       
-      // Agregar la nueva orden al estado local INMEDIATAMENTE
       setLocalOrders(prev => {
         if (prev.some(o => o.id === newOrder.id)) {
           return prev;
@@ -384,17 +390,20 @@ const OrdersManager: React.FC = () => {
   }, [deleteOrder]);
 
   // ============================================
-  // NUEVA FUNCIÓN: Editar método de pago
+  // FUNCIÓN PARA EDITAR MÉTODO DE PAGO
   // ============================================
   const handleEditPayment = useCallback((order: Order) => {
+    console.log('📝 Abriendo modal de edición de pago para orden:', order.id, order.orderNumber);
     setSelectedOrder(order);
     setShowPaymentModal(true);
   }, []);
 
   // ============================================
-  // NUEVA FUNCIÓN: Guardar cambio de método de pago
+  // FUNCIÓN PARA GUARDAR CAMBIO DE MÉTODO DE PAGO
   // ============================================
   const handleSavePaymentMethod = useCallback(async (orderId: string, newPaymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | undefined) => {
+    console.log('💾 Guardando nuevo método de pago:', { orderId, newPaymentMethod });
+    
     try {
       // Actualizar UI inmediatamente (optimistic update)
       setLocalOrders(prev => prev.map(order => 
@@ -525,6 +534,7 @@ const OrdersManager: React.FC = () => {
       <PaymentMethodModal
         isOpen={showPaymentModal}
         onClose={() => {
+          console.log('🔒 Cerrando modal de pago');
           setShowPaymentModal(false);
           setSelectedOrder(null);
         }}
