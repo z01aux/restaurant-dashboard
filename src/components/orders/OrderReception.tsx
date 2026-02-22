@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus, Minus, X, ShoppingBag, ArrowRight, Search, Trash2, User, Edit2, Check, DollarSign } from 'lucide-react';
+import { Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
@@ -48,19 +48,7 @@ const ToastNotification: React.FC<{
   );
 });
 
-// Componente Skeleton para productos - Memoizado
-const ProductSkeleton: React.FC = React.memo(() => (
-  <div className="bg-white rounded-lg p-3 border border-gray-200 animate-pulse">
-    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-    <div className="h-3 bg-gray-200 rounded w-full mb-3"></div>
-    <div className="flex justify-between items-center">
-      <div className="h-4 bg-gray-300 rounded w-16"></div>
-      <div className="h-8 bg-gray-300 rounded w-20"></div>
-    </div>
-  </div>
-));
-
-// Componente de Item del Carrito con Edición de Precio - MEJORADO
+// Componente de Item del Carrito con Edición de Precio
 const CartItem: React.FC<{
   item: OrderItem;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
@@ -204,7 +192,7 @@ const CartItem: React.FC<{
   );
 });
 
-// Componente de Producto del Menú - Memoizado
+// Componente de Producto del Menú
 const MenuProduct: React.FC<{
   item: MenuItem;
   quantityInCart: number;
@@ -295,32 +283,20 @@ const OrderReception: React.FC = React.memo(() => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
-  // Cache de clientes para búsqueda rápida
-  const customersCache = useRef<Map<string, any>>(new Map());
-
   // Refs para manejar clicks
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Hooks
-  const { customers, loading: customersLoading } = useCustomers();
+  const { customers } = useCustomers();
   const { getDailySpecialsByCategory, getAllDailySpecials } = useMenu();
   const { createOrder } = useOrders();
   const { addNewOrder } = useOrderContext();
 
-  // Construir cache de clientes
-  useEffect(() => {
-    customersCache.current.clear();
-    customers.forEach(customer => {
-      customersCache.current.set(customer.phone, customer);
-      customersCache.current.set(customer.name.toLowerCase(), customer);
-    });
-  }, [customers]);
-
   // Memoizar datos del menú
   const allMenuItems = useMemo(() => getAllDailySpecials(), [getAllDailySpecials]);
   
-  // Definir categorías en el orden deseado - Memoizado
+  // Definir categorías
   const categories = useMemo(() => ['Entradas', 'Platos de Fondo', 'Bebidas'], []);
 
   // Memoizar items filtrados
@@ -334,7 +310,7 @@ const OrderReception: React.FC = React.memo(() => {
     return getDailySpecialsByCategory(activeCategory) || [];
   }, [allMenuItems, searchTerm, activeCategory, getDailySpecialsByCategory]);
 
-  // Memoizar sugerencias de clientes (usando cache para velocidad)
+  // Memoizar sugerencias de clientes
   useEffect(() => {
     if (customerName.trim().length > 1) {
       const searchLower = customerName.toLowerCase();
@@ -379,16 +355,6 @@ const OrderReception: React.FC = React.memo(() => {
     showToast(`Cliente seleccionado`, 'success');
   }, [showToast]);
 
-  const clearCustomerSelection = useCallback(() => {
-    setSelectedCustomer(null);
-    setCustomerName('');
-    setPhone('');
-    setAddress('');
-    setTableNumber('');
-    setShowSuggestions(false);
-  }, []);
-
-  // Manejadores para el input - Optimizados
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomerName(value);
@@ -401,19 +367,7 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, []);
 
-  const handleInputFocus = useCallback(() => {
-    if (customerName.length > 1 && customerSuggestions.length > 0) {
-      setShowSuggestions(true);
-    }
-  }, [customerName.length, customerSuggestions.length]);
-
-  const handleInputBlur = useCallback(() => {
-    setTimeout(() => {
-      setShowSuggestions(false);
-    }, 200);
-  }, []);
-
-  // Funciones del carrito - Optimizadas
+  // Funciones del carrito
   const addToCart = useCallback((menuItem: MenuItem) => {
     setCart(prev => {
       const existing = prev.find(item => item.menuItem.id === menuItem.id);
@@ -457,7 +411,6 @@ const OrderReception: React.FC = React.memo(() => {
     );
   }, [removeFromCart]);
 
-  // Función para cambiar precio
   const handlePriceChange = useCallback((itemId: string, newPrice: number) => {
     setCart(prev =>
       prev.map(item => {
@@ -486,17 +439,13 @@ const OrderReception: React.FC = React.memo(() => {
     [cart]
   );
 
-  // Callbacks para cambios de estado
-  const handleActiveTabChange = useCallback((tab: 'phone' | 'walk-in' | 'delivery') => {
-    setActiveTab(tab);
+  // Handlers
+  const handleCategoryChange = useCallback((category: string) => {
+    setActiveCategory(category);
   }, []);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-  }, []);
-
-  const handleCategoryChange = useCallback((category: string) => {
-    setActiveCategory(category);
   }, []);
 
   const handlePaymentMethodChange = useCallback((method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA') => {
@@ -514,7 +463,7 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [cart.length, showToast]);
 
-  // Función para imprimir inmediatamente (optimizada)
+  // Función para imprimir
   const printOrderImmediately = useCallback((order: Order) => {
     const isPhoneOrder = order.source.type === 'phone';
     
@@ -615,7 +564,7 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, []);
 
-  // Crear orden en Supabase - VERSIÓN ULTRARRÁPIDA
+  // Crear orden
   const handleCreateOrder = useCallback(async () => {
     if (cart.length === 0) {
       showToast('El pedido está vacío', 'error');
@@ -661,10 +610,10 @@ const OrderReception: React.FC = React.memo(() => {
 
       setLastOrder(tempOrder);
       
-      // NOTIFICAR INMEDIATAMENTE a OrdersManager
+      // NOTIFICAR INMEDIATAMENTE
       addNewOrder(tempOrder);
       
-      // Limpiar formulario INMEDIATAMENTE
+      // Limpiar formulario
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -675,7 +624,6 @@ const OrderReception: React.FC = React.memo(() => {
       setShowCartDrawer(false);
       
       showToast('✅ Creando orden...', 'success');
-
       printOrderImmediately(tempOrder);
 
       const result = await createOrder({
@@ -737,6 +685,17 @@ const OrderReception: React.FC = React.memo(() => {
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">Recepción</h1>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <select
+                      value={activeTab}
+                      onChange={(e) => setActiveTab(e.target.value as any)}
+                      className="text-xs bg-gray-100 rounded-lg px-2 py-1 border border-gray-300"
+                    >
+                      <option value="phone">📞 Cocina</option>
+                      <option value="walk-in">👤 Local</option>
+                      <option value="delivery">🚚 Delivery</option>
+                    </select>
+                  </div>
                 </div>
                 
                 <button
@@ -758,18 +717,421 @@ const OrderReception: React.FC = React.memo(() => {
             </div>
           </div>
 
-          {/* Layout Desktop simplificado */}
-          <div className="hidden lg:block">
-            {/* ... tu código desktop existente ... */}
+          {/* Contenido Móvil */}
+          <div className="lg:hidden px-3 pt-4">
+            {/* Formulario de cliente móvil */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4">
+              <h3 className="text-sm font-bold text-gray-900 mb-3">Datos del Cliente</h3>
+              
+              <div className="space-y-3">
+                {/* Nombre con autocompletado */}
+                <div className="relative">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={customerName}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Nombre del cliente *"
+                    required
+                  />
+                  
+                  {showSuggestions && customerSuggestions.length > 0 && (
+                    <div 
+                      ref={suggestionsRef}
+                      className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                    >
+                      {customerSuggestions.map((customer) => (
+                        <div
+                          key={customer.id}
+                          onMouseDown={() => selectCustomer(customer)}
+                          className="p-3 hover:bg-red-50 cursor-pointer border-b border-gray-100"
+                        >
+                          <div className="font-medium text-gray-900 text-sm">{customer.name}</div>
+                          <div className="text-gray-600 text-xs">📞 {customer.phone}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Teléfono */}
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Teléfono *"
+                  required
+                />
+
+                {/* Mesa (solo Local) */}
+                {activeTab === 'walk-in' && (
+                  <input
+                    type="text"
+                    value={tableNumber}
+                    onChange={(e) => setTableNumber(e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Número de mesa *"
+                    required
+                  />
+                )}
+
+                {/* Dirección (solo delivery) */}
+                {activeTab === 'delivery' && (
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Dirección de envío *"
+                    required
+                  />
+                )}
+
+                {/* Método de pago */}
+                {(activeTab === 'walk-in' || activeTab === 'delivery') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Método de Pago *
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'EFECTIVO', label: '💵', color: 'bg-green-500' },
+                        { value: 'YAPE/PLIN', label: '📱', color: 'bg-purple-500' },
+                        { value: 'TARJETA', label: '💳', color: 'bg-blue-500' }
+                      ].map((method) => (
+                        <button
+                          key={method.value}
+                          type="button"
+                          onClick={() => handlePaymentMethodChange(method.value as any)}
+                          className={`p-2 rounded-lg text-white font-medium text-xs transition-all ${
+                            paymentMethod === method.value 
+                              ? `${method.color} shadow-md transform scale-105` 
+                              : 'bg-gray-300 text-gray-600'
+                          }`}
+                        >
+                          {method.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Menú */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-20">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">Menú del Día</h3>
+              
+              {/* Buscador */}
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-4"
+                placeholder="Buscar productos..."
+              />
+
+              {/* Categorías */}
+              {!searchTerm && (
+                <div className="flex space-x-2 mb-4 overflow-x-auto pb-2 hide-scrollbar">
+                  {categories.map(category => (
+                    <button
+                      key={category}
+                      onClick={() => handleCategoryChange(category)}
+                      className={`px-3 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-colors ${
+                        activeCategory === category
+                          ? 'bg-red-500 text-white'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Grid de productos */}
+              <div className="grid grid-cols-2 gap-3">
+                {currentItems.map((item: MenuItem) => {
+                  const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
+                  const quantityInCart = cartItem ? cartItem.quantity : 0;
+                  
+                  return (
+                    <MenuProduct
+                      key={item.id}
+                      item={item}
+                      quantityInCart={quantityInCart}
+                      onAddToCart={addToCart}
+                      onUpdateQuantity={updateQuantity}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          {/* Layout Móvil simplificado */}
-          <div className="lg:hidden px-3 pt-4">
-            {/* ... tu código móvil existente ... */}
+          {/* Drawer del Carrito Móvil */}
+          {showCartDrawer && (
+            <div className="lg:hidden fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => handleShowCartDrawer(false)} />
+              <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto">
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Tu Pedido</h3>
+                      <p className="text-sm text-gray-600">{totalItems} productos</p>
+                    </div>
+                    <button
+                      onClick={() => handleShowCartDrawer(false)}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {cart.length === 0 ? (
+                    <div className="text-center py-8">
+                      <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500">Tu pedido está vacío</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        {cart.map((item, index) => (
+                          <CartItem
+                            key={`${item.menuItem.id}-${index}`}
+                            item={item}
+                            onUpdateQuantity={updateQuantity}
+                            onRemove={removeFromCart}
+                            onPriceChange={handlePriceChange}
+                          />
+                        ))}
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="text-lg font-semibold">Total:</span>
+                          <span className="text-2xl font-bold text-red-600">
+                            S/ {getTotal().toFixed(2)}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={clearCart}
+                          className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors mb-2"
+                        >
+                          Vaciar Carrito
+                        </button>
+                        <button
+                          onClick={handleCreateOrder}
+                          disabled={!customerName || !phone || (activeTab === 'walk-in' && !tableNumber)}
+                          className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-4 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold"
+                        >
+                          Confirmar Pedido
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Versión Desktop (simplificada) */}
+          <div className="hidden lg:block">
+            <div className="grid grid-cols-3 gap-6">
+              {/* Columna izquierda: Formulario */}
+              <div className="col-span-1">
+                <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-6">Nuevo Pedido</h2>
+                  
+                  <div className="space-y-4">
+                    {/* Tipo de pedido */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                      <select
+                        value={activeTab}
+                        onChange={(e) => setActiveTab(e.target.value as any)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="phone">📞 Cocina</option>
+                        <option value="walk-in">👤 Local</option>
+                        <option value="delivery">🚚 Delivery</option>
+                      </select>
+                    </div>
+
+                    {/* Cliente */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                      <input
+                        type="text"
+                        value={customerName}
+                        onChange={handleInputChange}
+                        placeholder="Nombre *"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2"
+                      />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Teléfono *"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                    </div>
+
+                    {/* Datos adicionales */}
+                    {activeTab === 'walk-in' && (
+                      <input
+                        type="text"
+                        value={tableNumber}
+                        onChange={(e) => setTableNumber(e.target.value)}
+                        placeholder="Mesa *"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                    )}
+
+                    {activeTab === 'delivery' && (
+                      <input
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="Dirección *"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                    )}
+
+                    {/* Método de pago */}
+                    {(activeTab === 'walk-in' || activeTab === 'delivery') && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Pago</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {['EFECTIVO', 'YAPE/PLIN', 'TARJETA'].map(method => (
+                            <button
+                              key={method}
+                              onClick={() => handlePaymentMethodChange(method as any)}
+                              className={`p-2 rounded-lg text-xs font-medium ${
+                                paymentMethod === method
+                                  ? 'bg-red-500 text-white'
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}
+                            >
+                              {method === 'EFECTIVO' ? '💵' : method === 'YAPE/PLIN' ? '📱' : '💳'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Columna central: Menú */}
+              <div className="col-span-1">
+                <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">Menú</h2>
+                  
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    placeholder="Buscar..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
+                  />
+
+                  {!searchTerm && (
+                    <div className="flex space-x-2 mb-4 overflow-x-auto">
+                      {categories.map(category => (
+                        <button
+                          key={category}
+                          onClick={() => handleCategoryChange(category)}
+                          className={`px-3 py-1 rounded-lg text-xs whitespace-nowrap ${
+                            activeCategory === category
+                              ? 'bg-red-500 text-white'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {category}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
+                    {currentItems.map((item: MenuItem) => {
+                      const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
+                      const quantityInCart = cartItem ? cartItem.quantity : 0;
+                      
+                      return (
+                        <MenuProduct
+                          key={item.id}
+                          item={item}
+                          quantityInCart={quantityInCart}
+                          onAddToCart={addToCart}
+                          onUpdateQuantity={updateQuantity}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Columna derecha: Carrito */}
+              <div className="col-span-1">
+                <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">Pedido</h2>
+                  
+                  {cart.length === 0 ? (
+                    <div className="text-center py-8">
+                      <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500">Carrito vacío</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto mb-4">
+                        {cart.map((item, index) => (
+                          <CartItem
+                            key={`${item.menuItem.id}-${index}`}
+                            item={item}
+                            onUpdateQuantity={updateQuantity}
+                            onRemove={removeFromCart}
+                            onPriceChange={handlePriceChange}
+                          />
+                        ))}
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4">
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="font-semibold">Total:</span>
+                          <span className="text-xl font-bold text-red-600">
+                            S/ {getTotal().toFixed(2)}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={clearCart}
+                          className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 mb-2"
+                        >
+                          Vaciar
+                        </button>
+                        <button
+                          onClick={handleCreateOrder}
+                          disabled={!customerName || !phone || (activeTab === 'walk-in' && !tableNumber)}
+                          className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 font-semibold"
+                        >
+                          Confirmar
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Ticket oculto para impresión */}
+        {/* Ticket oculto */}
         {lastOrder && <OrderTicket order={lastOrder} />}
       </div>
     </>

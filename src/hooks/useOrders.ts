@@ -13,7 +13,7 @@ export const useOrders = () => {
   const [totalCount, setTotalCount] = useState(0);
 
   // Cache para items de órdenes
-  const itemsCache = new Map<string, OrderItem[]>();
+  // const itemsCache = new Map<string, OrderItem[]>();
 
   // Función para actualizar estadísticas del cliente
   const updateCustomerStats = async (customerName: string, phone: string, orderTotal: number) => {
