@@ -192,16 +192,15 @@ const CartItem: React.FC<{
   );
 });
 
-// Componente de Producto del Menú - CORREGIDO: Solo el botón agrega productos
+// Componente de Producto del Menú
 const MenuProduct: React.FC<{
   item: MenuItem;
   quantityInCart: number;
   onAddToCart: (menuItem: MenuItem) => void;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
 }> = React.memo(({ item, quantityInCart, onAddToCart, onUpdateQuantity }) => {
-  // Prevenir propagación para evitar doble llamado
   const handleAddClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // Importante: prevenir propagación
+    e.stopPropagation();
     onAddToCart(item);
   }, [item, onAddToCart]);
 
@@ -459,7 +458,193 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [cart.length, showToast]);
 
-  // Función para imprimir
+  // Función para generar el ticket completo (RESTAURADA)
+  const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
+    const getCurrentUserName = () => {
+      try {
+        const savedUser = localStorage.getItem('restaurant-user');
+        if (savedUser) {
+          const userData = JSON.parse(savedUser);
+          return userData.name || 'Sistema';
+        }
+      } catch (error) {
+        console.error('Error obteniendo usuario:', error);
+      }
+      return 'Sistema';
+    };
+
+    if (isKitchenTicket) {
+      return `
+        <div class="ticket">
+          <div class="center">
+            <div class="header-title uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
+            <div class="header-title">** COCINA **</div>
+            <div class="divider"></div>
+          </div>
+          
+          <div class="info-row">
+            <span class="label">CLIENTE:</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">AREA:</span>
+            <span class="value">COCINA</span>
+          </div>
+          <div class="info-row">
+            <span class="label">COMANDA:</span>
+            <span class="value">#${order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">FECHA:</span>
+            <span class="value">${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">ATENDIDO POR:</span>
+            <span class="value">${getCurrentUserName().toUpperCase()}</span>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="products-header">DESCRIPCION</div>
+          
+          <div class="divider"></div>
+          
+          ${order.items.map(item => `
+            <div class="product-row">
+              <div class="quantity">${item.quantity}x</div>
+              <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
+            </div>
+            ${item.notes && item.notes.trim() !== '' ? `<div class="notes">- ${item.notes}</div>` : ''}
+          `).join('')}
+          
+          <div class="divider"></div>
+          
+          <div class="center">
+            <div class="asterisk-line">********************************</div>
+          </div>
+        </div>
+      `;
+    } else {
+      const subtotal = order.total / 1.18;
+      const igv = order.total - subtotal;
+      
+      return `
+        <div class="ticket">
+          <div class="center">
+            <div class="header-title" style="font-size: 14px;">MARY'S RESTAURANT</div>
+            <div class="header-subtitle">INVERSIONES AROMO S.A.C.</div>
+            <div class="header-subtitle">RUC: 20505262086</div>
+            <div class="header-subtitle">AV. ISABEL LA CATOLICA 1254</div>
+            <div class="header-subtitle">Tel: 941 778 599</div>
+            <div class="divider"></div>
+          </div>
+          
+          <div class="info-row">
+            <span class="label">ORDEN:</span>
+            <span class="value">${order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">TIPO:</span>
+            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : 'DELIVERY'}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">FECHA:</span>
+            <span class="value">${order.createdAt.toLocaleDateString()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">HORA:</span>
+            <span class="value">${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">PAGO:</span>
+            <span class="value">${order.paymentMethod || 'NO APLICA'}</span>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="info-row">
+            <span class="label">CLIENTE:</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">TELÉFONO:</span>
+            <span class="value">${order.phone}</span>
+          </div>
+          ${order.address ? `
+          <div class="info-row">
+            <span class="label">DIRECCIÓN:</span>
+            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
+          </div>
+          ` : ''}
+          ${order.tableNumber ? `
+          <div class="info-row">
+            <span class="label">MESA:</span>
+            <span class="value">${order.tableNumber}</span>
+          </div>
+          ` : ''}
+          
+          <div class="divider"></div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Cant</th>
+                <th>Descripción</th>
+                <th style="text-align: right;">Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items.map(item => `
+                <tr>
+                  <td class="quantity" style="vertical-align: top;">${item.quantity}x</td>
+                  <td style="vertical-align: top;">
+                    <div class="product-name bold">${item.menuItem.name}</div>
+                    ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes">Nota: ${item.notes}</div>` : ''}
+                  </td>
+                  <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div style="font-size: 11px;">
+            <div class="info-row">
+              <span class="normal">Subtotal:</span>
+              <span class="normal">S/ ${subtotal.toFixed(2)}</span>
+            </div>
+            <div class="info-row">
+              <span class="normal">IGV (18%):</span>
+              <span class="normal">S/ ${igv.toFixed(2)}</span>
+            </div>
+            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
+              <span class="label">TOTAL:</span>
+              <span class="label">S/ ${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="center">
+            <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
+            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : 'DELIVERY'} ***</div>
+            <div class="normal" style="margin-top: 10px; font-size: 10px;">
+              ${new Date().toLocaleString('es-ES', { 
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }, []);
+
+  // Función para imprimir (RESTAURADA)
   const printOrderImmediately = useCallback((order: Order) => {
     const isPhoneOrder = order.source.type === 'phone';
     
@@ -473,59 +658,7 @@ const OrderReception: React.FC = React.memo(() => {
     
     document.body.appendChild(iframe);
 
-    const generateTicketContent = () => {
-      if (isPhoneOrder) {
-        return `
-          <div class="ticket">
-            <div class="center">
-              <div class="header-title uppercase" style="font-size: 16px;">${order.customerName.toUpperCase()}</div>
-              <div class="header-title">** COCINA **</div>
-              <div class="divider"></div>
-            </div>
-            <div class="info-row">
-              <span class="label">CLIENTE:</span>
-              <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">COMANDA:</span>
-              <span class="value">#${order.kitchenNumber || `COM-${order.id.slice(-8)}`}</span>
-            </div>
-            <div class="divider"></div>
-            <div class="products-header">PRODUCTOS</div>
-            ${order.items.map(item => `
-              <div class="product-row">
-                <div class="quantity">${item.quantity}x</div>
-                <div class="product-name">${item.menuItem.name.toUpperCase()}</div>
-              </div>
-            `).join('')}
-            <div class="divider"></div>
-          </div>
-        `;
-      } else {
-        return `
-          <div class="ticket">
-            <div class="center">
-              <div class="header-title">MARY'S RESTAURANT</div>
-              <div class="header-subtitle">RUC: 20505262086</div>
-              <div class="divider"></div>
-            </div>
-            <div class="info-row">
-              <span class="label">ORDEN:</span>
-              <span class="value">${order.orderNumber || `ORD-${order.id.slice(-8)}`}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">CLIENTE:</span>
-              <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">TOTAL:</span>
-              <span class="label">S/ ${order.total.toFixed(2)}</span>
-            </div>
-            <div class="center">¡GRACIAS!</div>
-          </div>
-        `;
-      }
-    };
+    const ticketContent = generateTicketContent(order, isPhoneOrder);
     
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (iframeDoc) {
@@ -534,16 +667,145 @@ const OrderReception: React.FC = React.memo(() => {
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Ticket</title>
+            <title>Ticket ${isPhoneOrder ? (order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`) : (order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`)}</title>
             <style>
               @media print {
-                @page { size: 80mm auto; margin: 0; }
-                body { width: 80mm; margin: 0; padding: 5px; font-size: 12px; }
+                @page {
+                  size: 80mm auto;
+                  margin: 0;
+                  padding: 0;
+                }
+                body {
+                  width: 80mm !important;
+                  margin: 0 auto !important;
+                  padding: 0 !important;
+                  font-size: 12px !important;
+                  font-family: "Helvetica", "Arial", sans-serif !important;
+                  font-weight: normal !important;
+                }
+                * {
+                  font-family: inherit !important;
+                }
+              }
+              body {
+                font-family: "Helvetica", "Arial", sans-serif;
+                font-weight: normal;
+                font-size: 12px;
+                line-height: 1.2;
+                width: 80mm;
+                margin: 0 auto;
+                padding: 8px;
+                background: white;
+                color: black;
+              }
+              .ticket, .ticket *, div, span, td, th {
+                font-family: "Helvetica", "Arial", sans-serif !important;
+              }
+              .center {
+                text-align: center;
+              }
+              .bold {
+                font-weight: bold !important;
+              }
+              .normal {
+                font-weight: normal !important;
+              }
+              .uppercase {
+                text-transform: uppercase;
+              }
+              .divider {
+                border-top: 1px solid #000;
+                margin: 6px 0;
+              }
+              .info-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 3px;
+              }
+              .label {
+                font-weight: bold !important;
+              }
+              .value {
+                font-weight: normal !important;
+              }
+              .customer-name-bold {
+                font-weight: bold !important;
+                max-width: 60%;
+                word-wrap: break-word;
+              }
+              .header-title {
+                font-weight: bold !important;
+              }
+              .header-subtitle {
+                font-weight: normal !important;
+              }
+              .notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 15%;
+                margin-bottom: 3px;
+                display: block;
+                width: 85%;
+                font-weight: normal !important;
+              }
+              .table-notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 0;
+                margin-top: 2px;
+                display: block;
+                font-weight: normal !important;
+              }
+              .products-header {
+                text-align: center;
+                font-weight: bold !important;
+                margin: 6px 0;
+                text-transform: uppercase;
+                border-bottom: 1px solid #000;
+                padding-bottom: 3px;
+              }
+              .product-row {
+                display: flex;
+                margin-bottom: 4px;
+              }
+              .quantity {
+                width: 15%;
+                font-weight: bold !important;
+              }
+              .product-name {
+                width: 85%;
+                font-weight: bold !important;
+                text-transform: uppercase;
+              }
+              .asterisk-line {
+                text-align: center;
+                font-size: 9px;
+                letter-spacing: 1px;
+                margin: 3px 0;
+                font-weight: normal !important;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 5px 0;
+              }
+              th, td {
+                padding: 2px 0;
+                text-align: left;
+                vertical-align: top;
+              }
+              th {
+                border-bottom: 1px solid #000;
+                font-weight: bold !important;
+              }
+              .notes-row td {
+                padding-top: 0;
+                padding-bottom: 3px;
               }
             </style>
           </head>
           <body>
-            ${generateTicketContent()}
+            ${ticketContent}
           </body>
         </html>
       `);
@@ -555,10 +817,10 @@ const OrderReception: React.FC = React.memo(() => {
           if (document.body.contains(iframe)) {
             document.body.removeChild(iframe);
           }
-        }, 500);
+        }, 1000);
       }, 50);
     }
-  }, []);
+  }, [generateTicketContent]);
 
   // Crear orden
   const handleCreateOrder = useCallback(async () => {
@@ -619,6 +881,8 @@ const OrderReception: React.FC = React.memo(() => {
       setShowCartDrawer(false);
       
       showToast('✅ Creando orden...', 'success');
+      
+      // IMPRIMIR CON EL FORMATO COMPLETO
       printOrderImmediately(tempOrder);
 
       const result = await createOrder({
