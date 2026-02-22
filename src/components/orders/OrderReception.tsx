@@ -276,7 +276,7 @@ const MenuProduct: React.FC<{
   );
 });
 
-// Modal de gestión rápida de menú - SIN CONFIRMACIONES
+// Modal de gestión rápida de menú - SIN CONFIRMACIONES Y CON SCROLL CORREGIDO
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -384,9 +384,9 @@ const QuickMenuManager: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-red-500 to-amber-500 p-4 text-white">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
+        {/* Header - Fijo */}
+        <div className="bg-gradient-to-r from-red-500 to-amber-500 p-4 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Settings size={20} />
@@ -398,8 +398,8 @@ const QuickMenuManager: React.FC<{
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 p-2">
+        {/* Tabs - Fijo */}
+        <div className="flex border-b border-gray-200 p-2 flex-shrink-0">
           {[
             { id: 'today', label: `📋 Hoy (${todayItems.length})` },
             { id: 'inventory', label: `📦 Inventario (${inventoryItems.length})` },
@@ -422,8 +422,8 @@ const QuickMenuManager: React.FC<{
           ))}
         </div>
 
-        {/* Contenido */}
-        <div className="p-4 overflow-y-auto max-h-[50vh]">
+        {/* Contenido con scroll - SOLO UNA BARRA */}
+        <div className="flex-1 overflow-y-auto p-4">
           {loading && (
             <div className="text-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mx-auto"></div>
@@ -442,7 +442,7 @@ const QuickMenuManager: React.FC<{
                   </div>
                   <button
                     onClick={() => handleRemoveFromToday(item.id)}
-                    className="text-xs bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600 transition-colors ml-2"
+                    className="text-xs bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600 transition-colors ml-2 flex-shrink-0"
                     title="Quitar del menú de hoy"
                   >
                     Quitar
@@ -458,7 +458,7 @@ const QuickMenuManager: React.FC<{
           {!loading && activeTab === 'inventory' && (
             <div className="space-y-3">
               {/* Buscador de inventario */}
-              <div className="relative">
+              <div className="relative sticky top-0 bg-white pt-1 pb-2 z-10">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type="text"
@@ -466,7 +466,7 @@ const QuickMenuManager: React.FC<{
                   onChange={(e) => setInventorySearchTerm(e.target.value)}
                   placeholder="Buscar en inventario por nombre, categoría o precio..."
                   className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  autoFocus
+                  autoFocus={activeTab === 'inventory'}
                 />
                 {inventorySearchTerm && (
                   <button
@@ -478,21 +478,23 @@ const QuickMenuManager: React.FC<{
                 )}
               </div>
 
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 px-1">
                 {filteredInventoryItems.length} producto(s) encontrado(s)
               </p>
 
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              <div className="space-y-2 pb-2">
                 {filteredInventoryItems.map(item => (
                   <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
-                    <div className="flex-1">
-                      <span className="font-medium">{item.name}</span>
-                      <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
-                      <span className="text-xs text-gray-500 ml-2">({item.category})</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm block truncate">{item.name}</span>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span className="text-xs font-semibold text-red-600">S/ {item.price.toFixed(2)}</span>
+                        <span className="text-xs text-gray-500">({item.category})</span>
+                      </div>
                     </div>
                     <button
                       onClick={() => handleAddToToday(item.id)}
-                      className="text-xs bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1"
+                      className="text-xs bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1 ml-2 flex-shrink-0"
                     >
                       <Plus size={12} />
                       <span>Agregar hoy</span>
@@ -523,12 +525,14 @@ const QuickMenuManager: React.FC<{
               <p className="text-sm text-gray-600 mb-2">Productos eliminados (ocultos):</p>
               {deletedItems.map(item => (
                 <div key={item.id} className="flex items-center justify-between p-2 bg-red-50 rounded-lg border border-red-200">
-                  <div className="flex-1">
-                    <span className="font-medium">{item.name}</span>
-                    <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
-                    <span className="text-xs text-gray-500 ml-2">({item.category})</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-sm block truncate">{item.name}</span>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className="text-xs font-semibold text-red-600">S/ {item.price.toFixed(2)}</span>
+                      <span className="text-xs text-gray-500">({item.category})</span>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2 ml-2 flex-shrink-0">
                     <button
                       onClick={() => handleRestore(item.id)}
                       className="text-xs bg-green-500 text-white px-2 py-1 rounded-lg hover:bg-green-600 transition-colors"
@@ -551,8 +555,8 @@ const QuickMenuManager: React.FC<{
           )}
         </div>
 
-        {/* Footer con acciones */}
-        <div className="border-t border-gray-200 p-4 bg-gray-50">
+        {/* Footer - Fijo */}
+        <div className="border-t border-gray-200 p-4 bg-gray-50 flex-shrink-0">
           {!showNewProductForm ? (
             <div className="flex space-x-2">
               <button
