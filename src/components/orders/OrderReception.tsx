@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, 
-  Settings, RotateCcw, Search, Tag, FolderPlus, Edit, Save 
-} from 'lucide-react';
+  Settings, RotateCcw, Search, Tag, FolderPlus, Edit 
+} from 'lucide-react'; // Eliminado 'Save' que no se usaba
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
@@ -10,6 +10,7 @@ import { useCustomers } from '../../hooks/useCustomers';
 import { useOrders } from '../../hooks/useOrders';
 import { useOrderContext } from '../../contexts/OrderContext';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase'; // <-- IMPORTANTE: Importar supabase
 
 // Estilos para ocultar scrollbar
 const styles = `
@@ -290,15 +291,19 @@ const CategoryManagerModal: React.FC<{
   const [loading, setLoading] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
-  const { supabase } = useMenu(); // Necesitamos acceso a supabase
 
   const handleCreateCategory = async () => {
     if (!newCategory.trim()) return;
     
     setLoading(true);
     try {
-      // Aquí deberías insertar en tu tabla de categorías
-      // Esto depende de cómo tengas estructurada tu BD
+      // Verificar si la categoría ya existe
+      if (categories.includes(newCategory.trim())) {
+        alert('Esta categoría ya existe');
+        return;
+      }
+
+      // Insertar en Supabase
       const { error } = await supabase
         .from('categories')
         .insert([{ name: newCategory.trim() }]);
@@ -323,6 +328,13 @@ const CategoryManagerModal: React.FC<{
 
     setLoading(true);
     try {
+      // Verificar si el nuevo nombre ya existe
+      if (categories.includes(newName.trim()) && newName.trim() !== oldName) {
+        alert('Ya existe una categoría con ese nombre');
+        return;
+      }
+
+      // Actualizar en Supabase
       const { error } = await supabase
         .from('categories')
         .update({ name: newName.trim() })
