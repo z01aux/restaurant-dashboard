@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, CreditCard, Pencil } from 'lucide-react'; // Añadimos Pencil
+import { Search, Pencil } from 'lucide-react'; // Eliminamos CreditCard que no se usa
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -174,12 +174,12 @@ const OrdersManager: React.FC = () => {
     fetchOrders
   } = useOrders();
 
+  // Eliminamos getTodaySummary que no se usa
   const { 
     cashRegister, 
     loading: salesLoading, 
     openCashRegister, 
-    closeCashRegister,
-    getTodaySummary
+    closeCashRegister
   } = useSalesClosure();
 
   // Inicializar órdenes locales cuando se cargan las de la BD
@@ -405,6 +405,9 @@ const OrdersManager: React.FC = () => {
     console.log('💾 Guardando nuevo método de pago:', { orderId, newPaymentMethod });
     
     try {
+      // Guardar el método anterior por si hay que revertir
+      const previousMethod = localOrders.find(o => o.id === orderId)?.paymentMethod;
+      
       // Actualizar UI inmediatamente (optimistic update)
       setLocalOrders(prev => prev.map(order => 
         order.id === orderId ? { ...order, paymentMethod: newPaymentMethod } : order
@@ -416,7 +419,7 @@ const OrdersManager: React.FC = () => {
       if (!result.success) {
         // Revertir en caso de error
         setLocalOrders(prev => prev.map(order => 
-          order.id === orderId ? { ...order, paymentMethod: selectedOrder?.paymentMethod } : order
+          order.id === orderId ? { ...order, paymentMethod: previousMethod } : order
         ));
         alert('❌ Error al actualizar el método de pago: ' + result.error);
       } else {
@@ -429,7 +432,7 @@ const OrdersManager: React.FC = () => {
       console.error('Error:', error);
       alert('❌ Error inesperado: ' + error.message);
     }
-  }, [updateOrderPayment, selectedOrder]);
+  }, [updateOrderPayment, localOrders]);
 
   const handleExportTodayCSV = useCallback(() => {
     const todayOrders = getTodayOrders();
