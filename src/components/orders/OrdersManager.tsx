@@ -7,7 +7,7 @@ import { usePagination, isDesktopPagination, isMobilePagination } from '../../ho
 import { PaginationControls } from '../ui/PaginationControls';
 import { OrderPreview } from './OrderPreview';
 import OrderTicket from './OrderTicket';
-import { exportOrdersToExcel, exportOrdersWithSummary, exportOrdersByDateRange } from '../../utils/exportUtils';
+import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
@@ -462,9 +462,7 @@ const OrdersManager: React.FC = () => {
     exportOrdersToExcel(orders, 'all');
   }, [orders]);
 
-  const handleExportSummary = useCallback(() => {
-    exportOrdersWithSummary(orders);
-  }, [orders]);
+  // NOTA: handleExportSummary ha sido eliminado y reemplazado por handleExportByDateRange
 
   const handleNewOrder = useCallback(() => {
     window.location.hash = '#reception';
