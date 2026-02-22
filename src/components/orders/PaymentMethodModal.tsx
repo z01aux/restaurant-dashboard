@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, DollarSign, Smartphone } from 'lucide-react';
+import { X, CreditCard, DollarSign, Smartphone, Minus } from 'lucide-react';
 import { Order } from '../../types';
 
 interface PaymentMethodModalProps {
@@ -43,12 +43,35 @@ export const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
     }
   };
 
-  const paymentOptions = [
+  // Definir las opciones de pago con tipos explícitos
+  const paymentOptions: Array<{
+    value: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'none';
+    label: string;
+    icon: any;
+    color: string;
+  }> = [
     { value: 'EFECTIVO', label: 'Efectivo', icon: DollarSign, color: 'green' },
     { value: 'YAPE/PLIN', label: 'Yape/Plin', icon: Smartphone, color: 'purple' },
     { value: 'TARJETA', label: 'Tarjeta', icon: CreditCard, color: 'blue' },
-    { value: undefined, label: 'No Aplica', icon: X, color: 'gray' }
+    { value: 'none', label: 'No Aplica', icon: Minus, color: 'gray' }
   ];
+
+  // Función para manejar la selección
+  const handleSelectMethod = (value: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'none') => {
+    if (value === 'none') {
+      setSelectedMethod(undefined);
+    } else {
+      setSelectedMethod(value);
+    }
+  };
+
+  // Función para determinar si una opción está seleccionada
+  const isSelected = (value: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'none') => {
+    if (value === 'none') {
+      return selectedMethod === undefined;
+    }
+    return selectedMethod === value;
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
@@ -97,7 +120,7 @@ export const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
               {order.paymentMethod === 'EFECTIVO' && <DollarSign size={18} className="text-green-600" />}
               {order.paymentMethod === 'YAPE/PLIN' && <Smartphone size={18} className="text-purple-600" />}
               {order.paymentMethod === 'TARJETA' && <CreditCard size={18} className="text-blue-600" />}
-              {!order.paymentMethod && <X size={18} className="text-gray-600" />}
+              {!order.paymentMethod && <Minus size={18} className="text-gray-600" />}
               <span className="font-medium">
                 {order.paymentMethod || 'NO APLICA'}
               </span>
@@ -111,17 +134,17 @@ export const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
           <div className="grid grid-cols-2 gap-3 mb-6">
             {paymentOptions.map((option) => {
               const Icon = option.icon;
-              const isSelected = selectedMethod === option.value;
+              const selected = isSelected(option.value);
               
               return (
                 <button
-                  key={option.value || 'none'}
+                  key={option.value}
                   type="button"
-                  onClick={() => setSelectedMethod(option.value)}
+                  onClick={() => handleSelectMethod(option.value)}
                   disabled={saving}
                   className={`
                     p-4 rounded-xl border-2 transition-all flex flex-col items-center space-y-2
-                    ${isSelected 
+                    ${selected 
                       ? `border-${option.color}-500 bg-${option.color}-50` 
                       : 'border-gray-200 hover:border-gray-300 bg-gray-50'
                     }
