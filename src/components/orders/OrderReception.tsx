@@ -604,7 +604,7 @@ const QuickMenuManager: React.FC<{
   const [activeTab, setActiveTab] = useState<'today' | 'inventory' | 'deleted'>('today');
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const { getAllItems, getCategories, createItem, updateItem, deleteItem, refreshMenu } = useMenu();
+  const { getAllItems, createItem, updateItem, deleteItem, refreshMenu } = useMenu();
   const { categories: dbCategories, refreshCategories } = useCategories(); // Usar nuestro hook personalizado
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -616,14 +616,13 @@ const QuickMenuManager: React.FC<{
   });
 
   const allItems = useMemo(() => getAllItems(), [getAllItems, isOpen]);
-  const categories = useMemo(() => getCategories(), [getCategories, showCategoryManager]);
 
   // Establecer categoría por defecto cuando se cargan las categorías
   useEffect(() => {
-    if (categories.length > 0 && !newProduct.category) {
-      setNewProduct(prev => ({ ...prev, category: categories[0] }));
+    if (dbCategories.length > 0 && !newProduct.category) {
+      setNewProduct(prev => ({ ...prev, category: dbCategories[0] }));
     }
-  }, [categories]);
+  }, [dbCategories]);
 
   const todayItems = useMemo(() => allItems.filter(item => item.isDailySpecial && item.available), [allItems]);
   const inventoryItems = useMemo(() => allItems.filter(item => !item.isDailySpecial && item.available), [allItems]);
@@ -704,7 +703,7 @@ const QuickMenuManager: React.FC<{
       setNewProduct({ 
         name: '', 
         price: '', 
-        category: categories[0] || '', 
+        category: dbCategories[0] || '', 
         type: 'food' 
       });
       setShowNewProductForm(false);
@@ -951,12 +950,12 @@ const QuickMenuManager: React.FC<{
                     value={newProduct.category}
                     onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    disabled={loading || categories.length === 0}
+                    disabled={loading || dbCategories.length === 0}
                   >
-                    {categories.length === 0 ? (
+                    {dbCategories.length === 0 ? (
                       <option value="">Cargando...</option>
                     ) : (
-                      categories.map(cat => (
+                      dbCategories.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))
                     )}
@@ -1027,8 +1026,8 @@ const OrderReception: React.FC = React.memo(() => {
   // Hooks
   const { user } = useAuth();
   const { customers } = useCustomers();
-  const { getDailySpecialsByCategory, getAllDailySpecials, getCategories, refreshMenu } = useMenu();
-  const { categories: dbCategories, refreshCategories } = useCategories(); // Usar nuestro hook personalizado
+  const { getDailySpecialsByCategory, getAllDailySpecials, refreshMenu } = useMenu(); // Eliminamos getCategories y refreshCategories
+  const { categories: dbCategories } = useCategories(); // Usar nuestro hook personalizado
   const { createOrder } = useOrders();
   const { addNewOrder } = useOrderContext();
 
