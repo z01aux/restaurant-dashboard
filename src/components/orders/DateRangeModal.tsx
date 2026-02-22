@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { X, Calendar, Download } from 'lucide-react';
+import { X, Calendar, Download, Printer } from 'lucide-react';
 
 interface DateRangeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (startDate: Date, endDate: Date) => void;
+  onConfirmExcel: (startDate: Date, endDate: Date) => void;
+  onConfirmTicket: (startDate: Date, endDate: Date) => void;
 }
 
 export const DateRangeModal: React.FC<DateRangeModalProps> = ({
   isOpen,
   onClose,
-  onConfirm
+  onConfirmExcel,
+  onConfirmTicket
 }) => {
   const [startDate, setStartDate] = useState<string>(() => {
     const today = new Date();
@@ -28,14 +30,13 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
+  const validateDates = (): boolean => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    // Validaciones
     if (start > end) {
       setError('La fecha de inicio no puede ser mayor que la fecha de fin');
-      return;
+      return false;
     }
 
     const diffTime = Math.abs(end.getTime() - start.getTime());
@@ -43,11 +44,25 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
     
     if (diffDays > 365) {
       setError('El rango máximo permitido es de 365 días');
-      return;
+      return false;
     }
 
     setError(null);
-    onConfirm(start, end);
+    return true;
+  };
+
+  const handleExcel = () => {
+    if (validateDates()) {
+      onConfirmExcel(new Date(startDate), new Date(endDate));
+      onClose();
+    }
+  };
+
+  const handleTicket = () => {
+    if (validateDates()) {
+      onConfirmTicket(new Date(startDate), new Date(endDate));
+      onClose();
+    }
   };
 
   // Opciones rápidas
@@ -67,7 +82,7 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
   const setThisWeek = () => {
     const today = new Date();
     const firstDay = new Date(today);
-    firstDay.setDate(today.getDate() - today.getDay()); // Domingo como primer día
+    firstDay.setDate(today.getDate() - today.getDay());
     
     const lastDay = new Date(today);
     lastDay.setDate(firstDay.getDate() + 6);
@@ -183,34 +198,41 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
           <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <h3 className="text-sm font-semibold text-blue-800 mb-2 flex items-center">
               <Download size={16} className="mr-2" />
-              El Excel incluirá:
+              Formatos disponibles:
             </h3>
             <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-              <li>📊 RESUMEN: Estadísticas generales del período</li>
-              <li>📅 DIARIO: Desglose día por día</li>
-              <li>🔥 TOP PRODUCTOS: Los más vendidos</li>
-              <li>📋 DETALLE: Todas las órdenes del período</li>
+              <li>📊 EXCEL: Reporte completo con 4 hojas (Resumen, Diario, Top Productos, Detalle)</li>
+              <li>🧾 TICKET: Resumen en formato ticket para impresión térmica (80mm)</li>
             </ul>
           </div>
 
           {/* Botones de acción */}
-          <div className="flex space-x-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              onClick={handleTicket}
+              className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
             >
-              Cancelar
+              <Printer size={18} />
+              <span>Ticket</span>
             </button>
             <button
               type="button"
-              onClick={handleConfirm}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-3 rounded-lg hover:shadow-md transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
+              onClick={handleExcel}
+              className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
             >
               <Download size={18} />
-              <span>Generar Reporte</span>
+              <span>Excel</span>
             </button>
           </div>
+          
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full mt-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancelar
+          </button>
         </div>
       </div>
     </div>

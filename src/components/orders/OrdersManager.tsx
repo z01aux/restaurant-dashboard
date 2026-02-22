@@ -8,6 +8,7 @@ import { PaginationControls } from '../ui/PaginationControls';
 import { OrderPreview } from './OrderPreview';
 import OrderTicket from './OrderTicket';
 import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
+import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
@@ -438,10 +439,30 @@ const OrdersManager: React.FC = () => {
   }, [updateOrderPayment, localOrders]);
 
   // ============================================
-  // FUNCIÓN PARA EXPORTAR POR RANGO DE FECHAS
+  // FUNCIONES PARA EXPORTAR POR RANGO DE FECHAS
   // ============================================
-  const handleExportByDateRange = useCallback((startDate: Date, endDate: Date) => {
+  const handleExportExcel = useCallback((startDate: Date, endDate: Date) => {
     exportOrdersByDateRange(orders, startDate, endDate);
+  }, [orders]);
+
+  const handlePrintTicket = useCallback((startDate: Date, endDate: Date) => {
+    const filteredOrders = orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      orderDate.setHours(0, 0, 0, 0);
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      return orderDate >= start && orderDate <= end;
+    });
+
+    if (filteredOrders.length === 0) {
+      alert('No hay órdenes en el rango seleccionado');
+      return;
+    }
+
+    const summary = generateTicketSummary(filteredOrders, startDate, endDate);
+    printResumenTicket(summary, startDate, endDate);
   }, [orders]);
 
   const handleExportTodayCSV = useCallback(() => {
@@ -461,8 +482,6 @@ const OrdersManager: React.FC = () => {
   const handleExportAllExcel = useCallback(() => {
     exportOrdersToExcel(orders, 'all');
   }, [orders]);
-
-  // NOTA: handleExportSummary ha sido eliminado y reemplazado por handleExportByDateRange
 
   const handleNewOrder = useCallback(() => {
     window.location.hash = '#reception';
@@ -557,7 +576,8 @@ const OrdersManager: React.FC = () => {
       <DateRangeModal
         isOpen={showDateRangeModal}
         onClose={() => setShowDateRangeModal(false)}
-        onConfirm={handleExportByDateRange}
+        onConfirmExcel={handleExportExcel}
+        onConfirmTicket={handlePrintTicket}
       />
 
       {/* HEADER PRINCIPAL */}
@@ -655,7 +675,7 @@ const OrdersManager: React.FC = () => {
           className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 transition-colors flex items-center space-x-1"
         >
           <Download size={16} />
-          <span>Resumen por Fechas</span>
+          <span>Reportes por Fechas</span>
         </button>
 
         <button 
