@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil } from 'lucide-react'; // Eliminamos CreditCard que no se usa
+import { Search, Pencil, Download } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,11 +7,12 @@ import { usePagination, isDesktopPagination, isMobilePagination } from '../../ho
 import { PaginationControls } from '../ui/PaginationControls';
 import { OrderPreview } from './OrderPreview';
 import OrderTicket from './OrderTicket';
-import { exportOrdersToExcel, exportOrdersWithSummary } from '../../utils/exportUtils';
+import { exportOrdersToExcel, exportOrdersWithSummary, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
 import { PaymentMethodModal } from './PaymentMethodModal';
+import { DateRangeModal } from './DateRangeModal';
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -158,6 +159,9 @@ const OrdersManager: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
+  // Estado para el modal de rango de fechas
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  
   // Estado LOCAL para órdenes (para actualización inmediata)
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -174,7 +178,6 @@ const OrdersManager: React.FC = () => {
     fetchOrders
   } = useOrders();
 
-  // Eliminamos getTodaySummary que no se usa
   const { 
     cashRegister, 
     loading: salesLoading, 
@@ -434,6 +437,13 @@ const OrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment, localOrders]);
 
+  // ============================================
+  // FUNCIÓN PARA EXPORTAR POR RANGO DE FECHAS
+  // ============================================
+  const handleExportByDateRange = useCallback((startDate: Date, endDate: Date) => {
+    exportOrdersByDateRange(orders, startDate, endDate);
+  }, [orders]);
+
   const handleExportTodayCSV = useCallback(() => {
     const todayOrders = getTodayOrders();
     exportOrdersToCSV(todayOrders);
@@ -545,6 +555,13 @@ const OrdersManager: React.FC = () => {
         onSave={handleSavePaymentMethod}
       />
 
+      {/* MODAL DE RANGO DE FECHAS */}
+      <DateRangeModal
+        isOpen={showDateRangeModal}
+        onClose={() => setShowDateRangeModal(false)}
+        onConfirm={handleExportByDateRange}
+      />
+
       {/* HEADER PRINCIPAL */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -603,23 +620,52 @@ const OrdersManager: React.FC = () => {
 
       {/* BOTONES DE ACCIÓN */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExportTodayCSV} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600">
-          CSV Hoy
+        <button 
+          onClick={handleExportTodayCSV} 
+          className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1"
+        >
+          <Download size={16} />
+          <span>CSV Hoy</span>
         </button>
-        <button onClick={handleExportAllCSV} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600">
-          CSV Todo
+        
+        <button 
+          onClick={handleExportAllCSV} 
+          className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1"
+        >
+          <Download size={16} />
+          <span>CSV Todo</span>
         </button>
-        <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700">
-          Excel Hoy
+
+        <button 
+          onClick={handleExportTodayExcel} 
+          className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1"
+        >
+          <Download size={16} />
+          <span>Excel Hoy</span>
         </button>
-        <button onClick={handleExportAllExcel} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800">
-          Excel Todo
+
+        <button 
+          onClick={handleExportAllExcel} 
+          className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1"
+        >
+          <Download size={16} />
+          <span>Excel Todo</span>
         </button>
-        <button onClick={handleExportSummary} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700">
-          Resumen
+
+        <button 
+          onClick={() => setShowDateRangeModal(true)} 
+          className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 transition-colors flex items-center space-x-1"
+        >
+          <Download size={16} />
+          <span>Resumen por Fechas</span>
         </button>
-        <button onClick={handleNewOrder} className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm hover:from-red-600 hover:to-amber-600">
-          Nueva Orden
+
+        <button 
+          onClick={handleNewOrder} 
+          className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm hover:from-red-600 hover:to-amber-600 flex items-center space-x-1"
+        >
+          <span>➕</span>
+          <span>Nueva Orden</span>
         </button>
       </div>
 
