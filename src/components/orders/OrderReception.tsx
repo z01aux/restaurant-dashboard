@@ -276,7 +276,7 @@ const MenuProduct: React.FC<{
   );
 });
 
-// Modal de gestión rápida de menú - SIN CONFIRMACIONES Y CON SCROLL CORREGIDO
+// Modal de gestión rápida de menú - CON CATEGORÍAS DINÁMICAS
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -290,12 +290,19 @@ const QuickMenuManager: React.FC<{
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
-    category: 'Entradas',
+    category: '',
     type: 'food' as 'food' | 'drink'
   });
 
   const allItems = useMemo(() => getAllItems(), [getAllItems, isOpen]);
   const categories = useMemo(() => getCategories(), [getCategories]);
+
+  // Establecer categoría por defecto cuando se cargan las categorías
+  useEffect(() => {
+    if (categories.length > 0 && !newProduct.category) {
+      setNewProduct(prev => ({ ...prev, category: categories[0] }));
+    }
+  }, [categories]);
 
   const todayItems = useMemo(() => allItems.filter(item => item.isDailySpecial && item.available), [allItems]);
   const inventoryItems = useMemo(() => allItems.filter(item => !item.isDailySpecial && item.available), [allItems]);
@@ -357,7 +364,7 @@ const QuickMenuManager: React.FC<{
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProduct.name || !newProduct.price) return;
+    if (!newProduct.name || !newProduct.price || !newProduct.category) return;
 
     const price = parseFloat(newProduct.price);
     if (isNaN(price) || price <= 0) return;
@@ -373,7 +380,12 @@ const QuickMenuManager: React.FC<{
     });
 
     if (result.success) {
-      setNewProduct({ name: '', price: '', category: 'Entradas', type: 'food' });
+      setNewProduct({ 
+        name: '', 
+        price: '', 
+        category: categories[0] || '', 
+        type: 'food' 
+      });
       setShowNewProductForm(false);
       onRefresh();
     }
@@ -601,17 +613,21 @@ const QuickMenuManager: React.FC<{
                   value={newProduct.category}
                   onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  disabled={loading}
+                  disabled={loading || categories.length === 0}
                 >
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
+                  {categories.length === 0 ? (
+                    <option value="">Cargando...</option>
+                  ) : (
+                    categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))
+                  )}
                 </select>
               </div>
               <div className="flex space-x-2">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !newProduct.category}
                   className="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 text-sm font-medium disabled:opacity-50"
                 >
                   {loading ? 'Creando...' : 'Crear'}
@@ -643,7 +659,7 @@ const OrderReception: React.FC = React.memo(() => {
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string>('Entradas');
+  const [activeCategory, setActiveCategory] = useState<string>('');
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA'>('EFECTIVO');
@@ -661,18 +677,25 @@ const OrderReception: React.FC = React.memo(() => {
   // Hooks
   const { user } = useAuth();
   const { customers } = useCustomers();
-  const { getDailySpecialsByCategory, getAllDailySpecials, refreshMenu } = useMenu();
+  const { getDailySpecialsByCategory, getAllDailySpecials, getCategories, refreshMenu } = useMenu();
   const { createOrder } = useOrders();
   const { addNewOrder } = useOrderContext();
 
   const isAdmin = user?.role === 'admin';
 
+  // Obtener categorías de la base de datos
+  const dbCategories = useMemo(() => getCategories(), [getCategories]);
+  
+  // Establecer categoría activa por defecto
+  useEffect(() => {
+    if (dbCategories.length > 0 && !activeCategory) {
+      setActiveCategory(dbCategories[0]);
+    }
+  }, [dbCategories]);
+
   // Memoizar datos del menú
   const allMenuItems = useMemo(() => getAllDailySpecials(), [getAllDailySpecials, showMenuManager]);
   
-  // Definir categorías
-  const categories = useMemo(() => ['Entradas', 'Platos de Fondo', 'Bebidas'], []);
-
   // Memoizar items filtrados
   const currentItems = useMemo(() => {
     if (searchTerm) {
@@ -1455,10 +1478,10 @@ const OrderReception: React.FC = React.memo(() => {
                 placeholder="Buscar productos..."
               />
 
-              {/* Categorías */}
-              {!searchTerm && (
+              {/* Categorías desde la BD */}
+              {!searchTerm && dbCategories.length > 0 && (
                 <div className="flex space-x-2 mb-4 overflow-x-auto pb-2 hide-scrollbar">
-                  {categories.map(category => (
+                  {dbCategories.map(category => (
                     <button
                       key={category}
                       onClick={() => handleCategoryChange(category)}
@@ -1693,9 +1716,10 @@ const OrderReception: React.FC = React.memo(() => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
                   />
 
-                  {!searchTerm && (
+                  {/* Categorías desde la BD */}
+                  {!searchTerm && dbCategories.length > 0 && (
                     <div className="flex space-x-2 mb-4 overflow-x-auto">
-                      {categories.map(category => (
+                      {dbCategories.map(category => (
                         <button
                           key={category}
                           onClick={() => handleCategoryChange(category)}
