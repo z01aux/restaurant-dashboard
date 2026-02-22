@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, Settings, RotateCcw, Search } from 'lucide-react';
+import { 
+  Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, 
+  Settings, RotateCcw, Search, Tag, FolderPlus, Edit, Save 
+} from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
@@ -276,7 +279,204 @@ const MenuProduct: React.FC<{
   );
 });
 
-// Modal de gestión rápida de menú - CON CATEGORÍAS DINÁMICAS
+// Modal de gestión de categorías
+const CategoryManagerModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  categories: string[];
+  onCategoryCreated: () => void;
+}> = ({ isOpen, onClose, categories, onCategoryCreated }) => {
+  const [newCategory, setNewCategory] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+  const { supabase } = useMenu(); // Necesitamos acceso a supabase
+
+  const handleCreateCategory = async () => {
+    if (!newCategory.trim()) return;
+    
+    setLoading(true);
+    try {
+      // Aquí deberías insertar en tu tabla de categorías
+      // Esto depende de cómo tengas estructurada tu BD
+      const { error } = await supabase
+        .from('categories')
+        .insert([{ name: newCategory.trim() }]);
+
+      if (error) throw error;
+      
+      setNewCategory('');
+      onCategoryCreated();
+    } catch (error) {
+      console.error('Error creating category:', error);
+      alert('Error al crear la categoría');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateCategory = async (oldName: string, newName: string) => {
+    if (!newName.trim() || oldName === newName) {
+      setEditingIndex(null);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ name: newName.trim() })
+        .eq('name', oldName);
+
+      if (error) throw error;
+      
+      setEditingIndex(null);
+      onCategoryCreated();
+    } catch (error) {
+      console.error('Error updating category:', error);
+      alert('Error al actualizar la categoría');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryName: string) => {
+    if (!window.confirm(`¿Eliminar la categoría "${categoryName}"? Los productos de esta categoría quedarán sin categoría.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Primero actualizar productos que usan esta categoría
+      const { error: updateError } = await supabase
+        .from('menu_items')
+        .update({ category: 'Sin categoría' })
+        .eq('category', categoryName);
+
+      if (updateError) throw updateError;
+
+      // Luego eliminar la categoría
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('name', categoryName);
+
+      if (error) throw error;
+      
+      onCategoryCreated();
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      alert('Error al eliminar la categoría');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4 animate-in fade-in">
+      <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-4 text-white flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Tag size={20} />
+              <h2 className="text-lg font-bold">Gestionar Categorías</h2>
+            </div>
+            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Contenido */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* Formulario nueva categoría */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nueva Categoría
+            </label>
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="Ej: Postres, Bebidas, etc."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                disabled={loading}
+                onKeyPress={(e) => e.key === 'Enter' && handleCreateCategory()}
+              />
+              <button
+                onClick={handleCreateCategory}
+                disabled={loading || !newCategory.trim()}
+                className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 flex items-center space-x-1"
+              >
+                <FolderPlus size={16} />
+                <span>Crear</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Lista de categorías */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">
+              Categorías existentes ({categories.length})
+            </h3>
+            <div className="space-y-2">
+              {categories.map((category, index) => (
+                <div
+                  key={category}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  {editingIndex === index ? (
+                    <input
+                      type="text"
+                      value={editingValue}
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      className="flex-1 px-2 py-1 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                      autoFocus
+                      onBlur={() => handleUpdateCategory(category, editingValue)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleUpdateCategory(category, editingValue)}
+                      disabled={loading}
+                    />
+                  ) : (
+                    <span className="text-sm font-medium text-gray-700">{category}</span>
+                  )}
+                  
+                  <div className="flex space-x-2">
+                    {editingIndex !== index && (
+                      <button
+                        onClick={() => {
+                          setEditingIndex(index);
+                          setEditingValue(category);
+                        }}
+                        className="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded transition-colors"
+                        title="Editar"
+                      >
+                        <Edit size={14} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteCategory(category)}
+                      className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                      title="Eliminar"
+                      disabled={loading}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Modal de gestión rápida de menú - CON GESTIÓN DE CATEGORÍAS
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -284,7 +484,8 @@ const QuickMenuManager: React.FC<{
 }> = ({ isOpen, onClose, onRefresh }) => {
   const [activeTab, setActiveTab] = useState<'today' | 'inventory' | 'deleted'>('today');
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
-  const { getAllItems, getCategories, createItem, updateItem, deleteItem } = useMenu();
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const { getAllItems, getCategories, createItem, updateItem, deleteItem, refreshMenu } = useMenu();
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [newProduct, setNewProduct] = useState({
@@ -320,7 +521,7 @@ const QuickMenuManager: React.FC<{
     );
   }, [inventoryItems, inventorySearchTerm]);
 
-  // Función para quitar producto del menú del día (SIN CONFIRMACIÓN)
+  // Función para quitar producto del menú del día
   const handleRemoveFromToday = useCallback(async (itemId: string) => {
     setLoading(true);
     const result = await updateItem(itemId, { isDailySpecial: false });
@@ -330,7 +531,7 @@ const QuickMenuManager: React.FC<{
     setLoading(false);
   }, [updateItem, onRefresh]);
 
-  // Función para eliminar permanentemente (CON CONFIRMACIÓN - solo esta por ser peligrosa)
+  // Función para eliminar permanentemente
   const handlePermanentDelete = useCallback(async (itemId: string, itemName: string) => {
     if (window.confirm(`¿Eliminar PERMANENTEMENTE "${itemName}"? Esta acción no se puede deshacer.`)) {
       setLoading(true);
@@ -342,7 +543,7 @@ const QuickMenuManager: React.FC<{
     }
   }, [deleteItem, onRefresh]);
 
-  // Función para agregar producto al menú del día (SIN CONFIRMACIÓN)
+  // Función para agregar producto al menú del día
   const handleAddToToday = useCallback(async (itemId: string) => {
     setLoading(true);
     const result = await updateItem(itemId, { isDailySpecial: true });
@@ -352,7 +553,7 @@ const QuickMenuManager: React.FC<{
     setLoading(false);
   }, [updateItem, onRefresh]);
 
-  // Función para restaurar producto eliminado (SIN CONFIRMACIÓN)
+  // Función para restaurar producto eliminado
   const handleRestore = useCallback(async (itemId: string) => {
     setLoading(true);
     const result = await updateItem(itemId, { available: true });
@@ -395,108 +596,158 @@ const QuickMenuManager: React.FC<{
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
-        {/* Header - Fijo */}
-        <div className="bg-gradient-to-r from-red-500 to-amber-500 p-4 text-white flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Settings size={20} />
-              <h2 className="text-lg font-bold">Gestión Rápida de Menú</h2>
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
+        <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
+          {/* Header - Fijo */}
+          <div className="bg-gradient-to-r from-red-500 to-amber-500 p-4 text-white flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Settings size={20} />
+                <h2 className="text-lg font-bold">Gestión Rápida de Menú</h2>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowCategoryManager(true)}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                  title="Gestionar categorías"
+                >
+                  <Tag size={18} />
+                </button>
+                <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
             </div>
-            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
-              <X size={20} />
-            </button>
           </div>
-        </div>
 
-        {/* Tabs - Fijo */}
-        <div className="flex border-b border-gray-200 p-2 flex-shrink-0">
-          {[
-            { id: 'today', label: `📋 Hoy (${todayItems.length})` },
-            { id: 'inventory', label: `📦 Inventario (${inventoryItems.length})` },
-            { id: 'deleted', label: `🗑️ Eliminados (${deletedItems.length})` }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id as any);
-                setInventorySearchTerm('');
-              }}
-              className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-red-500 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+          {/* Tabs - Fijo */}
+          <div className="flex border-b border-gray-200 p-2 flex-shrink-0">
+            {[
+              { id: 'today', label: `📋 Hoy (${todayItems.length})` },
+              { id: 'inventory', label: `📦 Inventario (${inventoryItems.length})` },
+              { id: 'deleted', label: `🗑️ Eliminados (${deletedItems.length})` }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id as any);
+                  setInventorySearchTerm('');
+                }}
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-red-500 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-        {/* Contenido con scroll - SOLO UNA BARRA */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {loading && (
-            <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mx-auto"></div>
-            </div>
-          )}
+          {/* Contenido con scroll - SOLO UNA BARRA */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {loading && (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mx-auto"></div>
+              </div>
+            )}
 
-          {!loading && activeTab === 'today' && (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 mb-2">Productos activos hoy:</p>
-              {todayItems.map(item => (
-                <div key={item.id} className="flex items-center justify-between p-2 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex-1">
-                    <span className="font-medium">{item.name}</span>
-                    <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
-                    <span className="text-xs text-gray-500 ml-2">({item.category})</span>
+            {!loading && activeTab === 'today' && (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600 mb-2">Productos activos hoy:</p>
+                {todayItems.map(item => (
+                  <div key={item.id} className="flex items-center justify-between p-2 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex-1">
+                      <span className="font-medium">{item.name}</span>
+                      <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
+                      <span className="text-xs text-gray-500 ml-2">({item.category})</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveFromToday(item.id)}
+                      className="text-xs bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600 transition-colors ml-2 flex-shrink-0"
+                      title="Quitar del menú de hoy"
+                    >
+                      Quitar
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleRemoveFromToday(item.id)}
-                    className="text-xs bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600 transition-colors ml-2 flex-shrink-0"
-                    title="Quitar del menú de hoy"
-                  >
-                    Quitar
-                  </button>
-                </div>
-              ))}
-              {todayItems.length === 0 && (
-                <p className="text-center text-gray-500 py-4">No hay productos en el menú de hoy</p>
-              )}
-            </div>
-          )}
-
-          {!loading && activeTab === 'inventory' && (
-            <div className="space-y-3">
-              {/* Buscador de inventario */}
-              <div className="relative sticky top-0 bg-white pt-1 pb-2 z-10">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                <input
-                  type="text"
-                  value={inventorySearchTerm}
-                  onChange={(e) => setInventorySearchTerm(e.target.value)}
-                  placeholder="Buscar en inventario por nombre, categoría o precio..."
-                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  autoFocus={activeTab === 'inventory'}
-                />
-                {inventorySearchTerm && (
-                  <button
-                    onClick={() => setInventorySearchTerm('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X size={14} />
-                  </button>
+                ))}
+                {todayItems.length === 0 && (
+                  <p className="text-center text-gray-500 py-4">No hay productos en el menú de hoy</p>
                 )}
               </div>
+            )}
 
-              <p className="text-sm text-gray-600 px-1">
-                {filteredInventoryItems.length} producto(s) encontrado(s)
-              </p>
+            {!loading && activeTab === 'inventory' && (
+              <div className="space-y-3">
+                {/* Buscador de inventario */}
+                <div className="relative sticky top-0 bg-white pt-1 pb-2 z-10">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    value={inventorySearchTerm}
+                    onChange={(e) => setInventorySearchTerm(e.target.value)}
+                    placeholder="Buscar en inventario por nombre, categoría o precio..."
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    autoFocus={activeTab === 'inventory'}
+                  />
+                  {inventorySearchTerm && (
+                    <button
+                      onClick={() => setInventorySearchTerm('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
 
-              <div className="space-y-2 pb-2">
-                {filteredInventoryItems.map(item => (
-                  <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                <p className="text-sm text-gray-600 px-1">
+                  {filteredInventoryItems.length} producto(s) encontrado(s)
+                </p>
+
+                <div className="space-y-2 pb-2">
+                  {filteredInventoryItems.map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-sm block truncate">{item.name}</span>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className="text-xs font-semibold text-red-600">S/ {item.price.toFixed(2)}</span>
+                          <span className="text-xs text-gray-500">({item.category})</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAddToToday(item.id)}
+                        className="text-xs bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1 ml-2 flex-shrink-0"
+                      >
+                        <Plus size={12} />
+                        <span>Agregar hoy</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {filteredInventoryItems.length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-4xl text-gray-300 mb-2">🔍</div>
+                    <p className="text-gray-500">No se encontraron productos</p>
+                    {inventorySearchTerm && (
+                      <button
+                        onClick={() => setInventorySearchTerm('')}
+                        className="text-sm text-red-500 hover:text-red-700 mt-2"
+                      >
+                        Limpiar búsqueda
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!loading && activeTab === 'deleted' && (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600 mb-2">Productos eliminados (ocultos):</p>
+                {deletedItems.map(item => (
+                  <div key={item.id} className="flex items-center justify-between p-2 bg-red-50 rounded-lg border border-red-200">
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-sm block truncate">{item.name}</span>
                       <div className="flex items-center space-x-2 mt-1">
@@ -504,148 +755,120 @@ const QuickMenuManager: React.FC<{
                         <span className="text-xs text-gray-500">({item.category})</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleAddToToday(item.id)}
-                      className="text-xs bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1 ml-2 flex-shrink-0"
-                    >
-                      <Plus size={12} />
-                      <span>Agregar hoy</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {filteredInventoryItems.length === 0 && (
-                <div className="text-center py-8">
-                  <div className="text-4xl text-gray-300 mb-2">🔍</div>
-                  <p className="text-gray-500">No se encontraron productos</p>
-                  {inventorySearchTerm && (
-                    <button
-                      onClick={() => setInventorySearchTerm('')}
-                      className="text-sm text-red-500 hover:text-red-700 mt-2"
-                    >
-                      Limpiar búsqueda
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {!loading && activeTab === 'deleted' && (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 mb-2">Productos eliminados (ocultos):</p>
-              {deletedItems.map(item => (
-                <div key={item.id} className="flex items-center justify-between p-2 bg-red-50 rounded-lg border border-red-200">
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-sm block truncate">{item.name}</span>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span className="text-xs font-semibold text-red-600">S/ {item.price.toFixed(2)}</span>
-                      <span className="text-xs text-gray-500">({item.category})</span>
+                    <div className="flex space-x-2 ml-2 flex-shrink-0">
+                      <button
+                        onClick={() => handleRestore(item.id)}
+                        className="text-xs bg-green-500 text-white px-2 py-1 rounded-lg hover:bg-green-600 transition-colors"
+                      >
+                        Restaurar
+                      </button>
+                      <button
+                        onClick={() => handlePermanentDelete(item.id, item.name)}
+                        className="text-xs bg-red-700 text-white px-2 py-1 rounded-lg hover:bg-red-800 transition-colors"
+                      >
+                        Eliminar
+                      </button>
                     </div>
                   </div>
-                  <div className="flex space-x-2 ml-2 flex-shrink-0">
-                    <button
-                      onClick={() => handleRestore(item.id)}
-                      className="text-xs bg-green-500 text-white px-2 py-1 rounded-lg hover:bg-green-600 transition-colors"
-                    >
-                      Restaurar
-                    </button>
-                    <button
-                      onClick={() => handlePermanentDelete(item.id, item.name)}
-                      className="text-xs bg-red-700 text-white px-2 py-1 rounded-lg hover:bg-red-800 transition-colors"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {deletedItems.length === 0 && (
-                <p className="text-center text-gray-500 py-4">No hay productos eliminados</p>
-              )}
-            </div>
-          )}
-        </div>
+                ))}
+                {deletedItems.length === 0 && (
+                  <p className="text-center text-gray-500 py-4">No hay productos eliminados</p>
+                )}
+              </div>
+            )}
+          </div>
 
-        {/* Footer - Fijo */}
-        <div className="border-t border-gray-200 p-4 bg-gray-50 flex-shrink-0">
-          {!showNewProductForm ? (
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setShowNewProductForm(true)}
-                disabled={loading}
-                className="flex-1 bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-medium flex items-center justify-center space-x-2 disabled:opacity-50"
-              >
-                <Plus size={16} />
-                <span>Nuevo producto</span>
-              </button>
-              <button
-                onClick={onRefresh}
-                disabled={loading}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-                title="Actualizar"
-              >
-                <RotateCcw size={16} className={loading ? 'animate-spin' : ''} />
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleCreateProduct} className="space-y-3">
-              <input
-                type="text"
-                value={newProduct.name}
-                onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                placeholder="Nombre del producto"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                autoFocus
-                disabled={loading}
-              />
+          {/* Footer - Fijo */}
+          <div className="border-t border-gray-200 p-4 bg-gray-50 flex-shrink-0">
+            {!showNewProductForm ? (
               <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowNewProductForm(true)}
+                  disabled={loading}
+                  className="flex-1 bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-medium flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  <Plus size={16} />
+                  <span>Nuevo producto</span>
+                </button>
+                <button
+                  onClick={onRefresh}
+                  disabled={loading}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                  title="Actualizar"
+                >
+                  <RotateCcw size={16} className={loading ? 'animate-spin' : ''} />
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateProduct} className="space-y-3">
                 <input
-                  type="number"
-                  step="0.01"
-                  value={newProduct.price}
-                  onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                  placeholder="Precio"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  type="text"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                  placeholder="Nombre del producto"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  autoFocus
                   disabled={loading}
                 />
-                <select
-                  value={newProduct.category}
-                  onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  disabled={loading || categories.length === 0}
-                >
-                  {categories.length === 0 ? (
-                    <option value="">Cargando...</option>
-                  ) : (
-                    categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))
-                  )}
-                </select>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  type="submit"
-                  disabled={loading || !newProduct.category}
-                  className="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 text-sm font-medium disabled:opacity-50"
-                >
-                  {loading ? 'Creando...' : 'Crear'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowNewProductForm(false)}
-                  disabled={loading}
-                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-sm disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          )}
+                <div className="flex space-x-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newProduct.price}
+                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                    placeholder="Precio"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    disabled={loading}
+                  />
+                  <select
+                    value={newProduct.category}
+                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    disabled={loading || categories.length === 0}
+                  >
+                    {categories.length === 0 ? (
+                      <option value="">Cargando...</option>
+                    ) : (
+                      categories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    type="submit"
+                    disabled={loading || !newProduct.category}
+                    className="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 text-sm font-medium disabled:opacity-50"
+                  >
+                    {loading ? 'Creando...' : 'Crear'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewProductForm(false)}
+                    disabled={loading}
+                    className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-sm disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Modal de gestión de categorías */}
+      <CategoryManagerModal
+        isOpen={showCategoryManager}
+        onClose={() => setShowCategoryManager(false)}
+        categories={categories}
+        onCategoryCreated={() => {
+          refreshMenu();
+          onRefresh();
+        }}
+      />
+    </>
   );
 };
 
@@ -684,7 +907,7 @@ const OrderReception: React.FC = React.memo(() => {
   const isAdmin = user?.role === 'admin';
 
   // Obtener categorías de la base de datos
-  const dbCategories = useMemo(() => getCategories(), [getCategories]);
+  const dbCategories = useMemo(() => getCategories(), [getCategories, showMenuManager]);
   
   // Establecer categoría activa por defecto
   useEffect(() => {
