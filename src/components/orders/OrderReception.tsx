@@ -194,7 +194,7 @@ const CartItem: React.FC<{
           <button
             onClick={() => onRemove(item.menuItem.id)}
             className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg transition-colors"
-            title="Eliminar"
+            title="Eliminar del carrito"
           >
             <Trash2 size={14} />
           </button>
@@ -208,15 +208,13 @@ const CartItem: React.FC<{
   );
 });
 
-// Componente de Producto del Menú CON ELIMINACIÓN DIRECTA
+// Componente de Producto del Menú - SIN BOTÓN DE ELIMINAR
 const MenuProduct: React.FC<{
   item: MenuItem;
   quantityInCart: number;
   onAddToCart: (menuItem: MenuItem) => void;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
-  onDeleteFromMenu: (itemId: string, itemName: string) => void;
-  isAdmin: boolean;
-}> = React.memo(({ item, quantityInCart, onAddToCart, onUpdateQuantity, onDeleteFromMenu, isAdmin }) => {
+}> = React.memo(({ item, quantityInCart, onAddToCart, onUpdateQuantity }) => {
   const handleAddClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onAddToCart(item);
@@ -232,11 +230,6 @@ const MenuProduct: React.FC<{
     onUpdateQuantity(item.id, quantityInCart + 1);
   }, [item.id, quantityInCart, onUpdateQuantity]);
 
-  const handleDelete = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDeleteFromMenu(item.id, item.name);
-  }, [item.id, item.name, onDeleteFromMenu]);
-
   return (
     <div className="bg-white rounded-lg p-2 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all relative group">
       {quantityInCart > 0 && (
@@ -245,19 +238,8 @@ const MenuProduct: React.FC<{
         </div>
       )}
       
-      {/* Botón de eliminar (solo para admin) */}
-      {isAdmin && (
-        <button
-          onClick={handleDelete}
-          className="absolute -top-2 -left-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-600"
-          title="Eliminar del menú"
-        >
-          <X size={10} />
-        </button>
-      )}
-      
       <div className="mb-1">
-        <div className="font-semibold text-gray-900 text-xs mb-1 line-clamp-2 min-h-[2rem] pr-4">
+        <div className="font-semibold text-gray-900 text-xs mb-1 line-clamp-2 min-h-[2rem]">
           {item.name}
         </div>
         <div className="font-bold text-red-600 text-sm">
@@ -294,14 +276,14 @@ const MenuProduct: React.FC<{
   );
 });
 
-// Modal de gestión rápida de menú
+// Modal de gestión rápida de menú - CON ELIMINACIÓN
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onRefresh: () => void;
 }> = ({ isOpen, onClose, onRefresh }) => {
   const [activeTab, setActiveTab] = useState<'today' | 'inventory' | 'deleted'>('today');
-  const { getAllItems, getCategories, createItem, updateItem } = useMenu();
+  const { getAllItems, getCategories, createItem, updateItem, deleteItem } = useMenu();
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [newProduct, setNewProduct] = useState({
@@ -317,6 +299,30 @@ const QuickMenuManager: React.FC<{
   const todayItems = useMemo(() => allItems.filter(item => item.isDailySpecial && item.available), [allItems]);
   const inventoryItems = useMemo(() => allItems.filter(item => !item.isDailySpecial && item.available), [allItems]);
   const deletedItems = useMemo(() => allItems.filter(item => !item.available), [allItems]);
+
+  // Función para quitar producto del menú del día (no eliminar permanentemente)
+  const handleRemoveFromToday = useCallback(async (itemId: string, itemName: string) => {
+    if (window.confirm(`¿Quitar "${itemName}" del menú de hoy?`)) {
+      setLoading(true);
+      const result = await updateItem(itemId, { isDailySpecial: false });
+      if (result.success) {
+        onRefresh();
+      }
+      setLoading(false);
+    }
+  }, [updateItem, onRefresh]);
+
+  // Función para eliminar permanentemente (solo desde eliminados)
+  const handlePermanentDelete = useCallback(async (itemId: string, itemName: string) => {
+    if (window.confirm(`¿Eliminar PERMANENTEMENTE "${itemName}"? Esta acción no se puede deshacer.`)) {
+      setLoading(true);
+      const result = await deleteItem(itemId);
+      if (result.success) {
+        onRefresh();
+      }
+      setLoading(false);
+    }
+  }, [deleteItem, onRefresh]);
 
   // Función para agregar producto al menú del día
   const handleAddToToday = useCallback(async (itemId: string, itemName: string) => {
@@ -419,11 +425,18 @@ const QuickMenuManager: React.FC<{
               <p className="text-sm text-gray-600 mb-2">Productos activos hoy:</p>
               {todayItems.map(item => (
                 <div key={item.id} className="flex items-center justify-between p-2 bg-green-50 rounded-lg border border-green-200">
-                  <div>
+                  <div className="flex-1">
                     <span className="font-medium">{item.name}</span>
                     <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
+                    <span className="text-xs text-gray-500 ml-2">({item.category})</span>
                   </div>
-                  <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">Activo hoy</span>
+                  <button
+                    onClick={() => handleRemoveFromToday(item.id, item.name)}
+                    className="text-xs bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600 transition-colors ml-2"
+                    title="Quitar del menú de hoy"
+                  >
+                    Quitar
+                  </button>
                 </div>
               ))}
               {todayItems.length === 0 && (
@@ -437,9 +450,10 @@ const QuickMenuManager: React.FC<{
               <p className="text-sm text-gray-600 mb-2">Productos disponibles en inventario:</p>
               {inventoryItems.map(item => (
                 <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200">
-                  <div>
+                  <div className="flex-1">
                     <span className="font-medium">{item.name}</span>
                     <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
+                    <span className="text-xs text-gray-500 ml-2">({item.category})</span>
                   </div>
                   <button
                     onClick={() => handleAddToToday(item.id, item.name)}
@@ -460,16 +474,25 @@ const QuickMenuManager: React.FC<{
               <p className="text-sm text-gray-600 mb-2">Productos eliminados (ocultos):</p>
               {deletedItems.map(item => (
                 <div key={item.id} className="flex items-center justify-between p-2 bg-red-50 rounded-lg border border-red-200">
-                  <div>
+                  <div className="flex-1">
                     <span className="font-medium">{item.name}</span>
                     <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
+                    <span className="text-xs text-gray-500 ml-2">({item.category})</span>
                   </div>
-                  <button
-                    onClick={() => handleRestore(item.id, item.name)}
-                    className="text-xs bg-green-500 text-white px-2 py-1 rounded-lg hover:bg-green-600 transition-colors"
-                  >
-                    Restaurar
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleRestore(item.id, item.name)}
+                      className="text-xs bg-green-500 text-white px-2 py-1 rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      Restaurar
+                    </button>
+                    <button
+                      onClick={() => handlePermanentDelete(item.id, item.name)}
+                      className="text-xs bg-red-700 text-white px-2 py-1 rounded-lg hover:bg-red-800 transition-colors"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               ))}
               {deletedItems.length === 0 && (
@@ -585,7 +608,7 @@ const OrderReception: React.FC = React.memo(() => {
   // Hooks
   const { user } = useAuth();
   const { customers } = useCustomers();
-  const { getDailySpecialsByCategory, getAllDailySpecials, deleteItem, refreshMenu } = useMenu();
+  const { getDailySpecialsByCategory, getAllDailySpecials, refreshMenu } = useMenu();
   const { createOrder } = useOrders();
   const { addNewOrder } = useOrderContext();
 
@@ -675,7 +698,7 @@ const OrderReception: React.FC = React.memo(() => {
   const removeFromCart = useCallback((itemId: string) => {
     setCart(prev => {
       const itemToRemove = prev.find(item => item.menuItem.id === itemId);
-      if (itemToRemove) showToast(`${itemToRemove.menuItem.name} eliminado`, 'info');
+      if (itemToRemove) showToast(`${itemToRemove.menuItem.name} eliminado del carrito`, 'info');
       return prev.filter(item => item.menuItem.id !== itemId);
     });
   }, [showToast]);
@@ -698,21 +721,6 @@ const OrderReception: React.FC = React.memo(() => {
     ));
     showToast(`Precio actualizado`, 'info');
   }, [showToast]);
-
-  // Eliminar producto del menú (solo admin)
-  const handleDeleteFromMenu = useCallback(async (itemId: string, itemName: string) => {
-    if (!isAdmin) return;
-    
-    if (window.confirm(`¿Eliminar "${itemName}" del menú?`)) {
-      const result = await deleteItem(itemId);
-      if (result.success) {
-        showToast(`✅ "${itemName}" eliminado`, 'success');
-        refreshMenu();
-      } else {
-        showToast(`❌ Error al eliminar`, 'error');
-      }
-    }
-  }, [isAdmin, deleteItem, showToast, refreshMenu]);
 
   // Cálculos
   const getTotal = useCallback(() => {
@@ -737,7 +745,7 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [cart.length, showToast]);
 
-  // Generar ticket
+  // Función para generar el ticket completo
   const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
     const getCurrentUserName = () => {
       try {
@@ -923,7 +931,7 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, []);
 
-  // Imprimir
+  // Imprimir ticket
   const printOrderImmediately = useCallback((order: Order) => {
     const isPhoneOrder = order.source.type === 'phone';
     
@@ -1413,7 +1421,7 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               )}
 
-              {/* Grid de productos */}
+              {/* Grid de productos - SIN BOTÓN DE ELIMINAR */}
               <div className="grid grid-cols-2 gap-3">
                 {currentItems.map((item: MenuItem) => {
                   const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
@@ -1426,8 +1434,6 @@ const OrderReception: React.FC = React.memo(() => {
                       quantityInCart={quantityInCart}
                       onAddToCart={addToCart}
                       onUpdateQuantity={updateQuantity}
-                      onDeleteFromMenu={handleDeleteFromMenu}
-                      isAdmin={isAdmin}
                     />
                   );
                 })}
@@ -1652,6 +1658,7 @@ const OrderReception: React.FC = React.memo(() => {
                     </div>
                   )}
 
+                  {/* Grid de productos - SIN BOTÓN DE ELIMINAR */}
                   <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
                     {currentItems.map((item: MenuItem) => {
                       const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
@@ -1664,8 +1671,6 @@ const OrderReception: React.FC = React.memo(() => {
                           quantityInCart={quantityInCart}
                           onAddToCart={addToCart}
                           onUpdateQuantity={updateQuantity}
-                          onDeleteFromMenu={handleDeleteFromMenu}
-                          isAdmin={isAdmin}
                         />
                       );
                     })}
