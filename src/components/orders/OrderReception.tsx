@@ -301,8 +301,9 @@ const QuickMenuManager: React.FC<{
   onRefresh: () => void;
 }> = ({ isOpen, onClose, onRefresh }) => {
   const [activeTab, setActiveTab] = useState<'today' | 'inventory' | 'deleted'>('today');
-  const { getAllItems, getCategories, createItem } = useMenu();
+  const { getAllItems, getCategories, createItem, updateItem } = useMenu();
   const [showNewProductForm, setShowNewProductForm] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
@@ -310,12 +311,36 @@ const QuickMenuManager: React.FC<{
     type: 'food' as 'food' | 'drink'
   });
 
-  const allItems = useMemo(() => getAllItems(), [getAllItems]);
+  const allItems = useMemo(() => getAllItems(), [getAllItems, isOpen]);
   const categories = useMemo(() => getCategories(), [getCategories]);
 
-  const todayItems = useMemo(() => allItems.filter(item => item.isDailySpecial), [allItems]);
+  const todayItems = useMemo(() => allItems.filter(item => item.isDailySpecial && item.available), [allItems]);
   const inventoryItems = useMemo(() => allItems.filter(item => !item.isDailySpecial && item.available), [allItems]);
   const deletedItems = useMemo(() => allItems.filter(item => !item.available), [allItems]);
+
+  // Función para agregar producto al menú del día
+  const handleAddToToday = useCallback(async (itemId: string, itemName: string) => {
+    if (window.confirm(`¿Agregar "${itemName}" al menú de hoy?`)) {
+      setLoading(true);
+      const result = await updateItem(itemId, { isDailySpecial: true });
+      if (result.success) {
+        onRefresh();
+      }
+      setLoading(false);
+    }
+  }, [updateItem, onRefresh]);
+
+  // Función para restaurar producto eliminado
+  const handleRestore = useCallback(async (itemId: string, itemName: string) => {
+    if (window.confirm(`¿Restaurar "${itemName}"?`)) {
+      setLoading(true);
+      const result = await updateItem(itemId, { available: true });
+      if (result.success) {
+        onRefresh();
+      }
+      setLoading(false);
+    }
+  }, [updateItem, onRefresh]);
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,6 +349,7 @@ const QuickMenuManager: React.FC<{
     const price = parseFloat(newProduct.price);
     if (isNaN(price) || price <= 0) return;
 
+    setLoading(true);
     const result = await createItem({
       name: newProduct.name,
       price: price,
@@ -338,6 +364,7 @@ const QuickMenuManager: React.FC<{
       setShowNewProductForm(false);
       onRefresh();
     }
+    setLoading(false);
   };
 
   if (!isOpen) return null;
@@ -381,7 +408,13 @@ const QuickMenuManager: React.FC<{
 
         {/* Contenido */}
         <div className="p-4 overflow-y-auto max-h-[50vh]">
-          {activeTab === 'today' && (
+          {loading && (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mx-auto"></div>
+            </div>
+          )}
+
+          {!loading && activeTab === 'today' && (
             <div className="space-y-2">
               <p className="text-sm text-gray-600 mb-2">Productos activos hoy:</p>
               {todayItems.map(item => (
@@ -399,7 +432,7 @@ const QuickMenuManager: React.FC<{
             </div>
           )}
 
-          {activeTab === 'inventory' && (
+          {!loading && activeTab === 'inventory' && (
             <div className="space-y-2">
               <p className="text-sm text-gray-600 mb-2">Productos disponibles en inventario:</p>
               {inventoryItems.map(item => (
@@ -408,7 +441,10 @@ const QuickMenuManager: React.FC<{
                     <span className="font-medium">{item.name}</span>
                     <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
                   </div>
-                  <button className="text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600">
+                  <button
+                    onClick={() => handleAddToToday(item.id, item.name)}
+                    className="text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600 transition-colors"
+                  >
                     Agregar hoy
                   </button>
                 </div>
@@ -419,7 +455,7 @@ const QuickMenuManager: React.FC<{
             </div>
           )}
 
-          {activeTab === 'deleted' && (
+          {!loading && activeTab === 'deleted' && (
             <div className="space-y-2">
               <p className="text-sm text-gray-600 mb-2">Productos eliminados (ocultos):</p>
               {deletedItems.map(item => (
@@ -428,7 +464,10 @@ const QuickMenuManager: React.FC<{
                     <span className="font-medium">{item.name}</span>
                     <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
                   </div>
-                  <button className="text-xs bg-green-500 text-white px-2 py-1 rounded-lg hover:bg-green-600">
+                  <button
+                    onClick={() => handleRestore(item.id, item.name)}
+                    className="text-xs bg-green-500 text-white px-2 py-1 rounded-lg hover:bg-green-600 transition-colors"
+                  >
                     Restaurar
                   </button>
                 </div>
@@ -446,19 +485,19 @@ const QuickMenuManager: React.FC<{
             <div className="flex space-x-2">
               <button
                 onClick={() => setShowNewProductForm(true)}
-                className="flex-1 bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-medium flex items-center justify-center space-x-2"
+                disabled={loading}
+                className="flex-1 bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-medium flex items-center justify-center space-x-2 disabled:opacity-50"
               >
                 <Plus size={16} />
                 <span>Nuevo producto</span>
               </button>
               <button
-                onClick={() => {
-                  onRefresh();
-                  onClose();
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                onClick={onRefresh}
+                disabled={loading}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                title="Actualizar"
               >
-                <RotateCcw size={16} />
+                <RotateCcw size={16} className={loading ? 'animate-spin' : ''} />
               </button>
             </div>
           ) : (
@@ -470,6 +509,7 @@ const QuickMenuManager: React.FC<{
                 placeholder="Nombre del producto"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 autoFocus
+                disabled={loading}
               />
               <div className="flex space-x-2">
                 <input
@@ -479,11 +519,13 @@ const QuickMenuManager: React.FC<{
                   onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
                   placeholder="Precio"
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  disabled={loading}
                 />
                 <select
                   value={newProduct.category}
                   onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  disabled={loading}
                 >
                   {categories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -493,14 +535,16 @@ const QuickMenuManager: React.FC<{
               <div className="flex space-x-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 text-sm font-medium"
+                  disabled={loading}
+                  className="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 text-sm font-medium disabled:opacity-50"
                 >
-                  Crear
+                  {loading ? 'Creando...' : 'Crear'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowNewProductForm(false)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-sm"
+                  disabled={loading}
+                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-sm disabled:opacity-50"
                 >
                   Cancelar
                 </button>
