@@ -1,6 +1,6 @@
 // ============================================
-// ARCHIVO OPTIMIZADO: src/hooks/useOrders.ts
-// MEJORA: Velocidad de carga de órdenes
+// ARCHIVO COMPLETO: src/hooks/useOrders.ts
+// CON FUNCIÓN PARA ACTUALIZAR MÉTODO DE PAGO
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -318,6 +318,49 @@ export const useOrders = () => {
   };
 
   // ============================================
+  // NUEVO MÉTODO: Actualizar método de pago
+  // ============================================
+  const updateOrderPayment = async (
+    orderId: string, 
+    paymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | undefined
+  ) => {
+    try {
+      // Guardar el método anterior por si hay que revertir
+      const previousOrder = orders.find(o => o.id === orderId);
+      
+      // Actualizar UI inmediatamente (optimistic update)
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, paymentMethod } : order
+      ));
+
+      const { data, error } = await supabase
+        .from('orders')
+        .update({ 
+          payment_method: paymentMethod,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', orderId)
+        .select()
+        .single();
+
+      if (error) {
+        // Revertir en caso de error
+        if (previousOrder) {
+          setOrders(prev => prev.map(order => 
+            order.id === orderId ? { ...order, paymentMethod: previousOrder.paymentMethod } : order
+          ));
+        }
+        throw error;
+      }
+      
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Error actualizando método de pago:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // ============================================
   // ELIMINAR ORDEN (optimizado)
   // ============================================
   const deleteOrder = async (orderId: string) => {
@@ -447,6 +490,7 @@ export const useOrders = () => {
     fetchOrders,
     createOrder,
     updateOrderStatus,
+    updateOrderPayment, // NUEVO MÉTODO EXPORTADO
     deleteOrder,
     exportOrdersToCSV,
     getTodayOrders

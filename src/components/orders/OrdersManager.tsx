@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import { Search, CreditCard } from 'lucide-react'; // Añadimos CreditCard
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -11,6 +11,7 @@ import { exportOrdersToExcel, exportOrdersWithSummary } from '../../utils/export
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
+import { PaymentMethodModal } from './PaymentMethodModal'; // Nuevo componente
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -20,6 +21,7 @@ const OrderRow = React.memo(({
   onMouseEnter, 
   onMouseLeave,
   onDelete,
+  onEditPayment, // Nueva prop
   user,
   getDisplayNumber,
   getNumberType,
@@ -31,6 +33,7 @@ const OrderRow = React.memo(({
   onMouseEnter: (e: React.MouseEvent) => void;
   onMouseLeave: () => void;
   onDelete: (orderId: string, displayNumber: string) => void;
+  onEditPayment: (order: Order) => void; // Nueva función
   user: any;
   getDisplayNumber: (order: Order) => string;
   getNumberType: (order: Order) => string;
@@ -75,9 +78,24 @@ const OrderRow = React.memo(({
             {getSourceText(order.source.type)}
           </span>
         </div>
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.paymentMethod)}`}>
-          {getPaymentText(order.paymentMethod)}
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.paymentMethod)}`}>
+            {getPaymentText(order.paymentMethod)}
+          </span>
+          {/* Botón de edición de pago - visible para admins y al hacer hover */}
+          {(user?.role === 'admin' || user?.role === 'manager') && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditPayment(order);
+              }}
+              className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded-lg transition-all"
+              title="Cambiar método de pago"
+            >
+              <CreditCard size={14} />
+            </button>
+          )}
+        </div>
       </td>
       <td className="px-4 sm:px-6 py-4">
         <div className="text-sm text-gray-900">
@@ -130,6 +148,10 @@ const OrdersManager: React.FC = () => {
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showOnlyToday, setShowOnlyToday] = useState(true);
   
+  // Estado para el modal de edición de pago
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  
   // Estado LOCAL para órdenes (para actualización inmediata)
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -140,6 +162,7 @@ const OrdersManager: React.FC = () => {
     orders, 
     loading, 
     deleteOrder,
+    updateOrderPayment, // Nuevo método
     exportOrdersToCSV,
     getTodayOrders,
     fetchOrders
@@ -360,6 +383,45 @@ const OrdersManager: React.FC = () => {
     }
   }, [deleteOrder]);
 
+  // ============================================
+  // NUEVA FUNCIÓN: Editar método de pago
+  // ============================================
+  const handleEditPayment = useCallback((order: Order) => {
+    setSelectedOrder(order);
+    setShowPaymentModal(true);
+  }, []);
+
+  // ============================================
+  // NUEVA FUNCIÓN: Guardar cambio de método de pago
+  // ============================================
+  const handleSavePaymentMethod = useCallback(async (orderId: string, newPaymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | undefined) => {
+    try {
+      // Actualizar UI inmediatamente (optimistic update)
+      setLocalOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, paymentMethod: newPaymentMethod } : order
+      ));
+
+      // Llamar al hook para actualizar en Supabase
+      const result = await updateOrderPayment(orderId, newPaymentMethod);
+      
+      if (!result.success) {
+        // Revertir en caso de error
+        setLocalOrders(prev => prev.map(order => 
+          order.id === orderId ? { ...order, paymentMethod: selectedOrder?.paymentMethod } : order
+        ));
+        alert('❌ Error al actualizar el método de pago: ' + result.error);
+      } else {
+        alert('✅ Método de pago actualizado correctamente');
+      }
+      
+      setShowPaymentModal(false);
+      setSelectedOrder(null);
+    } catch (error: any) {
+      console.error('Error:', error);
+      alert('❌ Error inesperado: ' + error.message);
+    }
+  }, [updateOrderPayment, selectedOrder]);
+
   const handleExportTodayCSV = useCallback(() => {
     const todayOrders = getTodayOrders();
     exportOrdersToCSV(todayOrders);
@@ -458,6 +520,17 @@ const OrdersManager: React.FC = () => {
           position={previewPosition}
         />
       )}
+
+      {/* MODAL DE EDICIÓN DE PAGO */}
+      <PaymentMethodModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setSelectedOrder(null);
+        }}
+        order={selectedOrder}
+        onSave={handleSavePaymentMethod}
+      />
 
       {/* HEADER PRINCIPAL */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -637,6 +710,7 @@ const OrdersManager: React.FC = () => {
                     onMouseEnter={(e) => handleRowMouseEnter(order, e)}
                     onMouseLeave={handleRowMouseLeave}
                     onDelete={handleDeleteOrder}
+                    onEditPayment={handleEditPayment}
                     user={user}
                     getDisplayNumber={getDisplayNumber}
                     getNumberType={getNumberType}
