@@ -192,14 +192,16 @@ const CartItem: React.FC<{
   );
 });
 
-// Componente de Producto del Menú
+// Componente de Producto del Menú - CORREGIDO: Solo el botón agrega productos
 const MenuProduct: React.FC<{
   item: MenuItem;
   quantityInCart: number;
   onAddToCart: (menuItem: MenuItem) => void;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
 }> = React.memo(({ item, quantityInCart, onAddToCart, onUpdateQuantity }) => {
-  const handleAdd = useCallback(() => {
+  // Prevenir propagación para evitar doble llamado
+  const handleAddClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); // Importante: prevenir propagación
     onAddToCart(item);
   }, [item, onAddToCart]);
 
@@ -214,10 +216,7 @@ const MenuProduct: React.FC<{
   }, [item.id, quantityInCart, onUpdateQuantity]);
 
   return (
-    <div
-      className="bg-white rounded-lg p-2 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all relative cursor-pointer group"
-      onClick={handleAdd}
-    >
+    <div className="bg-white rounded-lg p-2 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all relative">
       {quantityInCart > 0 && (
         <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
           {quantityInCart}
@@ -251,7 +250,7 @@ const MenuProduct: React.FC<{
         </div>
       ) : (
         <button
-          onClick={handleAdd}
+          onClick={handleAddClick}
           className="w-full bg-red-500 text-white py-1.5 rounded-lg flex items-center justify-center space-x-1 text-xs font-medium hover:bg-red-600 transition-colors"
         >
           <Plus size={12} />
