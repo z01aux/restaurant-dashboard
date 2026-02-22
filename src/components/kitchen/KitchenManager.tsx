@@ -3,7 +3,7 @@
 // MEJORA: Polling más rápido (2 segundos)
 // ============================================
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Clock, AlertCircle, ChefHat } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';

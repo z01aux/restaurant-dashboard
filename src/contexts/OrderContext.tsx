@@ -1,7 +1,3 @@
-// ============================================
-// NUEVO ARCHIVO: src/contexts/OrderContext.tsx
-// ============================================
-
 import React, { createContext, useContext, ReactNode } from 'react';
 import { Order } from '../types';
 

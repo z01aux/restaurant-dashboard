@@ -1,9 +1,4 @@
-// ============================================
-// ARCHIVO OPTIMIZADO: src/components/orders/OrdersManager.tsx
-// MEJORA: Actualización inmediata de órdenes
-// ============================================
-
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
@@ -173,46 +168,37 @@ const OrdersManager: React.FC = () => {
       
       // Agregar la nueva orden al estado local INMEDIATAMENTE
       setLocalOrders(prev => {
-        // Verificar si ya existe para evitar duplicados
         if (prev.some(o => o.id === newOrder.id)) {
           return prev;
         }
         return [newOrder, ...prev];
       });
 
-      // También refrescar en segundo plano para obtener datos reales
       setTimeout(() => {
         fetchOrders(500);
       }, 100);
     };
 
-    // Agregar event listener
     window.addEventListener('newOrderCreated', handleNewOrder as EventListener);
 
-    // Limpiar event listener
     return () => {
       window.removeEventListener('newOrderCreated', handleNewOrder as EventListener);
     };
   }, [fetchOrders]);
 
-  // Actualizar cuando cambian las órdenes de la BD (para mantener sincronización)
+  // Actualizar cuando cambian las órdenes de la BD
   useEffect(() => {
     if (orders.length > 0) {
       setLocalOrders(prev => {
-        // Crear un mapa de las órdenes existentes
-        const prevMap = new Map(prev.map(o => [o.id, o]));
-        
-        // Mezclar con las nuevas órdenes, manteniendo las que ya teníamos
         const merged = [...orders];
+        const existingIds = new Set(merged.map(o => o.id));
         
-        // Agregar órdenes locales que no estén en la BD (como las temporales)
         prev.forEach(order => {
-          if (order.id.startsWith('temp-') && !merged.some(o => o.id === order.id)) {
+          if (order.id.startsWith('temp-') && !existingIds.has(order.id)) {
             merged.push(order);
           }
         });
         
-        // Ordenar por fecha (más recientes primero)
         return merged.sort((a, b) => 
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
@@ -233,7 +219,7 @@ const OrdersManager: React.FC = () => {
     { value: 'created-asc', label: '📅 Más Antiguas' }
   ], []);
 
-  // Filtrar órdenes del día (usando localOrders)
+  // Filtrar órdenes del día
   const todayOrders = useMemo(() => {
     if (!showOnlyToday) return localOrders;
     
@@ -364,19 +350,15 @@ const OrdersManager: React.FC = () => {
 
   const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
     if (window.confirm(`¿Estás seguro de eliminar la orden ${orderNumber}?`)) {
-      // Eliminar de UI inmediatamente
       setLocalOrders(prev => prev.filter(order => order.id !== orderId));
       
       const result = await deleteOrder(orderId);
       if (result.success) {
         setDeletedOrder({ id: orderId, number: orderNumber });
         setTimeout(() => setDeletedOrder(null), 3000);
-      } else {
-        // Si hay error, restaurar
-        setLocalOrders(prev => [...prev, ...orders.filter(o => o.id === orderId)]);
       }
     }
-  }, [deleteOrder, orders]);
+  }, [deleteOrder]);
 
   const handleExportTodayCSV = useCallback(() => {
     const todayOrders = getTodayOrders();

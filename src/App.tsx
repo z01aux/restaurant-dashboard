@@ -1,7 +1,3 @@
-// ============================================
-// ARCHIVO MODIFICADO: src/App.tsx
-// ============================================
-
 import React from 'react';
 import DashboardLayout from './components/layout/DashboardLayout';
 import StatsCards from './components/dashboard/StatsCards';
@@ -19,7 +15,7 @@ import { useOrders } from './hooks/useOrders';
 function App() {
   const [activeTab, setActiveTab] = React.useState('reception');
   const { user } = useAuth();
-  const { fetchOrders, createOrder } = useOrders();
+  const { fetchOrders } = useOrders();
 
   // Función para refrescar órdenes
   const refreshOrders = async () => {
@@ -28,8 +24,6 @@ function App() {
 
   // Función para agregar nueva orden inmediatamente
   const addNewOrder = (order: any) => {
-    // Esta función será implementada en OrdersManager
-    // Disparamos un evento personalizado para comunicar entre componentes
     const event = new CustomEvent('newOrderCreated', { detail: order });
     window.dispatchEvent(event);
   };
