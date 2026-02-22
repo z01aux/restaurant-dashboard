@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, Settings, RotateCcw } from 'lucide-react';
+import { Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, Settings, RotateCcw, Search } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
@@ -276,13 +276,14 @@ const MenuProduct: React.FC<{
   );
 });
 
-// Modal de gestión rápida de menú - CON ELIMINACIÓN
+// Modal de gestión rápida de menú - CON BUSCADOR EN INVENTARIO
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onRefresh: () => void;
 }> = ({ isOpen, onClose, onRefresh }) => {
   const [activeTab, setActiveTab] = useState<'today' | 'inventory' | 'deleted'>('today');
+  const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const { getAllItems, getCategories, createItem, updateItem, deleteItem } = useMenu();
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -300,7 +301,19 @@ const QuickMenuManager: React.FC<{
   const inventoryItems = useMemo(() => allItems.filter(item => !item.isDailySpecial && item.available), [allItems]);
   const deletedItems = useMemo(() => allItems.filter(item => !item.available), [allItems]);
 
-  // Función para quitar producto del menú del día (no eliminar permanentemente)
+  // Filtrar inventario por término de búsqueda
+  const filteredInventoryItems = useMemo(() => {
+    if (!inventorySearchTerm.trim()) return inventoryItems;
+    
+    const term = inventorySearchTerm.toLowerCase();
+    return inventoryItems.filter(item => 
+      item.name.toLowerCase().includes(term) ||
+      item.category.toLowerCase().includes(term) ||
+      item.price.toString().includes(term)
+    );
+  }, [inventoryItems, inventorySearchTerm]);
+
+  // Función para quitar producto del menú del día
   const handleRemoveFromToday = useCallback(async (itemId: string, itemName: string) => {
     if (window.confirm(`¿Quitar "${itemName}" del menú de hoy?`)) {
       setLoading(true);
@@ -312,7 +325,7 @@ const QuickMenuManager: React.FC<{
     }
   }, [updateItem, onRefresh]);
 
-  // Función para eliminar permanentemente (solo desde eliminados)
+  // Función para eliminar permanentemente
   const handlePermanentDelete = useCallback(async (itemId: string, itemName: string) => {
     if (window.confirm(`¿Eliminar PERMANENTEMENTE "${itemName}"? Esta acción no se puede deshacer.`)) {
       setLoading(true);
@@ -362,7 +375,7 @@ const QuickMenuManager: React.FC<{
       category: newProduct.category,
       type: newProduct.type,
       available: true,
-      isDailySpecial: true // Se agrega directo al menú del día
+      isDailySpecial: true
     });
 
     if (result.success) {
@@ -400,7 +413,10 @@ const QuickMenuManager: React.FC<{
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setInventorySearchTerm(''); // Limpiar búsqueda al cambiar de pestaña
+              }}
               className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                 activeTab === tab.id
                   ? 'bg-red-500 text-white'
@@ -446,25 +462,64 @@ const QuickMenuManager: React.FC<{
           )}
 
           {!loading && activeTab === 'inventory' && (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 mb-2">Productos disponibles en inventario:</p>
-              {inventoryItems.map(item => (
-                <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex-1">
-                    <span className="font-medium">{item.name}</span>
-                    <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
-                    <span className="text-xs text-gray-500 ml-2">({item.category})</span>
-                  </div>
+            <div className="space-y-3">
+              {/* Buscador de inventario */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="text"
+                  value={inventorySearchTerm}
+                  onChange={(e) => setInventorySearchTerm(e.target.value)}
+                  placeholder="Buscar en inventario por nombre, categoría o precio..."
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  autoFocus
+                />
+                {inventorySearchTerm && (
                   <button
-                    onClick={() => handleAddToToday(item.id, item.name)}
-                    className="text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600 transition-colors"
+                    onClick={() => setInventorySearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    Agregar hoy
+                    <X size={14} />
                   </button>
+                )}
+              </div>
+
+              <p className="text-sm text-gray-600">
+                {filteredInventoryItems.length} producto(s) encontrado(s)
+              </p>
+
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {filteredInventoryItems.map(item => (
+                  <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                    <div className="flex-1">
+                      <span className="font-medium">{item.name}</span>
+                      <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
+                      <span className="text-xs text-gray-500 ml-2">({item.category})</span>
+                    </div>
+                    <button
+                      onClick={() => handleAddToToday(item.id, item.name)}
+                      className="text-xs bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1"
+                    >
+                      <Plus size={12} />
+                      <span>Agregar hoy</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {filteredInventoryItems.length === 0 && (
+                <div className="text-center py-8">
+                  <div className="text-4xl text-gray-300 mb-2">🔍</div>
+                  <p className="text-gray-500">No se encontraron productos</p>
+                  {inventorySearchTerm && (
+                    <button
+                      onClick={() => setInventorySearchTerm('')}
+                      className="text-sm text-red-500 hover:text-red-700 mt-2"
+                    >
+                      Limpiar búsqueda
+                    </button>
+                  )}
                 </div>
-              ))}
-              {inventoryItems.length === 0 && (
-                <p className="text-center text-gray-500 py-4">No hay productos en inventario</p>
               )}
             </div>
           )}
@@ -1421,7 +1476,7 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               )}
 
-              {/* Grid de productos - SIN BOTÓN DE ELIMINAR */}
+              {/* Grid de productos */}
               <div className="grid grid-cols-2 gap-3">
                 {currentItems.map((item: MenuItem) => {
                   const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
@@ -1658,7 +1713,7 @@ const OrderReception: React.FC = React.memo(() => {
                     </div>
                   )}
 
-                  {/* Grid de productos - SIN BOTÓN DE ELIMINAR */}
+                  {/* Grid de productos */}
                   <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
                     {currentItems.map((item: MenuItem) => {
                       const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
