@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign } from 'lucide-react';
+import { Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, Settings, RotateCcw } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useOrders } from '../../hooks/useOrders';
 import { useOrderContext } from '../../contexts/OrderContext';
+import { useAuth } from '../../hooks/useAuth';
 
 // Estilos para ocultar scrollbar
 const styles = `
@@ -16,9 +17,24 @@ const styles = `
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
 `;
 
-// Componente de Notificación Toast - Memoizado
+// Componente de Notificación Toast
 const ToastNotification: React.FC<{
   message: string;
   type: 'success' | 'error' | 'info';
@@ -48,7 +64,7 @@ const ToastNotification: React.FC<{
   );
 });
 
-// Componente de Item del Carrito con Edición de Precio
+// Componente de Item del Carrito
 const CartItem: React.FC<{
   item: OrderItem;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
@@ -192,13 +208,15 @@ const CartItem: React.FC<{
   );
 });
 
-// Componente de Producto del Menú
+// Componente de Producto del Menú CON ELIMINACIÓN DIRECTA
 const MenuProduct: React.FC<{
   item: MenuItem;
   quantityInCart: number;
   onAddToCart: (menuItem: MenuItem) => void;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
-}> = React.memo(({ item, quantityInCart, onAddToCart, onUpdateQuantity }) => {
+  onDeleteFromMenu: (itemId: string, itemName: string) => void;
+  isAdmin: boolean;
+}> = React.memo(({ item, quantityInCart, onAddToCart, onUpdateQuantity, onDeleteFromMenu, isAdmin }) => {
   const handleAddClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onAddToCart(item);
@@ -214,16 +232,32 @@ const MenuProduct: React.FC<{
     onUpdateQuantity(item.id, quantityInCart + 1);
   }, [item.id, quantityInCart, onUpdateQuantity]);
 
+  const handleDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDeleteFromMenu(item.id, item.name);
+  }, [item.id, item.name, onDeleteFromMenu]);
+
   return (
-    <div className="bg-white rounded-lg p-2 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all relative">
+    <div className="bg-white rounded-lg p-2 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all relative group">
       {quantityInCart > 0 && (
-        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
+        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white z-10">
           {quantityInCart}
         </div>
       )}
       
+      {/* Botón de eliminar (solo para admin) */}
+      {isAdmin && (
+        <button
+          onClick={handleDelete}
+          className="absolute -top-2 -left-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-600"
+          title="Eliminar del menú"
+        >
+          <X size={10} />
+        </button>
+      )}
+      
       <div className="mb-1">
-        <div className="font-semibold text-gray-900 text-xs mb-1 line-clamp-2 min-h-[2rem]">
+        <div className="font-semibold text-gray-900 text-xs mb-1 line-clamp-2 min-h-[2rem] pr-4">
           {item.name}
         </div>
         <div className="font-bold text-red-600 text-sm">
@@ -260,6 +294,225 @@ const MenuProduct: React.FC<{
   );
 });
 
+// Modal de gestión rápida de menú
+const QuickMenuManager: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onRefresh: () => void;
+}> = ({ isOpen, onClose, onRefresh }) => {
+  const [activeTab, setActiveTab] = useState<'today' | 'inventory' | 'deleted'>('today');
+  const { getAllItems, getCategories, createItem } = useMenu();
+  const [showNewProductForm, setShowNewProductForm] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: '',
+    category: 'Entradas',
+    type: 'food' as 'food' | 'drink'
+  });
+
+  const allItems = useMemo(() => getAllItems(), [getAllItems]);
+  const categories = useMemo(() => getCategories(), [getCategories]);
+
+  const todayItems = useMemo(() => allItems.filter(item => item.isDailySpecial), [allItems]);
+  const inventoryItems = useMemo(() => allItems.filter(item => !item.isDailySpecial && item.available), [allItems]);
+  const deletedItems = useMemo(() => allItems.filter(item => !item.available), [allItems]);
+
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProduct.name || !newProduct.price) return;
+
+    const price = parseFloat(newProduct.price);
+    if (isNaN(price) || price <= 0) return;
+
+    const result = await createItem({
+      name: newProduct.name,
+      price: price,
+      category: newProduct.category,
+      type: newProduct.type,
+      available: true,
+      isDailySpecial: true // Se agrega directo al menú del día
+    });
+
+    if (result.success) {
+      setNewProduct({ name: '', price: '', category: 'Entradas', type: 'food' });
+      setShowNewProductForm(false);
+      onRefresh();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-red-500 to-amber-500 p-4 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Settings size={20} />
+              <h2 className="text-lg font-bold">Gestión Rápida de Menú</h2>
+            </div>
+            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 p-2">
+          {[
+            { id: 'today', label: `📋 Hoy (${todayItems.length})` },
+            { id: 'inventory', label: `📦 Inventario (${inventoryItems.length})` },
+            { id: 'deleted', label: `🗑️ Eliminados (${deletedItems.length})` }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-red-500 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Contenido */}
+        <div className="p-4 overflow-y-auto max-h-[50vh]">
+          {activeTab === 'today' && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 mb-2">Productos activos hoy:</p>
+              {todayItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between p-2 bg-green-50 rounded-lg border border-green-200">
+                  <div>
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
+                  </div>
+                  <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">Activo hoy</span>
+                </div>
+              ))}
+              {todayItems.length === 0 && (
+                <p className="text-center text-gray-500 py-4">No hay productos en el menú de hoy</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'inventory' && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 mb-2">Productos disponibles en inventario:</p>
+              {inventoryItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200">
+                  <div>
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
+                  </div>
+                  <button className="text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600">
+                    Agregar hoy
+                  </button>
+                </div>
+              ))}
+              {inventoryItems.length === 0 && (
+                <p className="text-center text-gray-500 py-4">No hay productos en inventario</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'deleted' && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 mb-2">Productos eliminados (ocultos):</p>
+              {deletedItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between p-2 bg-red-50 rounded-lg border border-red-200">
+                  <div>
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-sm text-gray-600 ml-2">S/ {item.price.toFixed(2)}</span>
+                  </div>
+                  <button className="text-xs bg-green-500 text-white px-2 py-1 rounded-lg hover:bg-green-600">
+                    Restaurar
+                  </button>
+                </div>
+              ))}
+              {deletedItems.length === 0 && (
+                <p className="text-center text-gray-500 py-4">No hay productos eliminados</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer con acciones */}
+        <div className="border-t border-gray-200 p-4 bg-gray-50">
+          {!showNewProductForm ? (
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowNewProductForm(true)}
+                className="flex-1 bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-medium flex items-center justify-center space-x-2"
+              >
+                <Plus size={16} />
+                <span>Nuevo producto</span>
+              </button>
+              <button
+                onClick={() => {
+                  onRefresh();
+                  onClose();
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <RotateCcw size={16} />
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleCreateProduct} className="space-y-3">
+              <input
+                type="text"
+                value={newProduct.name}
+                onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                placeholder="Nombre del producto"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                autoFocus
+              />
+              <div className="flex space-x-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newProduct.price}
+                  onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                  placeholder="Precio"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <select
+                  value={newProduct.category}
+                  onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  type="submit"
+                  className="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 text-sm font-medium"
+                >
+                  Crear
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNewProductForm(false)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-sm"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const OrderReception: React.FC = React.memo(() => {
   const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery'>('phone');
   const [customerName, setCustomerName] = useState('');
@@ -275,23 +528,27 @@ const OrderReception: React.FC = React.memo(() => {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA'>('EFECTIVO');
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [showMenuManager, setShowMenuManager] = useState(false);
   
   // Estado para autocompletado
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Refs para manejar clicks
+  // Refs
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Hooks
+  const { user } = useAuth();
   const { customers } = useCustomers();
-  const { getDailySpecialsByCategory, getAllDailySpecials } = useMenu();
+  const { getDailySpecialsByCategory, getAllDailySpecials, deleteItem, refreshMenu } = useMenu();
   const { createOrder } = useOrders();
   const { addNewOrder } = useOrderContext();
 
+  const isAdmin = user?.role === 'admin';
+
   // Memoizar datos del menú
-  const allMenuItems = useMemo(() => getAllDailySpecials(), [getAllDailySpecials]);
+  const allMenuItems = useMemo(() => getAllDailySpecials(), [getAllDailySpecials, showMenuManager]);
   
   // Definir categorías
   const categories = useMemo(() => ['Entradas', 'Platos de Fondo', 'Bebidas'], []);
@@ -307,7 +564,7 @@ const OrderReception: React.FC = React.memo(() => {
     return getDailySpecialsByCategory(activeCategory) || [];
   }, [allMenuItems, searchTerm, activeCategory, getDailySpecialsByCategory]);
 
-  // Memoizar sugerencias de clientes
+  // Sugerencias de clientes
   useEffect(() => {
     if (customerName.trim().length > 1) {
       const searchLower = customerName.toLowerCase();
@@ -324,21 +581,18 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [customerName, customers]);
 
-  // Efecto para cerrar sugerencias al hacer click fuera
+  // Clic fuera de sugerencias
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Callbacks optimizados
+  // Callbacks
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
   }, []);
@@ -354,19 +608,13 @@ const OrderReception: React.FC = React.memo(() => {
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomerName(value);
-    
-    if (value.length > 1) {
-      setShowSuggestions(true);
-    } else {
-      setShowSuggestions(false);
-    }
+    setShowSuggestions(value.length > 1);
   }, []);
 
   // Funciones del carrito
   const addToCart = useCallback((menuItem: MenuItem) => {
     setCart(prev => {
       const existing = prev.find(item => item.menuItem.id === menuItem.id);
-      
       if (existing) {
         showToast(`${menuItem.name} +1`, 'success');
         return prev.map(item =>
@@ -383,9 +631,7 @@ const OrderReception: React.FC = React.memo(() => {
   const removeFromCart = useCallback((itemId: string) => {
     setCart(prev => {
       const itemToRemove = prev.find(item => item.menuItem.id === itemId);
-      if (itemToRemove) {
-        showToast(`${itemToRemove.menuItem.name} eliminado`, 'info');
-      }
+      if (itemToRemove) showToast(`${itemToRemove.menuItem.name} eliminado`, 'info');
       return prev.filter(item => item.menuItem.id !== itemId);
     });
   }, [showToast]);
@@ -395,36 +641,36 @@ const OrderReception: React.FC = React.memo(() => {
       removeFromCart(itemId);
       return;
     }
-    
-    setCart(prev =>
-      prev.map(item => {
-        if (item.menuItem.id === itemId) {
-          return { ...item, quantity };
-        }
-        return item;
-      })
-    );
+    setCart(prev => prev.map(item => 
+      item.menuItem.id === itemId ? { ...item, quantity } : item
+    ));
   }, [removeFromCart]);
 
   const handlePriceChange = useCallback((itemId: string, newPrice: number) => {
-    setCart(prev =>
-      prev.map(item => {
-        if (item.menuItem.id === itemId) {
-          return {
-            ...item,
-            menuItem: {
-              ...item.menuItem,
-              price: newPrice
-            }
-          };
-        }
-        return item;
-      })
-    );
+    setCart(prev => prev.map(item => 
+      item.menuItem.id === itemId 
+        ? { ...item, menuItem: { ...item.menuItem, price: newPrice } }
+        : item
+    ));
     showToast(`Precio actualizado`, 'info');
   }, [showToast]);
 
-  // Cálculos memoizados
+  // Eliminar producto del menú (solo admin)
+  const handleDeleteFromMenu = useCallback(async (itemId: string, itemName: string) => {
+    if (!isAdmin) return;
+    
+    if (window.confirm(`¿Eliminar "${itemName}" del menú?`)) {
+      const result = await deleteItem(itemId);
+      if (result.success) {
+        showToast(`✅ "${itemName}" eliminado`, 'success');
+        refreshMenu();
+      } else {
+        showToast(`❌ Error al eliminar`, 'error');
+      }
+    }
+  }, [isAdmin, deleteItem, showToast, refreshMenu]);
+
+  // Cálculos
   const getTotal = useCallback(() => {
     return cart.reduce((total, item) => total + (item.menuItem.price * item.quantity), 0);
   }, [cart]);
@@ -434,23 +680,12 @@ const OrderReception: React.FC = React.memo(() => {
     [cart]
   );
 
-  // Handlers
-  const handleCategoryChange = useCallback((category: string) => {
-    setActiveCategory(category);
-  }, []);
-
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  }, []);
-
-  const handlePaymentMethodChange = useCallback((method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA') => {
-    setPaymentMethod(method);
-  }, []);
-
-  const handleShowCartDrawer = useCallback((show: boolean) => {
-    setShowCartDrawer(show);
-  }, []);
-
+  // Handlers UI
+  const handleCategoryChange = useCallback((category: string) => setActiveCategory(category), []);
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value), []);
+  const handlePaymentMethodChange = useCallback((method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA') => setPaymentMethod(method), []);
+  const handleShowCartDrawer = useCallback((show: boolean) => setShowCartDrawer(show), []);
+  
   const clearCart = useCallback(() => {
     if (cart.length > 0 && window.confirm('¿Vaciar carrito?')) {
       setCart([]);
@@ -458,7 +693,7 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [cart.length, showToast]);
 
-  // Función para generar el ticket completo (RESTAURADA)
+  // Generar ticket
   const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
     const getCurrentUserName = () => {
       try {
@@ -644,7 +879,7 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, []);
 
-  // Función para imprimir (RESTAURADA)
+  // Imprimir
   const printOrderImmediately = useCallback((order: Order) => {
     const isPhoneOrder = order.source.type === 'phone';
     
@@ -867,11 +1102,8 @@ const OrderReception: React.FC = React.memo(() => {
       };
 
       setLastOrder(tempOrder);
-      
-      // NOTIFICAR INMEDIATAMENTE
       addNewOrder(tempOrder);
       
-      // Limpiar formulario
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -881,8 +1113,6 @@ const OrderReception: React.FC = React.memo(() => {
       setShowCartDrawer(false);
       
       showToast('✅ Creando orden...', 'success');
-      
-      // IMPRIMIR CON EL FORMATO COMPLETO
       printOrderImmediately(tempOrder);
 
       const result = await createOrder({
@@ -928,7 +1158,7 @@ const OrderReception: React.FC = React.memo(() => {
     <>
       <style>{styles}</style>
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 pb-20 lg:pb-6">
-        {/* Notificación Toast */}
+        {/* Toast */}
         {toast && (
           <ToastNotification
             message={toast.message}
@@ -936,6 +1166,13 @@ const OrderReception: React.FC = React.memo(() => {
             onClose={() => setToast(null)}
           />
         )}
+
+        {/* Modal de gestión de menú */}
+        <QuickMenuManager
+          isOpen={showMenuManager}
+          onClose={() => setShowMenuManager(false)}
+          onRefresh={refreshMenu}
+        />
 
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
           {/* Header Móvil */}
@@ -954,6 +1191,16 @@ const OrderReception: React.FC = React.memo(() => {
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
                     </select>
+                    
+                    {isAdmin && (
+                      <button
+                        onClick={() => setShowMenuManager(true)}
+                        className="p-1 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        title="Gestionar menú"
+                      >
+                        <Settings size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
                 
@@ -1081,7 +1328,18 @@ const OrderReception: React.FC = React.memo(() => {
 
             {/* Menú */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-20">
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Menú del Día</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-gray-900">Menú del Día</h3>
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowMenuManager(true)}
+                    className="text-xs bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-1.5 rounded-lg flex items-center space-x-1"
+                  >
+                    <Settings size={12} />
+                    <span>Gestionar</span>
+                  </button>
+                )}
+              </div>
               
               {/* Buscador */}
               <input
@@ -1124,6 +1382,8 @@ const OrderReception: React.FC = React.memo(() => {
                       quantityInCart={quantityInCart}
                       onAddToCart={addToCart}
                       onUpdateQuantity={updateQuantity}
+                      onDeleteFromMenu={handleDeleteFromMenu}
+                      isAdmin={isAdmin}
                     />
                   );
                 })}
@@ -1309,7 +1569,18 @@ const OrderReception: React.FC = React.memo(() => {
               {/* Columna central: Menú */}
               <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">Menú</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-gray-900">Menú</h2>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setShowMenuManager(true)}
+                        className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-1.5 rounded-lg text-sm flex items-center space-x-1"
+                      >
+                        <Settings size={14} />
+                        <span>Gestionar</span>
+                      </button>
+                    )}
+                  </div>
                   
                   <input
                     type="text"
@@ -1349,6 +1620,8 @@ const OrderReception: React.FC = React.memo(() => {
                           quantityInCart={quantityInCart}
                           onAddToCart={addToCart}
                           onUpdateQuantity={updateQuantity}
+                          onDeleteFromMenu={handleDeleteFromMenu}
+                          isAdmin={isAdmin}
                         />
                       );
                     })}
