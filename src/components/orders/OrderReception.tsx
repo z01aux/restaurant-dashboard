@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { 
   Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, 
   Settings, RotateCcw, Search, Tag, FolderPlus, Edit 
-} from 'lucide-react'; // Eliminado 'Save' que no se usaba
+} from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
@@ -10,7 +10,7 @@ import { useCustomers } from '../../hooks/useCustomers';
 import { useOrders } from '../../hooks/useOrders';
 import { useOrderContext } from '../../contexts/OrderContext';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase'; // <-- IMPORTANTE: Importar supabase
+import { supabase } from '../../lib/supabase';
 
 // Estilos para ocultar scrollbar
 const styles = `
@@ -280,7 +280,9 @@ const MenuProduct: React.FC<{
   );
 });
 
-// Modal de gestión de categorías
+// ============================================
+// MODAL DE GESTIÓN DE CATEGORÍAS (FUNCIONAL)
+// ============================================
 const CategoryManagerModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -289,52 +291,97 @@ const CategoryManagerModal: React.FC<{
 }> = ({ isOpen, onClose, categories, onCategoryCreated }) => {
   const [newCategory, setNewCategory] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
 
+  // Limpiar mensajes después de 3 segundos
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        setError(null);
+        setSuccess(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, success]);
+
+  // ============================================
+  // FUNCIÓN PARA CREAR NUEVA CATEGORÍA
+  // ============================================
   const handleCreateCategory = async () => {
-    if (!newCategory.trim()) return;
-    
+    if (!newCategory.trim()) {
+      setError('El nombre de la categoría no puede estar vacío');
+      return;
+    }
+
+    // Verificar si la categoría ya existe
+    if (categories.includes(newCategory.trim())) {
+      setError('Esta categoría ya existe');
+      return;
+    }
+
     setLoading(true);
+    setError(null);
+    
     try {
-      // Verificar si la categoría ya existe
-      if (categories.includes(newCategory.trim())) {
-        alert('Esta categoría ya existe');
+      console.log('Creando categoría:', newCategory.trim());
+      
+      // INSERTAR EN SUPABASE - usando tu tabla 'categories'
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{ 
+          name: newCategory.trim(),
+          sort_order: categories.length + 1 // Opcional: asignar orden
+        }])
+        .select();
+
+      if (error) {
+        console.error('Error detallado:', error);
+        
+        if (error.code === '23505') { // Código de error por duplicado
+          setError('Esta categoría ya existe en la base de datos');
+        } else {
+          setError(`Error al crear la categoría: ${error.message}`);
+        }
+        setLoading(false);
         return;
       }
 
-      // Insertar en Supabase
-      const { error } = await supabase
-        .from('categories')
-        .insert([{ name: newCategory.trim() }]);
-
-      if (error) throw error;
-      
+      console.log('Categoría creada:', data);
+      setSuccess('Categoría creada exitosamente');
       setNewCategory('');
-      onCategoryCreated();
-    } catch (error) {
-      console.error('Error creating category:', error);
-      alert('Error al crear la categoría');
+      onCategoryCreated(); // Actualizar la lista
+      
+    } catch (error: any) {
+      console.error('Error inesperado:', error);
+      setError(`Error inesperado: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
+  // ============================================
+  // FUNCIÓN PARA EDITAR CATEGORÍA
+  // ============================================
   const handleUpdateCategory = async (oldName: string, newName: string) => {
     if (!newName.trim() || oldName === newName) {
       setEditingIndex(null);
       return;
     }
 
-    setLoading(true);
-    try {
-      // Verificar si el nuevo nombre ya existe
-      if (categories.includes(newName.trim()) && newName.trim() !== oldName) {
-        alert('Ya existe una categoría con ese nombre');
-        return;
-      }
+    // Verificar si el nuevo nombre ya existe
+    if (categories.includes(newName.trim()) && newName.trim() !== oldName) {
+      setError('Ya existe una categoría con ese nombre');
+      return;
+    }
 
-      // Actualizar en Supabase
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // ACTUALIZAR EN SUPABASE
       const { error } = await supabase
         .from('categories')
         .update({ name: newName.trim() })
@@ -342,22 +389,28 @@ const CategoryManagerModal: React.FC<{
 
       if (error) throw error;
       
+      setSuccess('Categoría actualizada exitosamente');
       setEditingIndex(null);
       onCategoryCreated();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating category:', error);
-      alert('Error al actualizar la categoría');
+      setError(`Error al actualizar: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
+  // ============================================
+  // FUNCIÓN PARA ELIMINAR CATEGORÍA
+  // ============================================
   const handleDeleteCategory = async (categoryName: string) => {
     if (!window.confirm(`¿Eliminar la categoría "${categoryName}"? Los productos de esta categoría quedarán sin categoría.`)) {
       return;
     }
 
     setLoading(true);
+    setError(null);
+    
     try {
       // Primero actualizar productos que usan esta categoría
       const { error: updateError } = await supabase
@@ -375,10 +428,11 @@ const CategoryManagerModal: React.FC<{
 
       if (error) throw error;
       
+      setSuccess('Categoría eliminada exitosamente');
       onCategoryCreated();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting category:', error);
-      alert('Error al eliminar la categoría');
+      setError(`Error al eliminar: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -402,6 +456,13 @@ const CategoryManagerModal: React.FC<{
           </div>
         </div>
 
+        {/* Mensajes de error/success */}
+        {(error || success) && (
+          <div className={`p-3 text-sm ${error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+            {error || success}
+          </div>
+        )}
+
         {/* Contenido */}
         <div className="flex-1 overflow-y-auto p-4">
           {/* Formulario nueva categoría */}
@@ -424,7 +485,11 @@ const CategoryManagerModal: React.FC<{
                 disabled={loading || !newCategory.trim()}
                 className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 flex items-center space-x-1"
               >
-                <FolderPlus size={16} />
+                {loading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                ) : (
+                  <FolderPlus size={16} />
+                )}
                 <span>Crear</span>
               </button>
             </div>
@@ -465,6 +530,7 @@ const CategoryManagerModal: React.FC<{
                         }}
                         className="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded transition-colors"
                         title="Editar"
+                        disabled={loading}
                       >
                         <Edit size={14} />
                       </button>
@@ -483,12 +549,19 @@ const CategoryManagerModal: React.FC<{
             </div>
           </div>
         </div>
+
+        {/* Footer con información */}
+        <div className="border-t border-gray-200 p-3 bg-gray-50 text-xs text-gray-500 flex-shrink-0">
+          <p>Las categorías se sincronizan automáticamente con Supabase</p>
+        </div>
       </div>
     </div>
   );
 };
 
-// Modal de gestión rápida de menú - CON GESTIÓN DE CATEGORÍAS
+// ============================================
+// MODAL DE GESTIÓN RÁPIDA DE MENÚ
+// ============================================
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -508,7 +581,7 @@ const QuickMenuManager: React.FC<{
   });
 
   const allItems = useMemo(() => getAllItems(), [getAllItems, isOpen]);
-  const categories = useMemo(() => getCategories(), [getCategories]);
+  const categories = useMemo(() => getCategories(), [getCategories, showCategoryManager]);
 
   // Establecer categoría por defecto cuando se cargan las categorías
   useEffect(() => {
@@ -657,7 +730,7 @@ const QuickMenuManager: React.FC<{
             ))}
           </div>
 
-          {/* Contenido con scroll - SOLO UNA BARRA */}
+          {/* Contenido con scroll */}
           <div className="flex-1 overflow-y-auto p-4">
             {loading && (
               <div className="text-center py-4">
@@ -790,7 +863,7 @@ const QuickMenuManager: React.FC<{
             )}
           </div>
 
-          {/* Footer - Fijo */}
+          {/* Footer */}
           <div className="border-t border-gray-200 p-4 bg-gray-50 flex-shrink-0">
             {!showNewProductForm ? (
               <div className="flex space-x-2">
@@ -884,6 +957,9 @@ const QuickMenuManager: React.FC<{
   );
 };
 
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 const OrderReception: React.FC = React.memo(() => {
   const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery'>('phone');
   const [customerName, setCustomerName] = useState('');
