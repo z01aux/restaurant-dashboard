@@ -208,7 +208,7 @@ const CartItem: React.FC<{
   );
 });
 
-// Componente de Producto del Menú - SIN BOTÓN DE ELIMINAR
+// Componente de Producto del Menú
 const MenuProduct: React.FC<{
   item: MenuItem;
   quantityInCart: number;
@@ -276,7 +276,7 @@ const MenuProduct: React.FC<{
   );
 });
 
-// Modal de gestión rápida de menú - CON BUSCADOR EN INVENTARIO
+// Modal de gestión rápida de menú - SIN CONFIRMACIONES
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -313,19 +313,17 @@ const QuickMenuManager: React.FC<{
     );
   }, [inventoryItems, inventorySearchTerm]);
 
-  // Función para quitar producto del menú del día
-  const handleRemoveFromToday = useCallback(async (itemId: string, itemName: string) => {
-    if (window.confirm(`¿Quitar "${itemName}" del menú de hoy?`)) {
-      setLoading(true);
-      const result = await updateItem(itemId, { isDailySpecial: false });
-      if (result.success) {
-        onRefresh();
-      }
-      setLoading(false);
+  // Función para quitar producto del menú del día (SIN CONFIRMACIÓN)
+  const handleRemoveFromToday = useCallback(async (itemId: string) => {
+    setLoading(true);
+    const result = await updateItem(itemId, { isDailySpecial: false });
+    if (result.success) {
+      onRefresh();
     }
+    setLoading(false);
   }, [updateItem, onRefresh]);
 
-  // Función para eliminar permanentemente
+  // Función para eliminar permanentemente (CON CONFIRMACIÓN - solo esta por ser peligrosa)
   const handlePermanentDelete = useCallback(async (itemId: string, itemName: string) => {
     if (window.confirm(`¿Eliminar PERMANENTEMENTE "${itemName}"? Esta acción no se puede deshacer.`)) {
       setLoading(true);
@@ -337,28 +335,24 @@ const QuickMenuManager: React.FC<{
     }
   }, [deleteItem, onRefresh]);
 
-  // Función para agregar producto al menú del día
-  const handleAddToToday = useCallback(async (itemId: string, itemName: string) => {
-    if (window.confirm(`¿Agregar "${itemName}" al menú de hoy?`)) {
-      setLoading(true);
-      const result = await updateItem(itemId, { isDailySpecial: true });
-      if (result.success) {
-        onRefresh();
-      }
-      setLoading(false);
+  // Función para agregar producto al menú del día (SIN CONFIRMACIÓN)
+  const handleAddToToday = useCallback(async (itemId: string) => {
+    setLoading(true);
+    const result = await updateItem(itemId, { isDailySpecial: true });
+    if (result.success) {
+      onRefresh();
     }
+    setLoading(false);
   }, [updateItem, onRefresh]);
 
-  // Función para restaurar producto eliminado
-  const handleRestore = useCallback(async (itemId: string, itemName: string) => {
-    if (window.confirm(`¿Restaurar "${itemName}"?`)) {
-      setLoading(true);
-      const result = await updateItem(itemId, { available: true });
-      if (result.success) {
-        onRefresh();
-      }
-      setLoading(false);
+  // Función para restaurar producto eliminado (SIN CONFIRMACIÓN)
+  const handleRestore = useCallback(async (itemId: string) => {
+    setLoading(true);
+    const result = await updateItem(itemId, { available: true });
+    if (result.success) {
+      onRefresh();
     }
+    setLoading(false);
   }, [updateItem, onRefresh]);
 
   const handleCreateProduct = async (e: React.FormEvent) => {
@@ -415,7 +409,7 @@ const QuickMenuManager: React.FC<{
               key={tab.id}
               onClick={() => {
                 setActiveTab(tab.id as any);
-                setInventorySearchTerm(''); // Limpiar búsqueda al cambiar de pestaña
+                setInventorySearchTerm('');
               }}
               className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                 activeTab === tab.id
@@ -447,7 +441,7 @@ const QuickMenuManager: React.FC<{
                     <span className="text-xs text-gray-500 ml-2">({item.category})</span>
                   </div>
                   <button
-                    onClick={() => handleRemoveFromToday(item.id, item.name)}
+                    onClick={() => handleRemoveFromToday(item.id)}
                     className="text-xs bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600 transition-colors ml-2"
                     title="Quitar del menú de hoy"
                   >
@@ -497,7 +491,7 @@ const QuickMenuManager: React.FC<{
                       <span className="text-xs text-gray-500 ml-2">({item.category})</span>
                     </div>
                     <button
-                      onClick={() => handleAddToToday(item.id, item.name)}
+                      onClick={() => handleAddToToday(item.id)}
                       className="text-xs bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1"
                     >
                       <Plus size={12} />
@@ -536,7 +530,7 @@ const QuickMenuManager: React.FC<{
                   </div>
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => handleRestore(item.id, item.name)}
+                      onClick={() => handleRestore(item.id)}
                       className="text-xs bg-green-500 text-white px-2 py-1 rounded-lg hover:bg-green-600 transition-colors"
                     >
                       Restaurar
