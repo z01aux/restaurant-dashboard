@@ -1,6 +1,5 @@
 // ============================================
-// ARCHIVO COMPLETO: src/hooks/useOrders.ts
-// CON FUNCIÓN PARA ACTUALIZAR MÉTODO DE PAGO
+// ARCHIVO: src/hooks/useOrders.ts (COMPLETO ACTUALIZADO)
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -12,58 +11,11 @@ export const useOrders = () => {
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Cache para items de órdenes
-  // const itemsCache = new Map<string, OrderItem[]>();
-
-  // Función para actualizar estadísticas del cliente
-  const updateCustomerStats = async (customerName: string, phone: string, orderTotal: number) => {
-    try {
-      const { data: existingCustomers, error: searchError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('phone', phone);
-
-      if (searchError) throw searchError;
-
-      if (existingCustomers && existingCustomers.length > 0) {
-        const customer = existingCustomers[0];
-        const { error: updateError } = await supabase
-          .from('customers')
-          .update({
-            orders_count: (customer.orders_count || 0) + 1,
-            total_spent: (customer.total_spent || 0) + orderTotal,
-            last_order: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', customer.id);
-
-        if (updateError) console.error('Error actualizando estadísticas:', updateError);
-      } else {
-        const { error: insertError } = await supabase
-          .from('customers')
-          .insert([{
-            name: customerName,
-            phone: phone,
-            orders_count: 1,
-            total_spent: orderTotal,
-            last_order: new Date().toISOString(),
-          }]);
-
-        if (insertError) console.error('Error creando nuevo cliente:', insertError);
-      }
-    } catch (error) {
-      console.error('Error en updateCustomerStats:', error);
-    }
-  };
-
-  // Función optimizada para convertir múltiples órdenes a la vez
   const convertDatabaseOrdersToOrders = async (dbOrders: DatabaseOrder[]): Promise<Order[]> => {
     if (!dbOrders.length) return [];
 
-    // Obtener todos los IDs de las órdenes
     const orderIds = dbOrders.map(order => order.id);
 
-    // Obtener TODOS los items de UNA SOLA consulta
     const { data: allItemsData, error: itemsError } = await supabase
       .from('order_items')
       .select('*')
@@ -74,7 +26,6 @@ export const useOrders = () => {
       return [];
     }
 
-    // Organizar items por order_id usando un Map (más rápido que reduce)
     const itemsByOrderId = new Map<string, DatabaseOrderItem[]>();
     allItemsData?.forEach(item => {
       if (!itemsByOrderId.has(item.order_id)) {
@@ -83,7 +34,6 @@ export const useOrders = () => {
       itemsByOrderId.get(item.order_id)!.push(item);
     });
 
-    // Convertir todas las órdenes en un solo mapeo
     return dbOrders.map(dbOrder => {
       const items = itemsByOrderId.get(dbOrder.id) || [];
       
@@ -119,23 +69,19 @@ export const useOrders = () => {
         paymentMethod: dbOrder.payment_method,
         items: orderItems,
         createdAt: new Date(dbOrder.created_at),
-        updatedAt: new Date(dbOrder.updated_at)
+        updatedAt: new Date(dbOrder.updated_at),
+        studentId: dbOrder.student_id
       };
     });
   };
 
-  // ============================================
-  // CONSULTA ULTRARRÁPIDA: Carga masiva optimizada
-  // ============================================
   const fetchOrders = useCallback(async (limit = 1000) => {
     try {
       setLoading(true);
       
-      // Calcular fecha de hace 30 días
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      // Primero obtener el total de órdenes
       const { count, error: countError } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
@@ -144,7 +90,6 @@ export const useOrders = () => {
       if (countError) throw countError;
       setTotalCount(count || 0);
 
-      // Obtener TODAS las órdenes de UNA SOLA consulta
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
@@ -158,13 +103,8 @@ export const useOrders = () => {
         return;
       }
 
-      // Convertir todas las órdenes en UNA SOLA operación
-      console.time('convertOrders');
       const convertedOrders = await convertDatabaseOrdersToOrders(ordersData);
-      console.timeEnd('convertOrders');
-
       setOrders(convertedOrders);
-      console.log(`✅ Cargadas ${convertedOrders.length} órdenes en tiempo récord`);
       
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -173,16 +113,13 @@ export const useOrders = () => {
     }
   }, []);
 
-  // ============================================
-  // CREAR ORDEN OPTIMIZADO (con inserción directa)
-  // ============================================
   const createOrder = async (orderData: {
     customerName: string;
     phone: string;
     address?: string;
     tableNumber?: string;
     source: {
-      type: 'phone' | 'walk-in' | 'delivery';
+      type: 'phone' | 'walk-in' | 'delivery' | 'fullDay';
       deliveryAddress?: string;
     };
     notes?: string;
@@ -196,6 +133,7 @@ export const useOrders = () => {
       quantity: number;
       notes?: string;
     }>;
+    studentId?: string;
   }) => {
     try {
       const total = orderData.items.reduce(
@@ -203,7 +141,6 @@ export const useOrders = () => {
         0
       );
 
-      // Insertar orden
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -216,13 +153,13 @@ export const useOrders = () => {
           payment_method: orderData.paymentMethod,
           total: total,
           status: 'pending',
+          student_id: orderData.studentId || null
         }])
         .select('*, order_number, kitchen_number')
         .single();
 
       if (orderError) throw orderError;
 
-      // Preparar items para inserción masiva
       const orderItems = orderData.items.map(item => ({
         order_id: order.id,
         menu_item_id: item.menuItem.id,
@@ -232,17 +169,12 @@ export const useOrders = () => {
         notes: item.notes,
       }));
 
-      // Insertar todos los items de UNA SOLA VEZ
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
 
-      // Actualizar estadísticas del cliente (en segundo plano, no bloquea)
-      updateCustomerStats(orderData.customerName, orderData.phone, total).catch(console.error);
-
-      // Crear objeto de orden para el frontend
       const newOrder: Order = {
         id: order.id,
         orderNumber: order.order_number,
@@ -270,10 +202,10 @@ export const useOrders = () => {
           notes: item.notes
         })),
         createdAt: new Date(order.created_at),
-        updatedAt: new Date(order.updated_at)
+        updatedAt: new Date(order.updated_at),
+        studentId: orderData.studentId
       };
 
-      // Actualizar el estado local INMEDIATAMENTE (sin esperar)
       setOrders(prev => [newOrder, ...prev]);
       
       return { success: true, order: newOrder };
@@ -283,12 +215,8 @@ export const useOrders = () => {
     }
   };
 
-  // ============================================
-  // ACTUALIZAR ESTADO (optimizado)
-  // ============================================
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
     try {
-      // Actualizar UI inmediatamente (optimistic update)
       setOrders(prev => prev.map(order => 
         order.id === orderId ? { ...order, status } : order
       ));
@@ -304,7 +232,6 @@ export const useOrders = () => {
         .single();
 
       if (error) {
-        // Revertir en caso de error
         setOrders(prev => prev.map(order => 
           order.id === orderId ? { ...order, status: order.status } : order
         ));
@@ -317,18 +244,13 @@ export const useOrders = () => {
     }
   };
 
-  // ============================================
-  // NUEVO MÉTODO: Actualizar método de pago
-  // ============================================
   const updateOrderPayment = async (
     orderId: string, 
     paymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | undefined
   ) => {
     try {
-      // Guardar el método anterior por si hay que revertir
       const previousOrder = orders.find(o => o.id === orderId);
       
-      // Actualizar UI inmediatamente (optimistic update)
       setOrders(prev => prev.map(order => 
         order.id === orderId ? { ...order, paymentMethod } : order
       ));
@@ -344,7 +266,6 @@ export const useOrders = () => {
         .single();
 
       if (error) {
-        // Revertir en caso de error
         if (previousOrder) {
           setOrders(prev => prev.map(order => 
             order.id === orderId ? { ...order, paymentMethod: previousOrder.paymentMethod } : order
@@ -360,12 +281,8 @@ export const useOrders = () => {
     }
   };
 
-  // ============================================
-  // ELIMINAR ORDEN (optimizado)
-  // ============================================
   const deleteOrder = async (orderId: string) => {
     try {
-      // Eliminar de UI inmediatamente
       const orderToDelete = orders.find(o => o.id === orderId);
       setOrders(prev => prev.filter(order => order.id !== orderId));
 
@@ -375,7 +292,6 @@ export const useOrders = () => {
         .eq('order_id', orderId);
 
       if (itemsError) {
-        // Revertir
         if (orderToDelete) {
           setOrders(prev => [...prev, orderToDelete]);
         }
@@ -388,7 +304,6 @@ export const useOrders = () => {
         .eq('id', orderId);
 
       if (orderError) {
-        // Revertir
         if (orderToDelete) {
           setOrders(prev => [...prev, orderToDelete]);
         }
@@ -402,9 +317,6 @@ export const useOrders = () => {
     }
   };
 
-  // ============================================
-  // EXPORTAR A CSV (sin cambios)
-  // ============================================
   const exportOrdersToCSV = (ordersToExport: Order[]) => {
     if (ordersToExport.length === 0) {
       alert('No hay órdenes para exportar');
@@ -436,7 +348,8 @@ export const useOrders = () => {
         `S/ ${order.total.toFixed(2)}`,
         order.paymentMethod || 'NO APLICA',
         order.source.type === 'phone' ? 'COCINA' : 
-          order.source.type === 'walk-in' ? 'LOCAL' : 'DELIVERY',
+          order.source.type === 'walk-in' ? 'LOCAL' : 
+          order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY',
         fecha,
         hora,
         order.orderNumber || `ORD-${order.id.slice(-8)}`,
@@ -464,9 +377,6 @@ export const useOrders = () => {
     URL.revokeObjectURL(url);
   };
 
-  // ============================================
-  // OBTENER ÓRDENES DE HOY (optimizado)
-  // ============================================
   const getTodayOrders = useCallback(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -478,10 +388,9 @@ export const useOrders = () => {
     });
   }, [orders]);
 
-  // Cargar datos al iniciar UNA SOLA VEZ
   useEffect(() => {
-    fetchOrders(500); // Cargar 500 órdenes iniciales
-  }, []); // Sin dependencias para que solo cargue una vez
+    fetchOrders(500);
+  }, []);
 
   return {
     orders,
@@ -490,7 +399,7 @@ export const useOrders = () => {
     fetchOrders,
     createOrder,
     updateOrderStatus,
-    updateOrderPayment, // NUEVO MÉTODO EXPORTADO
+    updateOrderPayment,
     deleteOrder,
     exportOrdersToCSV,
     getTodayOrders

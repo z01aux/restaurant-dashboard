@@ -1,3 +1,7 @@
+// ============================================
+// ARCHIVO: src/types/index.ts (COMPLETO)
+// ============================================
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -16,14 +20,14 @@ export interface OrderItem {
 }
 
 export interface OrderSource {
-  type: 'phone' | 'walk-in' | 'delivery';
+  type: 'phone' | 'walk-in' | 'delivery' | 'fullDay';
   deliveryAddress?: string;
 }
 
 export interface Order {
   id: string;
-  orderNumber?: string;        // Nuevo campo: ORD-0000-0000001
-  kitchenNumber?: string;      // Nuevo campo: COM-0000-00000001
+  orderNumber?: string;
+  kitchenNumber?: string;
   items: OrderItem[];
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   createdAt: Date;
@@ -34,11 +38,18 @@ export interface Order {
   source: OrderSource;
   notes?: string;
   tableNumber?: string;
-  paymentMethod?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA'; // Nuevo campo
+  paymentMethod?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
   updatedAt?: Date;
+  studentId?: string;
+  studentInfo?: {
+    fullName: string;
+    grade: string;
+    section: string;
+    guardianName: string;
+    phone?: string;
+  };
 }
 
-// Interfaces para Supabase
 export interface DatabaseOrder {
   id: string;
   order_number?: string;
@@ -47,13 +58,14 @@ export interface DatabaseOrder {
   phone: string;
   address?: string;
   table_number?: string;
-  source_type: 'phone' | 'walk-in' | 'delivery';
+  source_type: 'phone' | 'walk-in' | 'delivery' | 'fullDay';
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   total: number;
   notes?: string;
-  payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA'; // Nuevo campo
+  payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
   created_at: string;
   updated_at: string;
+  student_id?: string;
 }
 
 export interface DatabaseOrderItem {
@@ -66,4 +78,3 @@ export interface DatabaseOrderItem {
   notes?: string;
   created_at: string;
 }
-

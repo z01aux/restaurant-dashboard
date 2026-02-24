@@ -1,7 +1,12 @@
+// ============================================
+// ARCHIVO: src/components/orders/OrderReception.tsx (COMPLETO ACTUALIZADO)
+// ============================================
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, 
-  Settings, RotateCcw, Search, Tag, FolderPlus, Edit 
+  Settings, RotateCcw, Search, Tag, FolderPlus, Edit, GraduationCap,
+  Users, Phone, User
 } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
@@ -10,9 +15,10 @@ import { useCustomers } from '../../hooks/useCustomers';
 import { useOrders } from '../../hooks/useOrders';
 import { useOrderContext } from '../../contexts/OrderContext';
 import { useAuth } from '../../hooks/useAuth';
+import { useStudents } from '../../hooks/useStudents';
+import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 import { supabase } from '../../lib/supabase';
 
-// Estilos para ocultar scrollbar
 const styles = `
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
@@ -38,7 +44,6 @@ const styles = `
   }
 `;
 
-// Componente de Notificación Toast
 const ToastNotification: React.FC<{
   message: string;
   type: 'success' | 'error' | 'info';
@@ -68,7 +73,6 @@ const ToastNotification: React.FC<{
   );
 });
 
-// Componente de Item del Carrito
 const CartItem: React.FC<{
   item: OrderItem;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
@@ -212,7 +216,6 @@ const CartItem: React.FC<{
   );
 });
 
-// Componente de Producto del Menú
 const MenuProduct: React.FC<{
   item: MenuItem;
   quantityInCart: number;
@@ -280,9 +283,6 @@ const MenuProduct: React.FC<{
   );
 });
 
-// ============================================
-// HOOK PERSONALIZADO PARA CATEGORÍAS
-// ============================================
 const useCategories = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -300,7 +300,6 @@ const useCategories = () => {
       
       const categoryNames = data?.map(item => item.name) || [];
       setCategories(categoryNames);
-      console.log('✅ Categorías cargadas:', categoryNames);
     } catch (error) {
       console.error('Error fetching categories:', error);
     } finally {
@@ -315,9 +314,6 @@ const useCategories = () => {
   return { categories, loading, refreshCategories: fetchCategories };
 };
 
-// ============================================
-// MODAL DE GESTIÓN DE CATEGORÍAS
-// ============================================
 const CategoryManagerModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -331,7 +327,6 @@ const CategoryManagerModal: React.FC<{
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
 
-  // Limpiar mensajes después de 3 segundos
   useEffect(() => {
     if (error || success) {
       const timer = setTimeout(() => {
@@ -342,16 +337,12 @@ const CategoryManagerModal: React.FC<{
     }
   }, [error, success]);
 
-  // ============================================
-  // FUNCIÓN PARA CREAR NUEVA CATEGORÍA
-  // ============================================
   const handleCreateCategory = async () => {
     if (!newCategory.trim()) {
       setError('El nombre de la categoría no puede estar vacío');
       return;
     }
 
-    // Verificar si la categoría ya existe
     if (categories.includes(newCategory.trim())) {
       setError('Esta categoría ya existe');
       return;
@@ -361,9 +352,6 @@ const CategoryManagerModal: React.FC<{
     setError(null);
     
     try {
-      console.log('📝 Creando categoría:', newCategory.trim());
-      
-      // INSERTAR EN SUPABASE
       const { data, error } = await supabase
         .from('categories')
         .insert([{ 
@@ -373,8 +361,6 @@ const CategoryManagerModal: React.FC<{
         .select();
 
       if (error) {
-        console.error('❌ Error detallado:', error);
-        
         if (error.code === '23505') {
           setError('Esta categoría ya existe en la base de datos');
         } else {
@@ -384,29 +370,23 @@ const CategoryManagerModal: React.FC<{
         return;
       }
 
-      console.log('✅ Categoría creada:', data);
       setSuccess('Categoría creada exitosamente');
       setNewCategory('');
-      onCategoryCreated(); // Actualizar la lista
+      onCategoryCreated();
       
     } catch (error: any) {
-      console.error('❌ Error inesperado:', error);
       setError(`Error inesperado: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // ============================================
-  // FUNCIÓN PARA EDITAR CATEGORÍA
-  // ============================================
   const handleUpdateCategory = async (oldName: string, newName: string) => {
     if (!newName.trim() || oldName === newName) {
       setEditingIndex(null);
       return;
     }
 
-    // Verificar si el nuevo nombre ya existe
     if (categories.includes(newName.trim()) && newName.trim() !== oldName) {
       setError('Ya existe una categoría con ese nombre');
       return;
@@ -427,16 +407,12 @@ const CategoryManagerModal: React.FC<{
       setEditingIndex(null);
       onCategoryCreated();
     } catch (error: any) {
-      console.error('Error updating category:', error);
       setError(`Error al actualizar: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // ============================================
-  // FUNCIÓN PARA ELIMINAR CATEGORÍA
-  // ============================================
   const handleDeleteCategory = async (categoryName: string) => {
     if (!window.confirm(`¿Eliminar la categoría "${categoryName}"? Los productos de esta categoría quedarán sin categoría.`)) {
       return;
@@ -446,7 +422,6 @@ const CategoryManagerModal: React.FC<{
     setError(null);
     
     try {
-      // Primero actualizar productos que usan esta categoría
       const { error: updateError } = await supabase
         .from('menu_items')
         .update({ category: 'Sin categoría' })
@@ -454,7 +429,6 @@ const CategoryManagerModal: React.FC<{
 
       if (updateError) throw updateError;
 
-      // Luego eliminar la categoría
       const { error } = await supabase
         .from('categories')
         .delete()
@@ -465,7 +439,6 @@ const CategoryManagerModal: React.FC<{
       setSuccess('Categoría eliminada exitosamente');
       onCategoryCreated();
     } catch (error: any) {
-      console.error('Error deleting category:', error);
       setError(`Error al eliminar: ${error.message}`);
     } finally {
       setLoading(false);
@@ -477,7 +450,6 @@ const CategoryManagerModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4 animate-in fade-in">
       <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
-        {/* Header */}
         <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-4 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -490,16 +462,13 @@ const CategoryManagerModal: React.FC<{
           </div>
         </div>
 
-        {/* Mensajes de error/success */}
         {(error || success) && (
           <div className={`p-3 text-sm ${error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
             {error || success}
           </div>
         )}
 
-        {/* Contenido */}
         <div className="flex-1 overflow-y-auto p-4">
-          {/* Formulario nueva categoría */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Nueva Categoría
@@ -529,7 +498,6 @@ const CategoryManagerModal: React.FC<{
             </div>
           </div>
 
-          {/* Lista de categorías */}
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-3">
               Categorías existentes ({categories.length})
@@ -584,7 +552,6 @@ const CategoryManagerModal: React.FC<{
           </div>
         </div>
 
-        {/* Footer con información */}
         <div className="border-t border-gray-200 p-3 bg-gray-50 text-xs text-gray-500 flex-shrink-0">
           <p>Las categorías se sincronizan automáticamente con Supabase</p>
         </div>
@@ -593,9 +560,6 @@ const CategoryManagerModal: React.FC<{
   );
 };
 
-// ============================================
-// MODAL DE GESTIÓN RÁPIDA DE MENÚ
-// ============================================
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -605,7 +569,7 @@ const QuickMenuManager: React.FC<{
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const { getAllItems, createItem, updateItem, deleteItem, refreshMenu } = useMenu();
-  const { categories: dbCategories, refreshCategories } = useCategories(); // Usar nuestro hook personalizado
+  const { categories: dbCategories, refreshCategories } = useCategories();
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [newProduct, setNewProduct] = useState({
@@ -617,7 +581,6 @@ const QuickMenuManager: React.FC<{
 
   const allItems = useMemo(() => getAllItems(), [getAllItems, isOpen]);
 
-  // Establecer categoría por defecto cuando se cargan las categorías
   useEffect(() => {
     if (dbCategories.length > 0 && !newProduct.category) {
       setNewProduct(prev => ({ ...prev, category: dbCategories[0] }));
@@ -628,7 +591,6 @@ const QuickMenuManager: React.FC<{
   const inventoryItems = useMemo(() => allItems.filter(item => !item.isDailySpecial && item.available), [allItems]);
   const deletedItems = useMemo(() => allItems.filter(item => !item.available), [allItems]);
 
-  // Filtrar inventario por término de búsqueda
   const filteredInventoryItems = useMemo(() => {
     if (!inventorySearchTerm.trim()) return inventoryItems;
     
@@ -640,7 +602,6 @@ const QuickMenuManager: React.FC<{
     );
   }, [inventoryItems, inventorySearchTerm]);
 
-  // Función para quitar producto del menú del día
   const handleRemoveFromToday = useCallback(async (itemId: string) => {
     setLoading(true);
     const result = await updateItem(itemId, { isDailySpecial: false });
@@ -650,7 +611,6 @@ const QuickMenuManager: React.FC<{
     setLoading(false);
   }, [updateItem, onRefresh]);
 
-  // Función para eliminar permanentemente
   const handlePermanentDelete = useCallback(async (itemId: string, itemName: string) => {
     if (window.confirm(`¿Eliminar PERMANENTEMENTE "${itemName}"? Esta acción no se puede deshacer.`)) {
       setLoading(true);
@@ -662,7 +622,6 @@ const QuickMenuManager: React.FC<{
     }
   }, [deleteItem, onRefresh]);
 
-  // Función para agregar producto al menú del día
   const handleAddToToday = useCallback(async (itemId: string) => {
     setLoading(true);
     const result = await updateItem(itemId, { isDailySpecial: true });
@@ -672,7 +631,6 @@ const QuickMenuManager: React.FC<{
     setLoading(false);
   }, [updateItem, onRefresh]);
 
-  // Función para restaurar producto eliminado
   const handleRestore = useCallback(async (itemId: string) => {
     setLoading(true);
     const result = await updateItem(itemId, { available: true });
@@ -712,11 +670,10 @@ const QuickMenuManager: React.FC<{
     setLoading(false);
   };
 
-  // Función para manejar la creación de categorías
   const handleCategoryCreated = async () => {
-    await refreshCategories(); // Actualizar categorías del hook personalizado
-    await refreshMenu(); // Actualizar menú
-    onRefresh(); // Notificar al padre
+    await refreshCategories();
+    await refreshMenu();
+    onRefresh();
   };
 
   if (!isOpen) return null;
@@ -725,7 +682,6 @@ const QuickMenuManager: React.FC<{
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
         <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
-          {/* Header - Fijo */}
           <div className="bg-gradient-to-r from-red-500 to-amber-500 p-4 text-white flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -747,7 +703,6 @@ const QuickMenuManager: React.FC<{
             </div>
           </div>
 
-          {/* Tabs - Fijo */}
           <div className="flex border-b border-gray-200 p-2 flex-shrink-0">
             {[
               { id: 'today', label: `📋 Hoy (${todayItems.length})` },
@@ -771,7 +726,6 @@ const QuickMenuManager: React.FC<{
             ))}
           </div>
 
-          {/* Contenido con scroll */}
           <div className="flex-1 overflow-y-auto p-4">
             {loading && (
               <div className="text-center py-4">
@@ -806,7 +760,6 @@ const QuickMenuManager: React.FC<{
 
             {!loading && activeTab === 'inventory' && (
               <div className="space-y-3">
-                {/* Buscador de inventario */}
                 <div className="relative sticky top-0 bg-white pt-1 pb-2 z-10">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                   <input
@@ -904,7 +857,6 @@ const QuickMenuManager: React.FC<{
             )}
           </div>
 
-          {/* Footer */}
           <div className="border-t border-gray-200 p-4 bg-gray-50 flex-shrink-0">
             {!showNewProductForm ? (
               <div className="flex space-x-2">
@@ -984,22 +936,18 @@ const QuickMenuManager: React.FC<{
         </div>
       </div>
 
-      {/* Modal de gestión de categorías */}
       <CategoryManagerModal
         isOpen={showCategoryManager}
         onClose={() => setShowCategoryManager(false)}
-        categories={dbCategories} // Usar las categorías de nuestro hook
+        categories={dbCategories}
         onCategoryCreated={handleCategoryCreated}
       />
     </>
   );
 };
 
-// ============================================
-// COMPONENTE PRINCIPAL
-// ============================================
 const OrderReception: React.FC = React.memo(() => {
-  const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery'>('phone');
+  const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay'>('phone');
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -1015,38 +963,43 @@ const OrderReception: React.FC = React.memo(() => {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [showMenuManager, setShowMenuManager] = useState(false);
   
-  // Estado para autocompletado
+  // Estados para autocompletado de clientes normales
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Refs
+  // Estados para FullDay
+  const [selectedGrade, setSelectedGrade] = useState<Grade>(GRADES[0]);
+  const [selectedSection, setSelectedSection] = useState<Section>(SECTIONS[0]);
+  const [studentName, setStudentName] = useState('');
+  const [guardianName, setGuardianName] = useState('');
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [studentSearchResults, setStudentSearchResults] = useState<any[]>([]);
+  const [showStudentSuggestions, setShowStudentSuggestions] = useState(false);
+
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const studentSuggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Hooks
   const { user } = useAuth();
   const { customers } = useCustomers();
-  const { getDailySpecialsByCategory, getAllDailySpecials, refreshMenu } = useMenu(); // Eliminamos getCategories y refreshCategories
-  const { categories: dbCategories } = useCategories(); // Usar nuestro hook personalizado
+  const { getDailySpecialsByCategory, getAllDailySpecials, refreshMenu } = useMenu();
+  const { categories: dbCategories } = useCategories();
   const { createOrder } = useOrders();
   const { addNewOrder } = useOrderContext();
+  const { searchStudents, searchResults } = useStudents();
 
   const isAdmin = user?.role === 'admin';
 
-  // Obtener categorías de la base de datos
   const categories = useMemo(() => dbCategories, [dbCategories]);
   
-  // Establecer categoría activa por defecto
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
       setActiveCategory(categories[0]);
     }
   }, [categories]);
 
-  // Memoizar datos del menú
   const allMenuItems = useMemo(() => getAllDailySpecials(), [getAllDailySpecials, showMenuManager]);
   
-  // Memoizar items filtrados
   const currentItems = useMemo(() => {
     if (searchTerm) {
       return allMenuItems.filter((item: MenuItem) =>
@@ -1057,9 +1010,9 @@ const OrderReception: React.FC = React.memo(() => {
     return getDailySpecialsByCategory(activeCategory) || [];
   }, [allMenuItems, searchTerm, activeCategory, getDailySpecialsByCategory]);
 
-  // Sugerencias de clientes
+  // Sugerencias para clientes normales
   useEffect(() => {
-    if (customerName.trim().length > 1) {
+    if (customerName.trim().length > 1 && activeTab !== 'fullDay') {
       const searchLower = customerName.toLowerCase();
       const filtered = customers.filter(customer =>
         customer.name.toLowerCase().includes(searchLower) ||
@@ -1072,7 +1025,19 @@ const OrderReception: React.FC = React.memo(() => {
       setCustomerSuggestions([]);
       setShowSuggestions(false);
     }
-  }, [customerName, customers]);
+  }, [customerName, customers, activeTab]);
+
+  // Sugerencias para alumnos
+  useEffect(() => {
+    if (studentName.trim().length > 1 && activeTab === 'fullDay') {
+      searchStudents(studentName);
+      setStudentSearchResults(searchResults);
+      setShowStudentSuggestions(searchResults.length > 0);
+    } else {
+      setStudentSearchResults([]);
+      setShowStudentSuggestions(false);
+    }
+  }, [studentName, activeTab, searchStudents, searchResults]);
 
   // Clic fuera de sugerencias
   useEffect(() => {
@@ -1080,12 +1045,14 @@ const OrderReception: React.FC = React.memo(() => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
       }
+      if (studentSuggestionsRef.current && !studentSuggestionsRef.current.contains(event.target as Node)) {
+        setShowStudentSuggestions(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Callbacks
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
   }, []);
@@ -1098,13 +1065,31 @@ const OrderReception: React.FC = React.memo(() => {
     showToast(`Cliente seleccionado`, 'success');
   }, [showToast]);
 
+  const selectStudent = useCallback((student: any) => {
+    setStudentName(student.full_name);
+    setSelectedGrade(student.grade);
+    setSelectedSection(student.section);
+    setGuardianName(student.guardian_name);
+    setPhone(student.phone || '');
+    setSelectedStudentId(student.id);
+    setShowStudentSuggestions(false);
+    showToast(`Alumno seleccionado`, 'success');
+  }, [showToast]);
+
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomerName(value);
-    setShowSuggestions(value.length > 1);
+    if (activeTab !== 'fullDay') {
+      setShowSuggestions(value.length > 1);
+    }
+  }, [activeTab]);
+
+  const handleStudentNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setStudentName(value);
+    setShowStudentSuggestions(value.length > 1);
   }, []);
 
-  // Funciones del carrito
   const addToCart = useCallback((menuItem: MenuItem) => {
     setCart(prev => {
       const existing = prev.find(item => item.menuItem.id === menuItem.id);
@@ -1148,7 +1133,6 @@ const OrderReception: React.FC = React.memo(() => {
     showToast(`Precio actualizado`, 'info');
   }, [showToast]);
 
-  // Cálculos
   const getTotal = useCallback(() => {
     return cart.reduce((total, item) => total + (item.menuItem.price * item.quantity), 0);
   }, [cart]);
@@ -1158,7 +1142,6 @@ const OrderReception: React.FC = React.memo(() => {
     [cart]
   );
 
-  // Handlers UI
   const handleCategoryChange = useCallback((category: string) => setActiveCategory(category), []);
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value), []);
   const handlePaymentMethodChange = useCallback((method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA') => setPaymentMethod(method), []);
@@ -1171,7 +1154,6 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [cart.length, showToast]);
 
-  // Función para generar el ticket completo
   const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
     const getCurrentUserName = () => {
       try {
@@ -1241,6 +1223,35 @@ const OrderReception: React.FC = React.memo(() => {
       const subtotal = order.total / 1.18;
       const igv = order.total - subtotal;
       
+      let customerInfo = '';
+      if (order.source.type === 'fullDay' && order.studentInfo) {
+        customerInfo = `
+          <div class="info-row">
+            <span class="label">ALUMNO:</span>
+            <span class="customer-name-bold">${order.studentInfo.fullName.toUpperCase()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">GRADO:</span>
+            <span class="value">${order.studentInfo.grade} "${order.studentInfo.section}"</span>
+          </div>
+          <div class="info-row">
+            <span class="label">APODERADO:</span>
+            <span class="value">${order.studentInfo.guardianName.toUpperCase()}</span>
+          </div>
+        `;
+      } else {
+        customerInfo = `
+          <div class="info-row">
+            <span class="label">CLIENTE:</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">TELÉFONO:</span>
+            <span class="value">${order.phone}</span>
+          </div>
+        `;
+      }
+      
       return `
         <div class="ticket">
           <div class="center">
@@ -1258,7 +1269,7 @@ const OrderReception: React.FC = React.memo(() => {
           </div>
           <div class="info-row">
             <span class="label">TIPO:</span>
-            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : 'DELIVERY'}</span>
+            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY'}</span>
           </div>
           <div class="info-row">
             <span class="label">FECHA:</span>
@@ -1275,14 +1286,8 @@ const OrderReception: React.FC = React.memo(() => {
           
           <div class="divider"></div>
           
-          <div class="info-row">
-            <span class="label">CLIENTE:</span>
-            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">TELÉFONO:</span>
-            <span class="value">${order.phone}</span>
-          </div>
+          ${customerInfo}
+          
           ${order.address ? `
           <div class="info-row">
             <span class="label">DIRECCIÓN:</span>
@@ -1341,7 +1346,7 @@ const OrderReception: React.FC = React.memo(() => {
           
           <div class="center">
             <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
-            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : 'DELIVERY'} ***</div>
+            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY'} ***</div>
             <div class="normal" style="margin-top: 10px; font-size: 10px;">
               ${new Date().toLocaleString('es-ES', { 
                 year: 'numeric',
@@ -1357,7 +1362,6 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, []);
 
-  // Imprimir ticket
   const printOrderImmediately = useCallback((order: Order) => {
     const isPhoneOrder = order.source.type === 'phone';
     
@@ -1535,20 +1539,32 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [generateTicketContent]);
 
-  // Crear orden
   const handleCreateOrder = useCallback(async () => {
     if (cart.length === 0) {
       showToast('El pedido está vacío', 'error');
       return;
     }
 
-    if (!customerName || !phone) {
-      showToast('Completa los datos del cliente', 'error');
-      return;
+    // Validaciones según el tipo de pedido
+    if (activeTab === 'fullDay') {
+      if (!studentName || !guardianName) {
+        showToast('Completa los datos del alumno', 'error');
+        return;
+      }
+    } else {
+      if (!customerName || !phone) {
+        showToast('Completa los datos del cliente', 'error');
+        return;
+      }
     }
 
     if (activeTab === 'walk-in' && !tableNumber) {
       showToast('Ingresa el número de mesa', 'error');
+      return;
+    }
+
+    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && !paymentMethod) {
+      showToast('Selecciona un método de pago', 'error');
       return;
     }
 
@@ -1559,43 +1575,10 @@ const OrderReception: React.FC = React.memo(() => {
     try {
       const total = getTotal();
       
-      const tempOrder: Order = {
-        id: 'temp-' + Date.now(),
-        orderNumber: `ORD-${Date.now().toString().slice(-8)}`,
-        kitchenNumber: activeTab === 'phone' ? `COM-${Date.now().toString().slice(-8)}` : undefined,
-        items: cart,
-        status: 'pending',
-        createdAt: new Date(),
-        total: total,
-        customerName: customerName,
-        phone: phone,
-        address: activeTab === 'delivery' ? address : undefined,
-        tableNumber: activeTab === 'walk-in' ? tableNumber : undefined,
-        source: {
-          type: activeTab,
-          ...(activeTab === 'delivery' && { deliveryAddress: address })
-        },
-        notes: orderNotes,
-        paymentMethod: activeTab !== 'phone' ? paymentMethod : undefined,
-      };
-
-      setLastOrder(tempOrder);
-      addNewOrder(tempOrder);
-      
-      setCart([]);
-      setCustomerName('');
-      setPhone('');
-      setAddress('');
-      setTableNumber('');
-      setOrderNotes('');
-      setShowCartDrawer(false);
-      
-      showToast('✅ Creando orden...', 'success');
-      printOrderImmediately(tempOrder);
-
-      const result = await createOrder({
-        customerName,
-        phone,
+      // Preparar datos según el tipo
+      const orderData: any = {
+        customerName: activeTab === 'fullDay' ? studentName : customerName,
+        phone: activeTab === 'fullDay' ? (phone || 'Sin teléfono') : phone,
         address: activeTab === 'delivery' ? address : undefined,
         tableNumber: activeTab === 'walk-in' ? tableNumber : undefined,
         source: {
@@ -1613,7 +1596,56 @@ const OrderReception: React.FC = React.memo(() => {
           quantity: item.quantity,
           notes: item.notes,
         }))
-      });
+      };
+
+      // Si es FullDay, agregar studentId
+      if (activeTab === 'fullDay' && selectedStudentId) {
+        orderData.studentId = selectedStudentId;
+      }
+
+      const tempOrder: Order = {
+        id: 'temp-' + Date.now(),
+        orderNumber: `ORD-${Date.now().toString().slice(-8)}`,
+        kitchenNumber: activeTab === 'phone' ? `COM-${Date.now().toString().slice(-8)}` : undefined,
+        items: cart,
+        status: 'pending',
+        createdAt: new Date(),
+        total: total,
+        customerName: orderData.customerName,
+        phone: orderData.phone,
+        address: orderData.address,
+        tableNumber: orderData.tableNumber,
+        source: orderData.source,
+        notes: orderNotes,
+        paymentMethod: orderData.paymentMethod,
+        studentId: orderData.studentId,
+        studentInfo: activeTab === 'fullDay' ? {
+          fullName: studentName,
+          grade: selectedGrade,
+          section: selectedSection,
+          guardianName: guardianName,
+          phone: phone
+        } : undefined
+      };
+
+      setLastOrder(tempOrder);
+      addNewOrder(tempOrder);
+      
+      setCart([]);
+      setCustomerName('');
+      setPhone('');
+      setAddress('');
+      setTableNumber('');
+      setOrderNotes('');
+      setStudentName('');
+      setGuardianName('');
+      setSelectedStudentId(null);
+      setShowCartDrawer(false);
+      
+      showToast('✅ Creando orden...', 'success');
+      printOrderImmediately(tempOrder);
+
+      const result = await createOrder(orderData);
 
       if (result.success) {
         showToast('✅ Orden guardada', 'success');
@@ -1629,14 +1661,33 @@ const OrderReception: React.FC = React.memo(() => {
   }, [
     cart, customerName, phone, activeTab, tableNumber, address, orderNotes, 
     paymentMethod, createOrder, getTotal, showToast, printOrderImmediately, 
-    isCreatingOrder, addNewOrder
+    isCreatingOrder, addNewOrder, studentName, guardianName, selectedGrade,
+    selectedSection, selectedStudentId
   ]);
+
+  const isFormValid = useMemo(() => {
+    if (cart.length === 0) return false;
+    
+    if (activeTab === 'fullDay') {
+      return studentName && guardianName;
+    }
+    
+    if (activeTab === 'walk-in') {
+      return customerName && phone && tableNumber;
+    }
+    
+    if (activeTab === 'delivery') {
+      return customerName && phone && address;
+    }
+    
+    // phone
+    return customerName && phone;
+  }, [cart, activeTab, customerName, phone, tableNumber, address, studentName, guardianName]);
 
   return (
     <>
       <style>{styles}</style>
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 pb-20 lg:pb-6">
-        {/* Toast */}
         {toast && (
           <ToastNotification
             message={toast.message}
@@ -1645,7 +1696,6 @@ const OrderReception: React.FC = React.memo(() => {
           />
         )}
 
-        {/* Modal de gestión de menú */}
         <QuickMenuManager
           isOpen={showMenuManager}
           onClose={() => setShowMenuManager(false)}
@@ -1668,6 +1718,7 @@ const OrderReception: React.FC = React.memo(() => {
                       <option value="phone">📞 Cocina</option>
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
+                      <option value="fullDay">🎒 FullDay</option>
                     </select>
                     
                     {isAdmin && (
@@ -1705,76 +1756,157 @@ const OrderReception: React.FC = React.memo(() => {
           <div className="lg:hidden px-3 pt-4">
             {/* Formulario de cliente móvil */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4">
-              <h3 className="text-sm font-bold text-gray-900 mb-3">Datos del Cliente</h3>
+              <h3 className="text-sm font-bold text-gray-900 mb-3">
+                {activeTab === 'fullDay' ? 'Datos del Alumno' : 'Datos del Cliente'}
+              </h3>
               
               <div className="space-y-3">
-                {/* Nombre con autocompletado */}
-                <div className="relative">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={customerName}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Nombre del cliente *"
-                    required
-                  />
-                  
-                  {showSuggestions && customerSuggestions.length > 0 && (
-                    <div 
-                      ref={suggestionsRef}
-                      className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
-                    >
-                      {customerSuggestions.map((customer) => (
-                        <div
-                          key={customer.id}
-                          onMouseDown={() => selectCustomer(customer)}
-                          className="p-3 hover:bg-red-50 cursor-pointer border-b border-gray-100"
+                {activeTab === 'fullDay' ? (
+                  <>
+                    {/* Grado y Sección */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Grado y Sección *
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <select
+                          value={selectedGrade}
+                          onChange={(e) => setSelectedGrade(e.target.value as Grade)}
+                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         >
-                          <div className="font-medium text-gray-900 text-sm">{customer.name}</div>
-                          <div className="text-gray-600 text-xs">📞 {customer.phone}</div>
-                        </div>
-                      ))}
+                          {GRADES.map(grade => (
+                            <option key={grade} value={grade}>{grade}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={selectedSection}
+                          onChange={(e) => setSelectedSection(e.target.value as Section)}
+                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        >
+                          {SECTIONS.map(section => (
+                            <option key={section} value={section}>"{section}"</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Teléfono */}
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Teléfono *"
-                  required
-                />
+                    {/* Buscador de alumnos */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={studentName}
+                        onChange={handleStudentNameChange}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        placeholder="Nombre del alumno *"
+                        required
+                      />
+                      {showStudentSuggestions && studentSearchResults.length > 0 && (
+                        <div 
+                          ref={studentSuggestionsRef}
+                          className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                        >
+                          {studentSearchResults.map((student) => (
+                            <div
+                              key={student.id}
+                              onMouseDown={() => selectStudent(student)}
+                              className="p-3 hover:bg-purple-50 cursor-pointer border-b border-gray-100"
+                            >
+                              <div className="font-medium text-gray-900 text-sm">{student.full_name}</div>
+                              <div className="text-gray-600 text-xs">
+                                {student.grade} "{student.section}" - Apoderado: {student.guardian_name}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
-                {/* Mesa (solo Local) */}
-                {activeTab === 'walk-in' && (
-                  <input
-                    type="text"
-                    value={tableNumber}
-                    onChange={(e) => setTableNumber(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Número de mesa *"
-                    required
-                  />
-                )}
+                    {/* Apoderado */}
+                    <input
+                      type="text"
+                      value={guardianName}
+                      onChange={(e) => setGuardianName(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      placeholder="Nombre del apoderado *"
+                      required
+                    />
 
-                {/* Dirección (solo delivery) */}
-                {activeTab === 'delivery' && (
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Dirección de envío *"
-                    required
-                  />
+                    {/* Teléfono opcional */}
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      placeholder="Teléfono (opcional)"
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* Campos normales para otros tipos de pedido */}
+                    <div className="relative">
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={customerName}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        placeholder="Nombre del cliente *"
+                        required
+                      />
+                      {showSuggestions && customerSuggestions.length > 0 && (
+                        <div 
+                          ref={suggestionsRef}
+                          className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                        >
+                          {customerSuggestions.map((customer) => (
+                            <div
+                              key={customer.id}
+                              onMouseDown={() => selectCustomer(customer)}
+                              className="p-3 hover:bg-red-50 cursor-pointer border-b border-gray-100"
+                            >
+                              <div className="font-medium text-gray-900 text-sm">{customer.name}</div>
+                              <div className="text-gray-600 text-xs">📞 {customer.phone}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="Teléfono *"
+                      required
+                    />
+
+                    {activeTab === 'walk-in' && (
+                      <input
+                        type="text"
+                        value={tableNumber}
+                        onChange={(e) => setTableNumber(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        placeholder="Número de mesa *"
+                        required
+                      />
+                    )}
+
+                    {activeTab === 'delivery' && (
+                      <input
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        placeholder="Dirección de envío *"
+                        required
+                      />
+                    )}
+                  </>
                 )}
 
                 {/* Método de pago */}
-                {(activeTab === 'walk-in' || activeTab === 'delivery') && (
+                {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Método de Pago *
@@ -1819,16 +1951,14 @@ const OrderReception: React.FC = React.memo(() => {
                 )}
               </div>
               
-              {/* Buscador */}
               <input
                 type="text"
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-4"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-4"
                 placeholder="Buscar productos..."
               />
 
-              {/* Categorías desde la BD */}
               {!searchTerm && categories.length > 0 && (
                 <div className="flex space-x-2 mb-4 overflow-x-auto pb-2 hide-scrollbar">
                   {categories.map(category => (
@@ -1847,7 +1977,6 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               )}
 
-              {/* Grid de productos */}
               <div className="grid grid-cols-2 gap-3">
                 {currentItems.map((item: MenuItem) => {
                   const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
@@ -1921,7 +2050,7 @@ const OrderReception: React.FC = React.memo(() => {
                         </button>
                         <button
                           onClick={handleCreateOrder}
-                          disabled={!customerName || !phone || (activeTab === 'walk-in' && !tableNumber)}
+                          disabled={!isFormValid}
                           className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-4 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold"
                         >
                           Confirmar Pedido
@@ -1940,85 +2069,194 @@ const OrderReception: React.FC = React.memo(() => {
               {/* Columna izquierda: Formulario */}
               <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">Nuevo Pedido</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-gray-900">
+                      {activeTab === 'fullDay' ? 'Nuevo Pedido FullDay' : 'Nuevo Pedido'}
+                    </h2>
+                    <select
+                      value={activeTab}
+                      onChange={(e) => setActiveTab(e.target.value as any)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="phone">📞 Cocina</option>
+                      <option value="walk-in">👤 Local</option>
+                      <option value="delivery">🚚 Delivery</option>
+                      <option value="fullDay">🎒 FullDay</option>
+                    </select>
+                  </div>
                   
                   <div className="space-y-4">
-                    {/* Tipo de pedido */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-                      <select
-                        value={activeTab}
-                        onChange={(e) => setActiveTab(e.target.value as any)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      >
-                        <option value="phone">📞 Cocina</option>
-                        <option value="walk-in">👤 Local</option>
-                        <option value="delivery">🚚 Delivery</option>
-                      </select>
-                    </div>
-
-                    {/* Cliente */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
-                      <div className="relative mb-2">
-                        <input
-                          ref={inputRef}
-                          type="text"
-                          value={customerName}
-                          onChange={handleInputChange}
-                          placeholder="Nombre *"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                        />
-                        {showSuggestions && customerSuggestions.length > 0 && (
-                          <div 
-                            ref={suggestionsRef}
-                            className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
-                          >
-                            {customerSuggestions.map((customer) => (
-                              <div
-                                key={customer.id}
-                                onMouseDown={() => selectCustomer(customer)}
-                                className="p-2 hover:bg-red-50 cursor-pointer border-b border-gray-100"
-                              >
-                                <div className="font-medium text-gray-900 text-sm">{customer.name}</div>
-                                <div className="text-gray-600 text-xs">📞 {customer.phone}</div>
-                              </div>
-                            ))}
+                    {activeTab === 'fullDay' ? (
+                      <>
+                        {/* Grado y Sección */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Grado y Sección *
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <select
+                              value={selectedGrade}
+                              onChange={(e) => setSelectedGrade(e.target.value as Grade)}
+                              className="px-3 py-2 border border-gray-300 rounded-lg"
+                            >
+                              {GRADES.map(grade => (
+                                <option key={grade} value={grade}>{grade} Grado</option>
+                              ))}
+                            </select>
+                            <select
+                              value={selectedSection}
+                              onChange={(e) => setSelectedSection(e.target.value as Section)}
+                              className="px-3 py-2 border border-gray-300 rounded-lg"
+                            >
+                              {SECTIONS.map(section => (
+                                <option key={section} value={section}>Sección "{section}"</option>
+                              ))}
+                            </select>
                           </div>
+                        </div>
+
+                        {/* Buscador de alumnos */}
+                        <div className="relative">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Buscar alumno existente
+                          </label>
+                          <input
+                            type="text"
+                            value={studentName}
+                            onChange={handleStudentNameChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                            placeholder="Escribe para buscar..."
+                          />
+                          {showStudentSuggestions && studentSearchResults.length > 0 && (
+                            <div 
+                              ref={studentSuggestionsRef}
+                              className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                            >
+                              {studentSearchResults.map((student) => (
+                                <div
+                                  key={student.id}
+                                  onMouseDown={() => selectStudent(student)}
+                                  className="p-2 hover:bg-purple-50 cursor-pointer border-b"
+                                >
+                                  <div className="font-medium">{student.full_name}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {student.grade} "{student.section}" - {student.guardian_name}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Nombre del alumno */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Nombre del Alumno *
+                          </label>
+                          <input
+                            type="text"
+                            value={studentName}
+                            onChange={(e) => setStudentName(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            placeholder="Ej: Juan Pérez García"
+                            required
+                          />
+                        </div>
+
+                        {/* Nombre del apoderado */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Nombre del Apoderado *
+                          </label>
+                          <input
+                            type="text"
+                            value={guardianName}
+                            onChange={(e) => setGuardianName(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            placeholder="Ej: María Pérez"
+                            required
+                          />
+                        </div>
+
+                        {/* Teléfono opcional */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Teléfono (Opcional)
+                          </label>
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            placeholder="Ej: 987654321"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Cliente normal */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                          <div className="relative mb-2">
+                            <input
+                              ref={inputRef}
+                              type="text"
+                              value={customerName}
+                              onChange={handleInputChange}
+                              placeholder="Nombre *"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            />
+                            {showSuggestions && customerSuggestions.length > 0 && (
+                              <div 
+                                ref={suggestionsRef}
+                                className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                              >
+                                {customerSuggestions.map((customer) => (
+                                  <div
+                                    key={customer.id}
+                                    onMouseDown={() => selectCustomer(customer)}
+                                    className="p-2 hover:bg-red-50 cursor-pointer border-b border-gray-100"
+                                  >
+                                    <div className="font-medium text-gray-900 text-sm">{customer.name}</div>
+                                    <div className="text-gray-600 text-xs">📞 {customer.phone}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="Teléfono *"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                        </div>
+
+                        {activeTab === 'walk-in' && (
+                          <input
+                            type="text"
+                            value={tableNumber}
+                            onChange={(e) => setTableNumber(e.target.value)}
+                            placeholder="Mesa *"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
                         )}
-                      </div>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="Teléfono *"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      />
-                    </div>
 
-                    {/* Datos adicionales */}
-                    {activeTab === 'walk-in' && (
-                      <input
-                        type="text"
-                        value={tableNumber}
-                        onChange={(e) => setTableNumber(e.target.value)}
-                        placeholder="Mesa *"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      />
-                    )}
-
-                    {activeTab === 'delivery' && (
-                      <input
-                        type="text"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="Dirección *"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      />
+                        {activeTab === 'delivery' && (
+                          <input
+                            type="text"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            placeholder="Dirección *"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                        )}
+                      </>
                     )}
 
                     {/* Método de pago */}
-                    {(activeTab === 'walk-in' || activeTab === 'delivery') && (
+                    {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Pago</label>
                         <div className="grid grid-cols-3 gap-2">
@@ -2042,7 +2280,7 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               </div>
 
-              {/* Columna central: Menú */}
+              {/* Columna central: Menú (sin cambios) */}
               <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
                   <div className="flex items-center justify-between mb-4">
@@ -2066,7 +2304,6 @@ const OrderReception: React.FC = React.memo(() => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
                   />
 
-                  {/* Categorías desde la BD */}
                   {!searchTerm && categories.length > 0 && (
                     <div className="flex space-x-2 mb-4 overflow-x-auto">
                       {categories.map(category => (
@@ -2085,7 +2322,6 @@ const OrderReception: React.FC = React.memo(() => {
                     </div>
                   )}
 
-                  {/* Grid de productos */}
                   <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
                     {currentItems.map((item: MenuItem) => {
                       const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
@@ -2145,7 +2381,7 @@ const OrderReception: React.FC = React.memo(() => {
                         </button>
                         <button
                           onClick={handleCreateOrder}
-                          disabled={!customerName || !phone || (activeTab === 'walk-in' && !tableNumber)}
+                          disabled={!isFormValid}
                           className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 font-semibold"
                         >
                           Confirmar
@@ -2159,7 +2395,6 @@ const OrderReception: React.FC = React.memo(() => {
           </div>
         </div>
 
-        {/* Ticket oculto */}
         {lastOrder && <OrderTicket order={lastOrder} />}
       </div>
     </>
