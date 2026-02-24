@@ -46,9 +46,8 @@ const OrderRow = React.memo(({
   const displayNumber = getDisplayNumber(order);
   const numberType = getNumberType(order);
 
-  // Función para manejar el clic en el botón de edición
   const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Evitar que el evento se propague a la fila
+    e.stopPropagation();
     e.preventDefault();
     console.log('📝 Editando pago para orden:', order.id, order.orderNumber);
     onEditPayment(order);
@@ -93,7 +92,6 @@ const OrderRow = React.memo(({
             {getPaymentText(order.paymentMethod)}
           </span>
           
-          {/* Botón de edición de pago - Siempre visible para admins y managers */}
           {(user?.role === 'admin' || user?.role === 'manager') && (
             <button
               onClick={handleEditClick}
@@ -156,14 +154,10 @@ const OrdersManager: React.FC = () => {
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showOnlyToday, setShowOnlyToday] = useState(true);
   
-  // Estado para el modal de edición de pago
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  
-  // Estado para el modal de rango de fechas
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   
-  // Estado LOCAL para órdenes (para actualización inmediata)
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   
@@ -176,7 +170,8 @@ const OrdersManager: React.FC = () => {
     updateOrderPayment,
     exportOrdersToCSV,
     getTodayOrders,
-    fetchOrders
+    fetchOrders,
+    getRegularOrders // NUEVO: Solo pedidos regulares
   } = useOrders();
 
   const { 
@@ -186,13 +181,18 @@ const OrdersManager: React.FC = () => {
     closeCashRegister
   } = useSalesClosure();
 
+  // Obtener solo pedidos regulares (excluir FullDay)
+  const regularOrders = useMemo(() => {
+    return getRegularOrders();
+  }, [getRegularOrders, orders]); // Se actualiza cuando cambian las órdenes
+
   // Inicializar órdenes locales cuando se cargan las de la BD
   useEffect(() => {
-    if (orders.length > 0 && !isInitialized) {
-      setLocalOrders(orders);
+    if (regularOrders.length > 0 && !isInitialized) {
+      setLocalOrders(regularOrders);
       setIsInitialized(true);
     }
-  }, [orders, isInitialized]);
+  }, [regularOrders, isInitialized]);
 
   // ESCUCHAR EVENTOS DE NUEVAS ÓRDENES
   useEffect(() => {
@@ -200,12 +200,15 @@ const OrdersManager: React.FC = () => {
       const newOrder = event.detail;
       console.log('📦 Nueva orden recibida en OrdersManager:', newOrder);
       
-      setLocalOrders(prev => {
-        if (prev.some(o => o.id === newOrder.id)) {
-          return prev;
-        }
-        return [newOrder, ...prev];
-      });
+      // Solo agregar si es un pedido regular (no FullDay)
+      if (newOrder.orderType !== 'fullday') {
+        setLocalOrders(prev => {
+          if (prev.some(o => o.id === newOrder.id)) {
+            return prev;
+          }
+          return [newOrder, ...prev];
+        });
+      }
 
       setTimeout(() => {
         fetchOrders(500);
@@ -221,9 +224,9 @@ const OrdersManager: React.FC = () => {
 
   // Actualizar cuando cambian las órdenes de la BD
   useEffect(() => {
-    if (orders.length > 0) {
+    if (regularOrders.length > 0) {
       setLocalOrders(prev => {
-        const merged = [...orders];
+        const merged = [...regularOrders];
         const existingIds = new Set(merged.map(o => o.id));
         
         prev.forEach(order => {
@@ -237,7 +240,7 @@ const OrdersManager: React.FC = () => {
         );
       });
     }
-  }, [orders]);
+  }, [regularOrders]);
 
   // ============================================
   // MEMOIZACIONES
@@ -252,7 +255,7 @@ const OrdersManager: React.FC = () => {
     { value: 'created-asc', label: '📅 Más Antiguas' }
   ], []);
 
-  // Filtrar órdenes del día
+  // Filtrar órdenes del día (solo regulares)
   const todayOrders = useMemo(() => {
     if (!showOnlyToday) return localOrders;
     
@@ -298,11 +301,10 @@ const OrdersManager: React.FC = () => {
           case 'waiting-time':
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           case 'delivery-priority':
-            const typeOrder: Record<Order['source']['type'], number> = { 
+            const typeOrder: Record<string, number> = { 
               delivery: 1, 
               phone: 2, 
-              'walk-in': 3,
-              'fullDay': 4 
+              'walk-in': 3 
             };
             return typeOrder[a.source.type] - typeOrder[b.source.type];
           case 'total-desc':
@@ -398,35 +400,25 @@ const OrdersManager: React.FC = () => {
     }
   }, [deleteOrder]);
 
-  // ============================================
-  // FUNCIÓN PARA EDITAR MÉTODO DE PAGO
-  // ============================================
   const handleEditPayment = useCallback((order: Order) => {
     console.log('📝 Abriendo modal de edición de pago para orden:', order.id, order.orderNumber);
     setSelectedOrder(order);
     setShowPaymentModal(true);
   }, []);
 
-  // ============================================
-  // FUNCIÓN PARA GUARDAR CAMBIO DE MÉTODO DE PAGO
-  // ============================================
   const handleSavePaymentMethod = useCallback(async (orderId: string, newPaymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | undefined) => {
     console.log('💾 Guardando nuevo método de pago:', { orderId, newPaymentMethod });
     
     try {
-      // Guardar el método anterior por si hay que revertir
       const previousMethod = localOrders.find(o => o.id === orderId)?.paymentMethod;
       
-      // Actualizar UI inmediatamente (optimistic update)
       setLocalOrders(prev => prev.map(order => 
         order.id === orderId ? { ...order, paymentMethod: newPaymentMethod } : order
       ));
 
-      // Llamar al hook para actualizar en Supabase
       const result = await updateOrderPayment(orderId, newPaymentMethod);
       
       if (!result.success) {
-        // Revertir en caso de error
         setLocalOrders(prev => prev.map(order => 
           order.id === orderId ? { ...order, paymentMethod: previousMethod } : order
         ));
@@ -443,15 +435,12 @@ const OrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment, localOrders]);
 
-  // ============================================
-  // FUNCIONES PARA EXPORTAR POR RANGO DE FECHAS
-  // ============================================
   const handleExportExcel = useCallback((startDate: Date, endDate: Date) => {
-    exportOrdersByDateRange(orders, startDate, endDate);
-  }, [orders]);
+    exportOrdersByDateRange(regularOrders, startDate, endDate);
+  }, [regularOrders]);
 
   const handlePrintTicket = useCallback((startDate: Date, endDate: Date) => {
-    const filteredOrders = orders.filter(order => {
+    const filteredOrders = regularOrders.filter(order => {
       const orderDate = new Date(order.createdAt);
       orderDate.setHours(0, 0, 0, 0);
       const start = new Date(startDate);
@@ -468,25 +457,25 @@ const OrdersManager: React.FC = () => {
 
     const summary = generateTicketSummary(filteredOrders, startDate, endDate);
     printResumenTicket(summary, startDate, endDate);
-  }, [orders]);
+  }, [regularOrders]);
 
   const handleExportTodayCSV = useCallback(() => {
-    const todayOrders = getTodayOrders();
+    const todayOrders = getTodayOrders().filter(order => order.orderType !== 'fullday');
     exportOrdersToCSV(todayOrders);
   }, [getTodayOrders, exportOrdersToCSV]);
 
   const handleExportAllCSV = useCallback(() => {
-    exportOrdersToCSV(orders);
-  }, [orders, exportOrdersToCSV]);
+    exportOrdersToCSV(regularOrders);
+  }, [regularOrders, exportOrdersToCSV]);
 
   const handleExportTodayExcel = useCallback(() => {
-    const todayOrders = getTodayOrders();
+    const todayOrders = getTodayOrders().filter(order => order.orderType !== 'fullday');
     exportOrdersToExcel(todayOrders, 'today');
   }, [getTodayOrders]);
 
   const handleExportAllExcel = useCallback(() => {
-    exportOrdersToExcel(orders, 'all');
-  }, [orders]);
+    exportOrdersToExcel(regularOrders, 'all');
+  }, [regularOrders]);
 
   const handleNewOrder = useCallback(() => {
     window.location.hash = '#reception';
@@ -513,13 +502,13 @@ const OrdersManager: React.FC = () => {
         setShowCashModal(false);
       }
     } else {
-      const result = await closeCashRegister(orders, data.finalCash!, data.notes || '');
+      const result = await closeCashRegister(regularOrders, data.finalCash!, data.notes || '');
       if (result.success) {
         alert('✅ Caja cerrada correctamente');
         setShowCashModal(false);
       }
     }
-  }, [cashModalType, openCashRegister, closeCashRegister, orders]);
+  }, [cashModalType, openCashRegister, closeCashRegister, regularOrders]);
 
   const handleToggleHistory = useCallback(() => {
     setShowHistory(prev => !prev);
@@ -541,10 +530,6 @@ const OrdersManager: React.FC = () => {
     loadedItems: pagination.loadedItems,
     onLoadMore: pagination.loadMore,
   } : {};
-
-  // ============================================
-  // RENDERIZADO
-  // ============================================
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -590,7 +575,7 @@ const OrdersManager: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Órdenes</h2>
           <p className="text-sm text-gray-600 mt-1">
-            {filteredAndSortedOrders.length} órdenes encontradas
+            {filteredAndSortedOrders.length} órdenes encontradas (excluye FullDay)
           </p>
         </div>
         
@@ -769,8 +754,8 @@ const OrdersManager: React.FC = () => {
         ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             {showOnlyToday 
-              ? 'No hay órdenes para hoy' 
-              : 'No hay órdenes para mostrar'}
+              ? 'No hay órdenes regulares para hoy' 
+              : 'No hay órdenes regulares para mostrar'}
           </div>
         ) : (
           <div className="overflow-x-auto">
