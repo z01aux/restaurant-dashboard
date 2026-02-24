@@ -1,28 +1,25 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// Gestor exclusivo para pedidos FullDay
+// Gestor exclusivo para pedidos FullDay (usando tabla fullday)
 // ============================================
 
 import React, { useState, useMemo } from 'react';
-import { useOrders } from '../../hooks/useOrders';
-import { GraduationCap, Download, Calendar, DollarSign, Users } from 'lucide-react'; // Eliminado 'Filter' que no se usaba
+import { useFullDay } from '../../hooks/useFullDay';
+import { GraduationCap, Download, Calendar, DollarSign, Users, Search } from 'lucide-react';
 
 export const FullDayOrdersManager: React.FC = () => {
-  const { getFullDayOrders } = useOrders();
+  const { orders, loading } = useFullDay();
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fullDayOrders = getFullDayOrders();
-
-  // Filtrar por fecha
   const filteredByDate = useMemo(() => {
     const now = new Date();
     const today = new Date(now.setHours(0, 0, 0, 0));
     const weekAgo = new Date(now.setDate(now.getDate() - 7));
     const monthAgo = new Date(now.setMonth(now.getMonth() - 1));
 
-    return fullDayOrders.filter(order => {
-      const orderDate = new Date(order.createdAt);
+    return orders.filter(order => {
+      const orderDate = new Date(order.created_at);
       orderDate.setHours(0, 0, 0, 0);
 
       switch (dateFilter) {
@@ -36,39 +33,35 @@ export const FullDayOrdersManager: React.FC = () => {
           return true;
       }
     });
-  }, [fullDayOrders, dateFilter]);
+  }, [orders, dateFilter]);
 
-  // Filtrar por búsqueda
   const filteredOrders = useMemo(() => {
     if (!searchTerm.trim()) return filteredByDate;
     
     const term = searchTerm.toLowerCase();
     return filteredByDate.filter(order => 
-      order.studentInfo?.fullName.toLowerCase().includes(term) ||
-      order.studentInfo?.guardianName.toLowerCase().includes(term) ||
-      order.phone.includes(term) ||
-      order.orderNumber?.toLowerCase().includes(term)
+      order.student_name.toLowerCase().includes(term) ||
+      order.guardian_name.toLowerCase().includes(term) ||
+      order.phone?.toLowerCase().includes(term) ||
+      order.order_number?.toLowerCase().includes(term)
     );
   }, [filteredByDate, searchTerm]);
 
-  // Calcular estadísticas
   const stats = useMemo(() => {
     const total = filteredOrders.reduce((sum, o) => sum + o.total, 0);
     const count = filteredOrders.length;
     const average = count > 0 ? total / count : 0;
 
-    // Ventas por método de pago
     const byPayment = {
-      EFECTIVO: filteredOrders.filter(o => o.paymentMethod === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0),
-      YAPE_PLIN: filteredOrders.filter(o => o.paymentMethod === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0),
-      TARJETA: filteredOrders.filter(o => o.paymentMethod === 'TARJETA').reduce((sum, o) => sum + o.total, 0),
-      NO_APLICA: filteredOrders.filter(o => !o.paymentMethod).reduce((sum, o) => sum + o.total, 0)
+      EFECTIVO: filteredOrders.filter(o => o.payment_method === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0),
+      YAPE_PLIN: filteredOrders.filter(o => o.payment_method === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0),
+      TARJETA: filteredOrders.filter(o => o.payment_method === 'TARJETA').reduce((sum, o) => sum + o.total, 0),
+      NO_APLICA: filteredOrders.filter(o => !o.payment_method).reduce((sum, o) => sum + o.total, 0)
     };
 
     return { total, count, average, byPayment };
   }, [filteredOrders]);
 
-  // Exportar a CSV
   const exportToCSV = () => {
     if (filteredOrders.length === 0) {
       alert('No hay pedidos FullDay para exportar');
@@ -86,27 +79,29 @@ export const FullDayOrdersManager: React.FC = () => {
       'TELÉFONO',
       'MONTO',
       'MÉTODO PAGO',
+      'ESTADO',
       'PRODUCTOS'
     ];
 
     const csvData = filteredOrders.map(order => {
-      const fecha = new Date(order.createdAt).toLocaleDateString();
-      const hora = new Date(order.createdAt).toLocaleTimeString();
+      const fecha = new Date(order.created_at).toLocaleDateString();
+      const hora = new Date(order.created_at).toLocaleTimeString();
       const productos = order.items.map(item => 
-        `${item.quantity}x ${item.menuItem.name}`
+        `${item.quantity}x ${item.name}`
       ).join(' | ');
 
       return [
         fecha,
         hora,
-        order.orderNumber || `ORD-${order.id.slice(-8)}`,
-        order.studentInfo?.fullName || order.customerName,
-        order.studentInfo?.grade || '',
-        order.studentInfo?.section || '',
-        order.studentInfo?.guardianName || '',
-        order.phone,
+        order.order_number,
+        order.student_name,
+        order.grade,
+        order.section,
+        order.guardian_name,
+        order.phone || '',
         `S/ ${order.total.toFixed(2)}`,
-        order.paymentMethod || 'NO APLICA',
+        order.payment_method || 'NO APLICA',
+        order.status,
         productos
       ];
     });
@@ -129,12 +124,33 @@ export const FullDayOrdersManager: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const getStatusColor = (status: string) => {
+    const colors = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      preparing: 'bg-blue-100 text-blue-800',
+      ready: 'bg-green-100 text-green-800',
+      delivered: 'bg-indigo-100 text-indigo-800',
+      cancelled: 'bg-red-100 text-red-800'
+    };
+    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getStatusText = (status: string) => {
+    const texts = {
+      pending: 'Pendiente',
+      preparing: 'Preparando',
+      ready: 'Listo',
+      delivered: 'Entregado',
+      cancelled: 'Cancelado'
+    };
+    return texts[status as keyof typeof texts] || status;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
           
-          {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
             <div>
               <div className="flex items-center space-x-3 mb-2">
@@ -149,18 +165,17 @@ export const FullDayOrdersManager: React.FC = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              {/* Buscador */}
               <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Buscar alumno o apoderado..."
-                  className="pl-4 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 w-full sm:w-64"
+                  className="pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 w-full sm:w-64"
                 />
               </div>
 
-              {/* Filtro de fecha */}
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value as any)}
@@ -172,7 +187,6 @@ export const FullDayOrdersManager: React.FC = () => {
                 <option value="all">Todos</option>
               </select>
 
-              {/* Botón exportar */}
               <button
                 onClick={exportToCSV}
                 className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg text-sm flex items-center justify-center space-x-2 hover:shadow-md transition-all"
@@ -183,7 +197,6 @@ export const FullDayOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Estadísticas rápidas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
             <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
               <div className="text-sm text-purple-600 font-medium flex items-center">
@@ -211,9 +224,13 @@ export const FullDayOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Lista de pedidos */}
           <div className="space-y-4">
-            {filteredOrders.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+                <p className="text-gray-600 mt-2">Cargando pedidos...</p>
+              </div>
+            ) : filteredOrders.length === 0 ? (
               <div className="text-center py-12">
                 <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -233,48 +250,39 @@ export const FullDayOrdersManager: React.FC = () => {
                 >
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                     
-                    {/* Información principal */}
                     <div className="flex-1">
-                      {/* Header de la orden */}
                       <div className="flex items-center space-x-3 mb-3">
                         <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
-                          #{order.orderNumber || order.id.slice(-8)}
+                          #{order.order_number}
+                        </span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
+                          {getStatusText(order.status)}
                         </span>
                         <span className="text-sm text-gray-500 flex items-center">
                           <Calendar size={14} className="mr-1" />
-                          {new Date(order.createdAt).toLocaleString()}
+                          {new Date(order.created_at).toLocaleString()}
                         </span>
                       </div>
 
-                      {/* Grid de información del alumno */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Alumno</div>
-                          <div className="font-medium text-gray-900">
-                            {order.studentInfo?.fullName || order.customerName}
-                          </div>
+                          <div className="font-medium text-gray-900">{order.student_name}</div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Grado y Sección</div>
-                          <div className="font-medium text-gray-900">
-                            {order.studentInfo?.grade} "{order.studentInfo?.section}"
-                          </div>
+                          <div className="font-medium text-gray-900">{order.grade} "{order.section}"</div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Apoderado</div>
-                          <div className="font-medium text-gray-900">
-                            {order.studentInfo?.guardianName}
-                          </div>
+                          <div className="font-medium text-gray-900">{order.guardian_name}</div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Teléfono</div>
-                          <div className="font-medium text-gray-900">
-                            {order.phone}
-                          </div>
+                          <div className="font-medium text-gray-900">{order.phone || 'No registrado'}</div>
                         </div>
                       </div>
 
-                      {/* Productos */}
                       <div>
                         <div className="text-xs text-gray-500 mb-2">Productos</div>
                         <div className="flex flex-wrap gap-2">
@@ -284,7 +292,7 @@ export const FullDayOrdersManager: React.FC = () => {
                               className="bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm"
                             >
                               <span className="font-semibold text-purple-600">{item.quantity}x</span>
-                              <span className="ml-2 text-gray-700">{item.menuItem.name}</span>
+                              <span className="ml-2 text-gray-700">{item.name}</span>
                               {item.notes && (
                                 <span className="ml-2 text-xs text-gray-500 italic">
                                   (Nota: {item.notes})
@@ -296,7 +304,6 @@ export const FullDayOrdersManager: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Total y método de pago */}
                     <div className="lg:text-right flex lg:block items-center justify-between lg:min-w-[200px]">
                       <div>
                         <div className="text-sm text-gray-500 mb-1">Total</div>
@@ -306,18 +313,17 @@ export const FullDayOrdersManager: React.FC = () => {
                       </div>
                       <div className="mt-2">
                         <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                          order.paymentMethod === 'EFECTIVO' ? 'bg-green-100 text-green-800' :
-                          order.paymentMethod === 'YAPE/PLIN' ? 'bg-purple-100 text-purple-800' :
-                          order.paymentMethod === 'TARJETA' ? 'bg-blue-100 text-blue-800' :
+                          order.payment_method === 'EFECTIVO' ? 'bg-green-100 text-green-800' :
+                          order.payment_method === 'YAPE/PLIN' ? 'bg-purple-100 text-purple-800' :
+                          order.payment_method === 'TARJETA' ? 'bg-blue-100 text-blue-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {order.paymentMethod || 'NO APLICA'}
+                          {order.payment_method || 'NO APLICA'}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Notas adicionales */}
                   {order.notes && (
                     <div className="mt-4 pt-3 border-t border-gray-100">
                       <div className="text-xs text-gray-500 mb-1">Notas adicionales</div>
@@ -331,12 +337,11 @@ export const FullDayOrdersManager: React.FC = () => {
             )}
           </div>
 
-          {/* Resumen final */}
           {filteredOrders.length > 0 && (
             <div className="mt-6 pt-4 border-t border-gray-200">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">
-                  Mostrando {filteredOrders.length} de {fullDayOrders.length} pedidos FullDay
+                  Mostrando {filteredOrders.length} de {orders.length} pedidos FullDay
                 </span>
                 <span className="font-semibold text-purple-600">
                   Total: S/ {stats.total.toFixed(2)}

@@ -11,6 +11,7 @@ import { useOrders } from '../../hooks/useOrders';
 import { useOrderContext } from '../../contexts/OrderContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudents } from '../../hooks/useStudents';
+import { useFullDay } from '../../hooks/useFullDay';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 import { supabase } from '../../lib/supabase';
 
@@ -979,6 +980,7 @@ const OrderReception: React.FC = React.memo(() => {
   const { getDailySpecialsByCategory, getAllDailySpecials, refreshMenu } = useMenu();
   const { categories: dbCategories } = useCategories();
   const { createOrder } = useOrders();
+  const { createOrder: createFullDayOrder } = useFullDay();
   const { addNewOrder } = useOrderContext();
   const { searchStudents, searchResults } = useStudents();
 
@@ -1569,61 +1571,112 @@ const OrderReception: React.FC = React.memo(() => {
     try {
       const total = getTotal();
       
-      const orderData: any = {
-        customerName: activeTab === 'fullDay' ? studentName : customerName,
-        phone: activeTab === 'fullDay' ? (phone || 'Sin teléfono') : phone,
-        address: activeTab === 'delivery' ? address : undefined,
-        tableNumber: activeTab === 'walk-in' ? tableNumber : undefined,
-        source: {
-          type: activeTab,
-          ...(activeTab === 'delivery' && { deliveryAddress: address })
-        },
-        notes: orderNotes,
-        paymentMethod: activeTab !== 'phone' ? paymentMethod : undefined,
-        items: cart.map(item => ({
-          menuItem: {
-            id: item.menuItem.id,
-            name: item.menuItem.name,
-            price: item.menuItem.price,
-          },
-          quantity: item.quantity,
-          notes: item.notes,
-        }))
-      };
-
-      if (activeTab === 'fullDay' && selectedStudentId) {
-        orderData.studentId = selectedStudentId;
-      }
-
-      const tempOrder: Order = {
-        id: 'temp-' + Date.now(),
-        orderNumber: `ORD-${Date.now().toString().slice(-8)}`,
-        kitchenNumber: activeTab === 'phone' ? `COM-${Date.now().toString().slice(-8)}` : undefined,
-        items: cart,
-        status: 'pending',
-        createdAt: new Date(),
-        total: total,
-        customerName: orderData.customerName,
-        phone: orderData.phone,
-        address: orderData.address,
-        tableNumber: orderData.tableNumber,
-        source: orderData.source,
-        notes: orderNotes,
-        paymentMethod: orderData.paymentMethod,
-        studentId: orderData.studentId,
-        studentInfo: activeTab === 'fullDay' ? {
-          fullName: studentName,
+      if (activeTab === 'fullDay') {
+        // Crear pedido en tabla fullday
+        const result = await createFullDayOrder({
+          student_id: selectedStudentId,
+          student_name: studentName,
           grade: selectedGrade,
           section: selectedSection,
-          guardianName: guardianName,
-          phone: phone
-        } : undefined,
-        orderType: activeTab === 'fullDay' ? 'fullday' : 'regular' // CAMPO OBLIGATORIO
-      };
+          guardian_name: guardianName,
+          phone: phone || undefined,
+          items: cart.map(item => ({
+            menuItem: {
+              id: item.menuItem.id,
+              name: item.menuItem.name,
+              price: item.menuItem.price,
+            },
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+          payment_method: paymentMethod,
+          notes: orderNotes
+        });
 
-      setLastOrder(tempOrder);
-      addNewOrder(tempOrder);
+        if (result.success) {
+          showToast('✅ Pedido FullDay guardado', 'success');
+          
+          const tempOrder: Order = {
+            id: 'temp-' + Date.now(),
+            orderNumber: `FLD-${Date.now().toString().slice(-8)}`,
+            items: cart,
+            status: 'pending',
+            createdAt: new Date(),
+            total: total,
+            customerName: studentName,
+            phone: phone || 'Sin teléfono',
+            source: { type: 'fullDay' },
+            notes: orderNotes,
+            paymentMethod: paymentMethod,
+            studentInfo: {
+              fullName: studentName,
+              grade: selectedGrade,
+              section: selectedSection,
+              guardianName: guardianName,
+              phone: phone
+            },
+            orderType: 'fullday'
+          };
+          
+          printOrderImmediately(tempOrder);
+        } else {
+          showToast('❌ Error al guardar: ' + result.error, 'error');
+        }
+      } else {
+        // Crear pedido regular en tabla orders
+        const orderData: any = {
+          customerName: customerName,
+          phone: phone,
+          address: activeTab === 'delivery' ? address : undefined,
+          tableNumber: activeTab === 'walk-in' ? tableNumber : undefined,
+          source: {
+            type: activeTab,
+            ...(activeTab === 'delivery' && { deliveryAddress: address })
+          },
+          notes: orderNotes,
+          paymentMethod: activeTab !== 'phone' ? paymentMethod : undefined,
+          items: cart.map(item => ({
+            menuItem: {
+              id: item.menuItem.id,
+              name: item.menuItem.name,
+              price: item.menuItem.price,
+            },
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+          orderType: 'regular'
+        };
+
+        const tempOrder: Order = {
+          id: 'temp-' + Date.now(),
+          orderNumber: `ORD-${Date.now().toString().slice(-8)}`,
+          kitchenNumber: activeTab === 'phone' ? `COM-${Date.now().toString().slice(-8)}` : undefined,
+          items: cart,
+          status: 'pending',
+          createdAt: new Date(),
+          total: total,
+          customerName: customerName,
+          phone: phone,
+          address: address,
+          tableNumber: tableNumber,
+          source: orderData.source,
+          notes: orderNotes,
+          paymentMethod: orderData.paymentMethod,
+          orderType: 'regular'
+        };
+
+        printOrderImmediately(tempOrder);
+
+        const result = await createOrder(orderData);
+
+        if (result.success) {
+          showToast('✅ Orden guardada', 'success');
+        } else {
+          showToast('❌ Error al guardar: ' + result.error, 'error');
+        }
+      }
       
+      // Limpiar todo después de crear el pedido
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -1637,27 +1690,17 @@ const OrderReception: React.FC = React.memo(() => {
       setSelectedStudentId(null);
       setShowCartDrawer(false);
       
-      showToast('✅ Creando orden...', 'success');
-      printOrderImmediately(tempOrder);
-
-      const result = await createOrder(orderData);
-
-      if (result.success) {
-        showToast('✅ Orden guardada', 'success');
-      } else {
-        showToast('❌ Error al guardar', 'error');
-      }
-      
     } catch (error: any) {
       showToast('❌ Error: ' + error.message, 'error');
+      console.error('Error in handleCreateOrder:', error);
     } finally {
       setIsCreatingOrder(false);
     }
   }, [
     cart, customerName, phone, activeTab, tableNumber, address, orderNotes, 
-    paymentMethod, createOrder, getTotal, showToast, printOrderImmediately, 
-    isCreatingOrder, addNewOrder, studentName, guardianName, selectedGrade,
-    selectedSection, selectedStudentId
+    paymentMethod, createOrder, createFullDayOrder, getTotal, showToast, 
+    printOrderImmediately, isCreatingOrder, studentName, guardianName, 
+    selectedGrade, selectedSection, selectedStudentId
   ]);
 
   const isFormValid = useMemo(() => {
@@ -1748,7 +1791,6 @@ const OrderReception: React.FC = React.memo(() => {
 
           {/* Contenido Móvil */}
           <div className="lg:hidden px-3 pt-4">
-            {/* Formulario de cliente móvil */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4">
               <h3 className="text-sm font-bold text-gray-900 mb-3">
                 {activeTab === 'fullDay' ? 'Datos del Alumno' : 'Datos del Cliente'}
@@ -1757,7 +1799,6 @@ const OrderReception: React.FC = React.memo(() => {
               <div className="space-y-3">
                 {activeTab === 'fullDay' ? (
                   <>
-                    {/* Grado y Sección */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Grado y Sección *
@@ -1784,7 +1825,6 @@ const OrderReception: React.FC = React.memo(() => {
                       </div>
                     </div>
 
-                    {/* Buscador de alumnos */}
                     <div className="relative">
                       <input
                         type="text"
@@ -1814,7 +1854,6 @@ const OrderReception: React.FC = React.memo(() => {
                       )}
                     </div>
 
-                    {/* Nombre del alumno */}
                     <input
                       type="text"
                       value={studentName}
@@ -1824,7 +1863,6 @@ const OrderReception: React.FC = React.memo(() => {
                       readOnly
                     />
 
-                    {/* Apoderado */}
                     <input
                       type="text"
                       value={guardianName}
@@ -1834,7 +1872,6 @@ const OrderReception: React.FC = React.memo(() => {
                       required
                     />
 
-                    {/* Teléfono opcional */}
                     <input
                       type="tel"
                       value={phone}
@@ -1845,7 +1882,6 @@ const OrderReception: React.FC = React.memo(() => {
                   </>
                 ) : (
                   <>
-                    {/* Buscador de clientes */}
                     <div className="relative">
                       <input
                         ref={inputRef}
@@ -1875,7 +1911,6 @@ const OrderReception: React.FC = React.memo(() => {
                       )}
                     </div>
 
-                    {/* Nombre del cliente */}
                     <input
                       type="text"
                       value={customerName}
@@ -1948,7 +1983,6 @@ const OrderReception: React.FC = React.memo(() => {
               </div>
             </div>
 
-            {/* Menú */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-20">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-gray-900">Menú del Día</h3>
@@ -2008,7 +2042,6 @@ const OrderReception: React.FC = React.memo(() => {
             </div>
           </div>
 
-          {/* Drawer del Carrito Móvil */}
           {showCartDrawer && (
             <div className="lg:hidden fixed inset-0 z-50">
               <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => handleShowCartDrawer(false)} />
@@ -2075,10 +2108,8 @@ const OrderReception: React.FC = React.memo(() => {
             </div>
           )}
 
-          {/* Versión Desktop */}
           <div className="hidden lg:block">
             <div className="grid grid-cols-3 gap-6">
-              {/* Columna izquierda: Formulario */}
               <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
                   <div className="flex items-center justify-between mb-6">
@@ -2100,7 +2131,6 @@ const OrderReception: React.FC = React.memo(() => {
                   <div className="space-y-4">
                     {activeTab === 'fullDay' ? (
                       <>
-                        {/* Grado y Sección */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Grado y Sección *
@@ -2127,7 +2157,6 @@ const OrderReception: React.FC = React.memo(() => {
                           </div>
                         </div>
 
-                        {/* Buscador de alumnos */}
                         <div className="relative">
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Buscar alumno existente
@@ -2160,7 +2189,6 @@ const OrderReception: React.FC = React.memo(() => {
                           )}
                         </div>
 
-                        {/* Nombre del alumno */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Nombre del Alumno *
@@ -2175,7 +2203,6 @@ const OrderReception: React.FC = React.memo(() => {
                           />
                         </div>
 
-                        {/* Nombre del apoderado */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Nombre del Apoderado *
@@ -2190,7 +2217,6 @@ const OrderReception: React.FC = React.memo(() => {
                           />
                         </div>
 
-                        {/* Teléfono opcional */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Teléfono (Opcional)
@@ -2206,7 +2232,6 @@ const OrderReception: React.FC = React.memo(() => {
                       </>
                     ) : (
                       <>
-                        {/* Buscador de clientes */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Buscar cliente</label>
                           <div className="relative mb-2">
@@ -2238,7 +2263,6 @@ const OrderReception: React.FC = React.memo(() => {
                           </div>
                         </div>
 
-                        {/* Nombre del cliente */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
                           <input
@@ -2305,7 +2329,6 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               </div>
 
-              {/* Columna central: Menú */}
               <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
                   <div className="flex items-center justify-between mb-4">
@@ -2366,7 +2389,6 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               </div>
 
-              {/* Columna derecha: Carrito */}
               <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">Pedido</h2>
