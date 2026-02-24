@@ -869,6 +869,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       'phone': 'COCINA',
       'walk-in': 'LOCAL', 
       'delivery': 'DELIVERY',
+      'fullDay': 'FULLDAY',
     };
     return sourceMap[sourceType] || sourceType;
   };
@@ -928,5 +929,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     </div>
   );
 };
+
 
 export default OrderTicket;
