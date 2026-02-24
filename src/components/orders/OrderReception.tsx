@@ -957,14 +957,18 @@ const OrderReception: React.FC = React.memo(() => {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [showMenuManager, setShowMenuManager] = useState(false);
   
+  // Estados para autocompletado de clientes
+  const [customerSearchTerm, setCustomerSearchTerm] = useState(''); // Término de búsqueda para clientes
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // Estados para FullDay
   const [selectedGrade, setSelectedGrade] = useState<Grade>(GRADES[0]);
   const [selectedSection, setSelectedSection] = useState<Section>(SECTIONS[0]);
   const [studentName, setStudentName] = useState('');
   const [guardianName, setGuardianName] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [studentSearchTerm, setStudentSearchTerm] = useState(''); // Término de búsqueda para alumnos
   const [studentSearchResults, setStudentSearchResults] = useState<any[]>([]);
   const [showStudentSuggestions, setShowStudentSuggestions] = useState(false);
 
@@ -1002,12 +1006,13 @@ const OrderReception: React.FC = React.memo(() => {
     return getDailySpecialsByCategory(activeCategory) || [];
   }, [allMenuItems, searchTerm, activeCategory, getDailySpecialsByCategory]);
 
+  // Efecto para búsqueda de clientes
   useEffect(() => {
-    if (customerName.trim().length > 1 && activeTab !== 'fullDay') {
-      const searchLower = customerName.toLowerCase();
+    if (customerSearchTerm.trim().length > 1 && activeTab !== 'fullDay') {
+      const searchLower = customerSearchTerm.toLowerCase();
       const filtered = customers.filter(customer =>
         customer.name.toLowerCase().includes(searchLower) ||
-        customer.phone.includes(customerName)
+        customer.phone.includes(customerSearchTerm)
       ).slice(0, 5);
       
       setCustomerSuggestions(filtered);
@@ -1016,23 +1021,25 @@ const OrderReception: React.FC = React.memo(() => {
       setCustomerSuggestions([]);
       setShowSuggestions(false);
     }
-  }, [customerName, customers, activeTab]);
+  }, [customerSearchTerm, customers, activeTab]);
 
+  // Efecto para búsqueda de alumnos
   useEffect(() => {
-    if (studentName.trim().length > 1 && activeTab === 'fullDay') {
-      searchStudents(studentName);
+    if (studentSearchTerm.trim().length > 1 && activeTab === 'fullDay') {
+      searchStudents(studentSearchTerm);
     } else {
       setStudentSearchResults([]);
       setShowStudentSuggestions(false);
     }
-  }, [studentName, activeTab, searchStudents]);
+  }, [studentSearchTerm, activeTab, searchStudents]);
 
-  // Actualizar resultados cuando cambia searchResults
+  // Actualizar resultados de alumnos
   useEffect(() => {
     setStudentSearchResults(searchResults);
     setShowStudentSuggestions(searchResults.length > 0);
   }, [searchResults]);
 
+  // Clic fuera de sugerencias
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
@@ -1050,14 +1057,18 @@ const OrderReception: React.FC = React.memo(() => {
     setToast({ message, type });
   }, []);
 
+  // Seleccionar cliente (para Cocina, Local, Delivery)
   const selectCustomer = useCallback((customer: any) => {
     setCustomerName(customer.name);
     setPhone(customer.phone || '');
     setAddress(customer.address || '');
+    // Limpiar el término de búsqueda para que desaparezcan las sugerencias
+    setCustomerSearchTerm('');
     setShowSuggestions(false);
     showToast(`Cliente seleccionado`, 'success');
   }, [showToast]);
 
+  // Seleccionar alumno (para FullDay)
   const selectStudent = useCallback((student: any) => {
     setStudentName(student.full_name);
     setSelectedGrade(student.grade as Grade);
@@ -1065,31 +1076,28 @@ const OrderReception: React.FC = React.memo(() => {
     setGuardianName(student.guardian_name);
     setPhone(student.phone || '');
     setSelectedStudentId(student.id);
-    // OCULTAR LAS SUGERENCIAS INMEDIATAMENTE
+    // Limpiar el término de búsqueda para que desaparezcan las sugerencias
+    setStudentSearchTerm('');
     setShowStudentSuggestions(false);
     setStudentSearchResults([]);
     showToast(`Alumno seleccionado`, 'success');
   }, [showToast]);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  // Manejar cambio en el campo de cliente
+  const handleCustomerSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    setCustomerSearchTerm(value);
+    // También actualizamos customerName para mantener compatibilidad
     setCustomerName(value);
-    if (activeTab !== 'fullDay') {
-      setShowSuggestions(value.length > 1);
-    }
-  }, [activeTab]);
+  }, []);
 
-  const handleStudentNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  // Manejar cambio en el campo de alumno
+  const handleStudentSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    setStudentSearchTerm(value);
+    // También actualizamos studentName para mantener compatibilidad
     setStudentName(value);
-    // Solo mostrar sugerencias si hay más de 1 carácter
-    if (value.length > 1) {
-      searchStudents(value);
-    } else {
-      setStudentSearchResults([]);
-      setShowStudentSuggestions(false);
-    }
-  }, [searchStudents]);
+  }, []);
 
   const addToCart = useCallback((menuItem: MenuItem) => {
     setCart(prev => {
@@ -1635,8 +1643,11 @@ const OrderReception: React.FC = React.memo(() => {
       setAddress('');
       setTableNumber('');
       setOrderNotes('');
+      // Limpiar campos de búsqueda
+      setCustomerSearchTerm('');
       setStudentName('');
       setGuardianName('');
+      setStudentSearchTerm('');
       setSelectedStudentId(null);
       setShowCartDrawer(false);
       
@@ -1791,11 +1802,10 @@ const OrderReception: React.FC = React.memo(() => {
                     <div className="relative">
                       <input
                         type="text"
-                        value={studentName}
-                        onChange={handleStudentNameChange}
+                        value={studentSearchTerm}
+                        onChange={handleStudentSearchChange}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                        placeholder="Nombre del alumno *"
-                        required
+                        placeholder="Buscar alumno por nombre..."
                       />
                       {showStudentSuggestions && studentSearchResults.length > 0 && (
                         <div 
@@ -1818,6 +1828,16 @@ const OrderReception: React.FC = React.memo(() => {
                       )}
                     </div>
 
+                    {/* Nombre del alumno (solo lectura después de seleccionar) */}
+                    <input
+                      type="text"
+                      value={studentName}
+                      onChange={(e) => setStudentName(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-gray-50"
+                      placeholder="Nombre del alumno (se llena automáticamente)"
+                      readOnly
+                    />
+
                     {/* Apoderado */}
                     <input
                       type="text"
@@ -1839,14 +1859,15 @@ const OrderReception: React.FC = React.memo(() => {
                   </>
                 ) : (
                   <>
+                    {/* Buscador de clientes */}
                     <div className="relative">
                       <input
                         ref={inputRef}
                         type="text"
-                        value={customerName}
-                        onChange={handleInputChange}
+                        value={customerSearchTerm}
+                        onChange={handleCustomerSearchChange}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        placeholder="Nombre del cliente *"
+                        placeholder="Buscar cliente por nombre o teléfono..."
                         required
                       />
                       {showSuggestions && customerSuggestions.length > 0 && (
@@ -1867,6 +1888,16 @@ const OrderReception: React.FC = React.memo(() => {
                         </div>
                       )}
                     </div>
+
+                    {/* Nombre del cliente (solo lectura después de seleccionar) */}
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50"
+                      placeholder="Nombre del cliente (se llena automáticamente)"
+                      readOnly
+                    />
 
                     <input
                       type="tel"
@@ -2117,8 +2148,8 @@ const OrderReception: React.FC = React.memo(() => {
                           </label>
                           <input
                             type="text"
-                            value={studentName}
-                            onChange={handleStudentNameChange}
+                            value={studentSearchTerm}
+                            onChange={handleStudentSearchChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                             placeholder="Escribe para buscar..."
                           />
@@ -2143,7 +2174,7 @@ const OrderReception: React.FC = React.memo(() => {
                           )}
                         </div>
 
-                        {/* Nombre del alumno */}
+                        {/* Nombre del alumno (solo lectura después de seleccionar) */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Nombre del Alumno *
@@ -2152,9 +2183,9 @@ const OrderReception: React.FC = React.memo(() => {
                             type="text"
                             value={studentName}
                             onChange={(e) => setStudentName(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                            placeholder="Ej: Juan Pérez García"
-                            required
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                            placeholder="Se llena automáticamente"
+                            readOnly
                           />
                         </div>
 
@@ -2189,16 +2220,16 @@ const OrderReception: React.FC = React.memo(() => {
                       </>
                     ) : (
                       <>
-                        {/* Cliente normal */}
+                        {/* Buscador de clientes */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Buscar cliente</label>
                           <div className="relative mb-2">
                             <input
                               ref={inputRef}
                               type="text"
-                              value={customerName}
-                              onChange={handleInputChange}
-                              placeholder="Nombre *"
+                              value={customerSearchTerm}
+                              onChange={handleCustomerSearchChange}
+                              placeholder="Buscar por nombre o teléfono..."
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                             />
                             {showSuggestions && customerSuggestions.length > 0 && (
@@ -2219,14 +2250,28 @@ const OrderReception: React.FC = React.memo(() => {
                               </div>
                             )}
                           </div>
+                        </div>
+
+                        {/* Nombre del cliente (solo lectura después de seleccionar) */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
                           <input
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="Teléfono *"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            type="text"
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            placeholder="Se llena automáticamente"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                            readOnly
                           />
                         </div>
+
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="Teléfono *"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        />
 
                         {activeTab === 'walk-in' && (
                           <input
