@@ -1,12 +1,7 @@
-// ============================================
-// ARCHIVO: src/components/orders/OrderReception.tsx (COMPLETO ACTUALIZADO)
-// ============================================
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, 
-  Settings, RotateCcw, Search, Tag, FolderPlus, Edit, GraduationCap,
-  Users, Phone, User
+  Settings, RotateCcw, Search, Tag, FolderPlus, Edit, GraduationCap
 } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
@@ -290,7 +285,7 @@ const useCategories = () => {
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { error, data } = await supabase
         .from('categories')
         .select('name')
         .order('sort_order', { ascending: true })
@@ -352,13 +347,12 @@ const CategoryManagerModal: React.FC<{
     setError(null);
     
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('categories')
         .insert([{ 
           name: newCategory.trim(),
           sort_order: categories.length + 1
-        }])
-        .select();
+        }]);
 
       if (error) {
         if (error.code === '23505') {
@@ -963,11 +957,9 @@ const OrderReception: React.FC = React.memo(() => {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [showMenuManager, setShowMenuManager] = useState(false);
   
-  // Estados para autocompletado de clientes normales
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Estados para FullDay
   const [selectedGrade, setSelectedGrade] = useState<Grade>(GRADES[0]);
   const [selectedSection, setSelectedSection] = useState<Section>(SECTIONS[0]);
   const [studentName, setStudentName] = useState('');
@@ -1010,7 +1002,6 @@ const OrderReception: React.FC = React.memo(() => {
     return getDailySpecialsByCategory(activeCategory) || [];
   }, [allMenuItems, searchTerm, activeCategory, getDailySpecialsByCategory]);
 
-  // Sugerencias para clientes normales
   useEffect(() => {
     if (customerName.trim().length > 1 && activeTab !== 'fullDay') {
       const searchLower = customerName.toLowerCase();
@@ -1027,7 +1018,6 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [customerName, customers, activeTab]);
 
-  // Sugerencias para alumnos
   useEffect(() => {
     if (studentName.trim().length > 1 && activeTab === 'fullDay') {
       searchStudents(studentName);
@@ -1039,7 +1029,6 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [studentName, activeTab, searchStudents, searchResults]);
 
-  // Clic fuera de sugerencias
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
@@ -1067,8 +1056,8 @@ const OrderReception: React.FC = React.memo(() => {
 
   const selectStudent = useCallback((student: any) => {
     setStudentName(student.full_name);
-    setSelectedGrade(student.grade);
-    setSelectedSection(student.section);
+    setSelectedGrade(student.grade as Grade);
+    setSelectedSection(student.section as Section);
     setGuardianName(student.guardian_name);
     setPhone(student.phone || '');
     setSelectedStudentId(student.id);
@@ -1545,7 +1534,6 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    // Validaciones según el tipo de pedido
     if (activeTab === 'fullDay') {
       if (!studentName || !guardianName) {
         showToast('Completa los datos del alumno', 'error');
@@ -1575,7 +1563,6 @@ const OrderReception: React.FC = React.memo(() => {
     try {
       const total = getTotal();
       
-      // Preparar datos según el tipo
       const orderData: any = {
         customerName: activeTab === 'fullDay' ? studentName : customerName,
         phone: activeTab === 'fullDay' ? (phone || 'Sin teléfono') : phone,
@@ -1598,7 +1585,6 @@ const OrderReception: React.FC = React.memo(() => {
         }))
       };
 
-      // Si es FullDay, agregar studentId
       if (activeTab === 'fullDay' && selectedStudentId) {
         orderData.studentId = selectedStudentId;
       }
@@ -1680,7 +1666,6 @@ const OrderReception: React.FC = React.memo(() => {
       return customerName && phone && address;
     }
     
-    // phone
     return customerName && phone;
   }, [cart, activeTab, customerName, phone, tableNumber, address, studentName, guardianName]);
 
@@ -1842,7 +1827,6 @@ const OrderReception: React.FC = React.memo(() => {
                   </>
                 ) : (
                   <>
-                    {/* Campos normales para otros tipos de pedido */}
                     <div className="relative">
                       <input
                         ref={inputRef}
@@ -1905,7 +1889,6 @@ const OrderReception: React.FC = React.memo(() => {
                   </>
                 )}
 
-                {/* Método de pago */}
                 {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2255,7 +2238,6 @@ const OrderReception: React.FC = React.memo(() => {
                       </>
                     )}
 
-                    {/* Método de pago */}
                     {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Pago</label>
@@ -2280,7 +2262,7 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               </div>
 
-              {/* Columna central: Menú (sin cambios) */}
+              {/* Columna central: Menú */}
               <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
                   <div className="flex items-center justify-between mb-4">
