@@ -1,6 +1,6 @@
 // ============================================
-// ARCHIVO OPTIMIZADO: src/components/kitchen/KitchenManager.tsx
-// MEJORA: Polling más rápido (2 segundos)
+// ARCHIVO: src/components/kitchen/KitchenManager.tsx
+// Excluye pedidos FullDay - Solo cocina regular
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -40,7 +40,10 @@ const KitchenManager: React.FC = () => {
   const [lastOrderIds, setLastOrderIds] = useState<Set<string>>(new Set());
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const { orders, updateOrderStatus, fetchOrders } = useOrders();
+  const { getRegularOrders, updateOrderStatus, fetchOrders } = useOrders();
+  
+  // Obtener solo pedidos regulares (excluir FullDay)
+  const allOrders = getRegularOrders();
 
   // Inicializar AudioContext
   useEffect(() => {
@@ -61,20 +64,21 @@ const KitchenManager: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchOrders();
-    }, 2000); // Reducido de 5s a 2s
+    }, 2000);
     
     return () => {
       clearInterval(interval);
     };
   }, [fetchOrders]);
 
-  // Detectar nuevas órdenes
+  // Detectar nuevas órdenes (solo pedidos de cocina/phone)
   useEffect(() => {
-    const pendingOrders = orders.filter(order => order.status === 'pending');
-    const currentIds = new Set(pendingOrders.map(o => o.id));
+    const kitchenOrders = allOrders.filter(order => 
+      order.source.type === 'phone' && order.status === 'pending'
+    );
+    const currentIds = new Set(kitchenOrders.map(o => o.id));
     
-    // Encontrar nuevas órdenes
-    const newOrders = pendingOrders.filter(order => !lastOrderIds.has(order.id));
+    const newOrders = kitchenOrders.filter(order => !lastOrderIds.has(order.id));
     
     if (newOrders.length > 0) {
       newOrders.forEach(order => {
@@ -83,7 +87,7 @@ const KitchenManager: React.FC = () => {
     }
     
     setLastOrderIds(currentIds);
-  }, [orders]);
+  }, [allOrders, lastOrderIds]);
 
   // Mostrar notificación de nueva orden
   const showNewOrderNotification = (order: Order) => {
@@ -92,7 +96,7 @@ const KitchenManager: React.FC = () => {
     playNotificationSound();
   };
 
-  // Sonido de notificación mejorado
+  // Sonido de notificación
   const playNotificationSound = () => {
     try {
       if (!audioContextRef.current) return;
@@ -125,7 +129,7 @@ const KitchenManager: React.FC = () => {
   const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
     const result = await updateOrderStatus(orderId, newStatus);
     if (result.success && newStatus === 'ready') {
-      const order = orders.find(o => o.id === orderId);
+      const order = allOrders.find(o => o.id === orderId);
       if (order) {
         setToast({ 
           message: `✅ Pedido #${order.kitchenNumber || `COM-${orderId.slice(-8)}`} listo`, 
@@ -135,11 +139,14 @@ const KitchenManager: React.FC = () => {
     }
   };
 
-  // Filtrar órdenes por estado
-  const filteredOrders = orders.filter(order => {
+  // Filtrar órdenes por estado (solo pedidos de cocina)
+  const filteredOrders = allOrders.filter(order => {
+    if (order.source.type !== 'phone') return false; // Solo pedidos por teléfono/cocina
+    
     if (activeTab === 'pending') return order.status === 'pending';
     if (activeTab === 'preparing') return order.status === 'preparing';
-    return order.status === 'ready';
+    if (activeTab === 'ready') return order.status === 'ready';
+    return false;
   });
 
   // Obtener icono según el estado
@@ -187,6 +194,12 @@ const KitchenManager: React.FC = () => {
     return `${diffMins} min`;
   };
 
+  // Contar órdenes por estado (solo cocina)
+  const pendingCount = allOrders.filter(o => o.source.type === 'phone' && o.status === 'pending').length;
+  const preparingCount = allOrders.filter(o => o.source.type === 'phone' && o.status === 'preparing').length;
+  const readyCount = allOrders.filter(o => o.source.type === 'phone' && o.status === 'ready').length;
+  const activeCount = pendingCount + preparingCount;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 p-6">
       {toast && (
@@ -203,7 +216,7 @@ const KitchenManager: React.FC = () => {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">👨‍🍳 Cocina</h1>
-              <p className="text-gray-600 mt-1">Actualización cada 2 segundos</p>
+              <p className="text-gray-600 mt-1">Actualización cada 2 segundos - Solo pedidos de cocina</p>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -213,7 +226,7 @@ const KitchenManager: React.FC = () => {
               <div className="text-right">
                 <div className="text-sm text-gray-600">Activas</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  {orders.filter(o => o.status === 'pending' || o.status === 'preparing').length}
+                  {activeCount}
                 </div>
               </div>
             </div>
@@ -222,9 +235,9 @@ const KitchenManager: React.FC = () => {
           {/* Tabs de estado */}
           <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
             {[
-              { id: 'pending' as const, name: '🕒 Pendientes', count: orders.filter(o => o.status === 'pending').length },
-              { id: 'preparing' as const, name: '👨‍🍳 En Cocina', count: orders.filter(o => o.status === 'preparing').length },
-              { id: 'ready' as const, name: '✅ Listos', count: orders.filter(o => o.status === 'ready').length }
+              { id: 'pending' as const, name: '🕒 Pendientes', count: pendingCount },
+              { id: 'preparing' as const, name: '👨‍🍳 En Cocina', count: preparingCount },
+              { id: 'ready' as const, name: '✅ Listos', count: readyCount }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -251,7 +264,7 @@ const KitchenManager: React.FC = () => {
               <div className="text-center py-12">
                 <div className="text-4xl text-gray-300 mb-4">✅</div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No hay pedidos
+                  No hay pedidos en cocina
                 </h3>
                 <p className="text-gray-500 text-sm">
                   Los nuevos pedidos aparecerán aquí automáticamente
@@ -290,10 +303,16 @@ const KitchenManager: React.FC = () => {
                           <div>
                             <span className="font-semibold">Tipo:</span> {
                               order.source.type === 'phone' ? '📞 Teléfono' :
-                              order.source.type === 'walk-in' ? '👤 Local' : '🚚 Delivery'
+                              order.source.type === 'walk-in' ? '👤 Local' : 
+                              order.source.type === 'delivery' ? '🚚 Delivery' : '🎒 FullDay'
                             }
                           </div>
                         </div>
+                        {order.phone && (
+                          <div className="text-sm text-gray-600 mt-1">
+                            <span className="font-semibold">Teléfono:</span> {order.phone}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -354,25 +373,25 @@ const KitchenManager: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="bg-yellow-50 rounded-lg p-4 text-center border border-yellow-200">
                 <div className="text-2xl font-bold text-yellow-600">
-                  {orders.filter(o => o.status === 'pending').length}
+                  {pendingCount}
                 </div>
                 <div className="text-sm text-gray-600">Pendientes</div>
               </div>
               <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-200">
                 <div className="text-2xl font-bold text-blue-600">
-                  {orders.filter(o => o.status === 'preparing').length}
+                  {preparingCount}
                 </div>
                 <div className="text-sm text-gray-600">En Cocina</div>
               </div>
               <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
                 <div className="text-2xl font-bold text-green-600">
-                  {orders.filter(o => o.status === 'ready').length}
+                  {readyCount}
                 </div>
                 <div className="text-sm text-gray-600">Listos</div>
               </div>
               <div className="bg-red-50 rounded-lg p-4 text-center border border-red-200">
                 <div className="text-2xl font-bold text-red-600">
-                  {orders.filter(o => o.status === 'pending' || o.status === 'preparing').length}
+                  {activeCount}
                 </div>
                 <div className="text-sm text-gray-600">Activas</div>
               </div>
