@@ -8,7 +8,6 @@ import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useOrders } from '../../hooks/useOrders';
-import { useOrderContext } from '../../contexts/OrderContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudents } from '../../hooks/useStudents';
 import { useFullDay } from '../../hooks/useFullDay';
@@ -980,6 +979,7 @@ const OrderReception: React.FC = React.memo(() => {
   const { categories: dbCategories } = useCategories();
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
+  const { searchStudents, searchResults } = useStudents(); // <-- IMPORTADO CORRECTAMENTE
 
   const isAdmin = user?.role === 'admin';
 
