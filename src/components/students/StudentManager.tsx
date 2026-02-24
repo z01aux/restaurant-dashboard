@@ -1,11 +1,11 @@
 // ============================================
-// ARCHIVO: src/components/students/StudentManager.tsx
+// ARCHIVO: src/components/students/StudentManager.tsx (CORREGIDO)
 // ============================================
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, Save, X, GraduationCap, Users, Phone, User } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
-import { GRADES, SECTIONS } from '../../types/student';
+import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 import { useAuth } from '../../hooks/useAuth';
 
 const StudentManager: React.FC = () => {
@@ -15,8 +15,8 @@ const StudentManager: React.FC = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
-    grade: GRADES[0],
-    section: SECTIONS[0],
+    grade: GRADES[0] as Grade,
+    section: SECTIONS[0] as Section,
     guardian_name: '',
     phone: ''
   });
@@ -38,8 +38,8 @@ const StudentManager: React.FC = () => {
     setEditingStudent(null);
     setFormData({
       full_name: '',
-      grade: GRADES[0],
-      section: SECTIONS[0],
+      grade: GRADES[0] as Grade,
+      section: SECTIONS[0] as Section,
       guardian_name: '',
       phone: ''
     });
@@ -50,8 +50,8 @@ const StudentManager: React.FC = () => {
     setEditingStudent(student);
     setFormData({
       full_name: student.full_name,
-      grade: student.grade,
-      section: student.section,
+      grade: student.grade as Grade,
+      section: student.section as Section,
       guardian_name: student.guardian_name,
       phone: student.phone || ''
     });
@@ -187,7 +187,7 @@ const StudentManager: React.FC = () => {
                       </label>
                       <select
                         value={formData.grade}
-                        onChange={(e) => setFormData({...formData, grade: e.target.value})}
+                        onChange={(e) => setFormData({...formData, grade: e.target.value as Grade})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         required
                         disabled={formLoading}
@@ -204,7 +204,7 @@ const StudentManager: React.FC = () => {
                       </label>
                       <select
                         value={formData.section}
-                        onChange={(e) => setFormData({...formData, section: e.target.value})}
+                        onChange={(e) => setFormData({...formData, section: e.target.value as Section})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         required
                         disabled={formLoading}
@@ -351,6 +351,28 @@ const StudentManager: React.FC = () => {
                 </div>
               ))
             )}
+          </div>
+
+          {/* Estadísticas */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-purple-50 rounded-lg p-4 text-center border border-purple-200">
+                <div className="text-2xl font-bold text-purple-600">{students.length}</div>
+                <div className="text-sm text-gray-600">Total Alumnos</div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-200">
+                <div className="text-2xl font-bold text-blue-600">
+                  {students.filter(s => s.phone).length}
+                </div>
+                <div className="text-sm text-gray-600">Con Teléfono</div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
+                <div className="text-2xl font-bold text-green-600">
+                  {[...new Set(students.map(s => s.grade))].length}
+                </div>
+                <div className="text-sm text-gray-600">Grados</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
