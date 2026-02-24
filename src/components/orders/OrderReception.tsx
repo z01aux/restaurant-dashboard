@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, 
-  Settings, RotateCcw, Search, Tag, FolderPlus, Edit, GraduationCap
+  Settings, RotateCcw, Search, Tag, FolderPlus, Edit
 } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import OrderTicket from './OrderTicket';
