@@ -9,7 +9,7 @@ import { useOrders } from '../../hooks/useOrders';
 import { GraduationCap, Download, Filter, Calendar, DollarSign, Users } from 'lucide-react';
 
 export const FullDayOrdersManager: React.FC = () => {
-  const { getFullDayOrders roboto } = useOrders();
+  const { getFullDayOrders } = useOrders(); // CORREGIDO: era "getFullDayOrders roboto"
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [searchTerm, setSearchTerm] = useState('');
 
