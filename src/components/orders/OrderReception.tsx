@@ -1021,13 +1021,17 @@ const OrderReception: React.FC = React.memo(() => {
   useEffect(() => {
     if (studentName.trim().length > 1 && activeTab === 'fullDay') {
       searchStudents(studentName);
-      setStudentSearchResults(searchResults);
-      setShowStudentSuggestions(searchResults.length > 0);
     } else {
       setStudentSearchResults([]);
       setShowStudentSuggestions(false);
     }
-  }, [studentName, activeTab, searchStudents, searchResults]);
+  }, [studentName, activeTab, searchStudents]);
+
+  // Actualizar resultados cuando cambia searchResults
+  useEffect(() => {
+    setStudentSearchResults(searchResults);
+    setShowStudentSuggestions(searchResults.length > 0);
+  }, [searchResults]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1061,7 +1065,9 @@ const OrderReception: React.FC = React.memo(() => {
     setGuardianName(student.guardian_name);
     setPhone(student.phone || '');
     setSelectedStudentId(student.id);
+    // OCULTAR LAS SUGERENCIAS INMEDIATAMENTE
     setShowStudentSuggestions(false);
+    setStudentSearchResults([]);
     showToast(`Alumno seleccionado`, 'success');
   }, [showToast]);
 
@@ -1076,8 +1082,14 @@ const OrderReception: React.FC = React.memo(() => {
   const handleStudentNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setStudentName(value);
-    setShowStudentSuggestions(value.length > 1);
-  }, []);
+    // Solo mostrar sugerencias si hay más de 1 carácter
+    if (value.length > 1) {
+      searchStudents(value);
+    } else {
+      setStudentSearchResults([]);
+      setShowStudentSuggestions(false);
+    }
+  }, [searchStudents]);
 
   const addToCart = useCallback((menuItem: MenuItem) => {
     setCart(prev => {
