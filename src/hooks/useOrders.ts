@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/hooks/useOrders.ts (COMPLETO ACTUALIZADO)
+// ARCHIVO: src/hooks/useOrders.ts (ACTUALIZADO)
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -70,7 +70,8 @@ export const useOrders = () => {
         items: orderItems,
         createdAt: new Date(dbOrder.created_at),
         updatedAt: new Date(dbOrder.updated_at),
-        studentId: dbOrder.student_id
+        studentId: dbOrder.student_id,
+        orderType: dbOrder.order_type as 'regular' | 'fullday' // NUEVO CAMPO
       };
     });
   };
@@ -141,6 +142,9 @@ export const useOrders = () => {
         0
       );
 
+      // Determinar order_type basado en source.type
+      const orderType = orderData.source.type === 'fullDay' ? 'fullday' : 'regular';
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -153,7 +157,8 @@ export const useOrders = () => {
           payment_method: orderData.paymentMethod,
           total: total,
           status: 'pending',
-          student_id: orderData.studentId || null
+          student_id: orderData.studentId || null,
+          order_type: orderType // NUEVO CAMPO
         }])
         .select('*, order_number, kitchen_number')
         .single();
@@ -203,7 +208,8 @@ export const useOrders = () => {
         })),
         createdAt: new Date(order.created_at),
         updatedAt: new Date(order.updated_at),
-        studentId: orderData.studentId
+        studentId: orderData.studentId,
+        orderType: orderType
       };
 
       setOrders(prev => [newOrder, ...prev]);
@@ -333,7 +339,8 @@ export const useOrders = () => {
       'N° ORDEN',
       'N° COMANDA',
       'TELÉFONO',
-      'PRODUCTOS'
+      'PRODUCTOS',
+      'TIPO' // Nuevo campo para diferenciar regular/fullday
     ];
 
     const csvData = ordersToExport.map(order => {
@@ -355,7 +362,8 @@ export const useOrders = () => {
         order.orderNumber || `ORD-${order.id.slice(-8)}`,
         order.kitchenNumber || `COM-${order.id.slice(-8)}`,
         order.phone,
-        productos
+        productos,
+        order.orderType === 'fullday' ? 'FULLDAY' : 'REGULAR'
       ];
     });
 
@@ -388,6 +396,15 @@ export const useOrders = () => {
     });
   }, [orders]);
 
+  // NUEVAS FUNCIONES PARA FILTRAR POR TIPO
+  const getRegularOrders = useCallback(() => {
+    return orders.filter(order => order.orderType === 'regular');
+  }, [orders]);
+
+  const getFullDayOrders = useCallback(() => {
+    return orders.filter(order => order.orderType === 'fullday');
+  }, [orders]);
+
   useEffect(() => {
     fetchOrders(500);
   }, []);
@@ -402,6 +419,8 @@ export const useOrders = () => {
     updateOrderPayment,
     deleteOrder,
     exportOrdersToCSV,
-    getTodayOrders
+    getTodayOrders,
+    getRegularOrders, // NUEVO
+    getFullDayOrders // NUEVO
   };
 };
