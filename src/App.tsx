@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/App.tsx (COMPLETO ACTUALIZADO)
+// ARCHIVO: src/App.tsx (ACTUALIZADO)
 // ============================================
 
 import React from 'react';
@@ -12,6 +12,7 @@ import CustomersManager from './components/customers/CustomersManager';
 import KitchenManager from './components/kitchen/KitchenManager';
 import UserManager from './components/users/UserManager';
 import StudentManager from './components/students/StudentManager';
+import { FullDayOrdersManager } from './components/fullday/FullDayOrdersManager'; // NUEVO
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 import { OrderProvider } from './contexts/OrderContext';
@@ -31,19 +32,22 @@ function App() {
     window.dispatchEvent(event);
   };
 
+  // Pestañas base para todos los usuarios (AHORA INCLUYE FULLDAY)
   const baseTabs = [
     { id: 'reception', name: '🎯 Recepción', shortName: '🎯' },
     { id: 'orders', name: '📋 Órdenes', shortName: '📋' },
+    { id: 'fullday', name: '🎒 FullDay', shortName: '🎒' }, // NUEVA PESTAÑA
     { id: 'menu', name: '🍽️ Menú', shortName: '🍽️' },
     { id: 'kitchen', name: '👨‍🍳 Cocina', shortName: '👨‍🍳' },
     { id: 'customers', name: '👥 Clientes', shortName: '👥' },
     { id: 'dashboard', name: '📊 Dashboard', shortName: '📊' },
   ];
 
+  // Solo administradores ven la pestaña de Usuarios y Alumnos
   const adminTabs = user?.role === 'admin' 
     ? [
         { id: 'users', name: '🔧 Usuarios', shortName: '🔧' },
-        { id: 'students', name: '🎒 Alumnos FullDay', shortName: '🎒' }
+        { id: 'students', name: '🎒 Alumnos', shortName: '🎒' }
       ]
     : [];
 
@@ -105,6 +109,7 @@ function App() {
           )}
 
           {activeTab === 'orders' && <OrdersManager />}
+          {activeTab === 'fullday' && <FullDayOrdersManager />} {/* NUEVA PESTAÑA */}
           {activeTab === 'menu' && <MenuManager />}
           {activeTab === 'customers' && <CustomersManager />}
           {activeTab === 'kitchen' && <KitchenManager />}
