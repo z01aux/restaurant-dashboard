@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/types/index.ts (COMPLETO)
+// ARCHIVO: src/types/index.ts (ACTUALIZADO)
 // ============================================
 
 export interface MenuItem {
@@ -48,6 +48,7 @@ export interface Order {
     guardianName: string;
     phone?: string;
   };
+  orderType: 'regular' | 'fullday'; // NUEVO CAMPO
 }
 
 export interface DatabaseOrder {
@@ -66,6 +67,7 @@ export interface DatabaseOrder {
   created_at: string;
   updated_at: string;
   student_id?: string;
+  order_type: string; // NUEVO CAMPO
 }
 
 export interface DatabaseOrderItem {
