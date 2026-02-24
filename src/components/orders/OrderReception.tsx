@@ -950,7 +950,6 @@ const OrderReception: React.FC = React.memo(() => {
   const [orderNotes, setOrderNotes] = useState('');
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('');
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -981,8 +980,6 @@ const OrderReception: React.FC = React.memo(() => {
   const { categories: dbCategories } = useCategories();
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
-  const { addNewOrder } = useOrderContext();
-  const { searchStudents, searchResults } = useStudents();
 
   const isAdmin = user?.role === 'admin';
 
@@ -1596,6 +1593,7 @@ const OrderReception: React.FC = React.memo(() => {
         if (result.success) {
           showToast('✅ Pedido FullDay guardado', 'success');
           
+          // Crear orden temporal solo para imprimir ticket
           const tempOrder: Order = {
             id: 'temp-' + Date.now(),
             orderNumber: `FLD-${Date.now().toString().slice(-8)}`,
@@ -2441,8 +2439,6 @@ const OrderReception: React.FC = React.memo(() => {
             </div>
           </div>
         </div>
-
-        {lastOrder && <OrderTicket order={lastOrder} />}
       </div>
     </>
   );
