@@ -1632,6 +1632,7 @@ const OrderReception: React.FC = React.memo(() => {
           guardianName: guardianName,
           phone: phone
         } : undefined
+        orderType: activeTab === 'fullDay' ? 'fullday' : 'regular' // <-- AÑADIR ESTA LÍNEA
       };
 
       setLastOrder(tempOrder);
@@ -2441,3 +2442,4 @@ const OrderReception: React.FC = React.memo(() => {
 });
 
 export default OrderReception;
+
