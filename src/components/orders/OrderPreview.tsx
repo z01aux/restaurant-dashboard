@@ -48,6 +48,7 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
       'phone': '📞 Teléfono',
       'walk-in': '👤 Presencial',
       'delivery': '🚚 Delivery',
+      'fullDay': '🎒 FullDay',
     };
     return sourceMap[sourceType] || sourceType;
   };
@@ -186,4 +187,5 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
       )}
     </div>
   );
+
 };
