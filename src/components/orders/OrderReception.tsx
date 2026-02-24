@@ -957,18 +957,16 @@ const OrderReception: React.FC = React.memo(() => {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [showMenuManager, setShowMenuManager] = useState(false);
   
-  // Estados para autocompletado de clientes
-  const [customerSearchTerm, setCustomerSearchTerm] = useState(''); // Término de búsqueda para clientes
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Estados para FullDay
   const [selectedGrade, setSelectedGrade] = useState<Grade>(GRADES[0]);
   const [selectedSection, setSelectedSection] = useState<Section>(SECTIONS[0]);
   const [studentName, setStudentName] = useState('');
   const [guardianName, setGuardianName] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [studentSearchTerm, setStudentSearchTerm] = useState(''); // Término de búsqueda para alumnos
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [studentSearchResults, setStudentSearchResults] = useState<any[]>([]);
   const [showStudentSuggestions, setShowStudentSuggestions] = useState(false);
 
@@ -1006,7 +1004,6 @@ const OrderReception: React.FC = React.memo(() => {
     return getDailySpecialsByCategory(activeCategory) || [];
   }, [allMenuItems, searchTerm, activeCategory, getDailySpecialsByCategory]);
 
-  // Efecto para búsqueda de clientes
   useEffect(() => {
     if (customerSearchTerm.trim().length > 1 && activeTab !== 'fullDay') {
       const searchLower = customerSearchTerm.toLowerCase();
@@ -1023,7 +1020,6 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [customerSearchTerm, customers, activeTab]);
 
-  // Efecto para búsqueda de alumnos
   useEffect(() => {
     if (studentSearchTerm.trim().length > 1 && activeTab === 'fullDay') {
       searchStudents(studentSearchTerm);
@@ -1033,13 +1029,11 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [studentSearchTerm, activeTab, searchStudents]);
 
-  // Actualizar resultados de alumnos
   useEffect(() => {
     setStudentSearchResults(searchResults);
     setShowStudentSuggestions(searchResults.length > 0);
   }, [searchResults]);
 
-  // Clic fuera de sugerencias
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
@@ -1057,18 +1051,15 @@ const OrderReception: React.FC = React.memo(() => {
     setToast({ message, type });
   }, []);
 
-  // Seleccionar cliente (para Cocina, Local, Delivery)
   const selectCustomer = useCallback((customer: any) => {
     setCustomerName(customer.name);
     setPhone(customer.phone || '');
     setAddress(customer.address || '');
-    // Limpiar el término de búsqueda para que desaparezcan las sugerencias
     setCustomerSearchTerm('');
     setShowSuggestions(false);
     showToast(`Cliente seleccionado`, 'success');
   }, [showToast]);
 
-  // Seleccionar alumno (para FullDay)
   const selectStudent = useCallback((student: any) => {
     setStudentName(student.full_name);
     setSelectedGrade(student.grade as Grade);
@@ -1076,26 +1067,21 @@ const OrderReception: React.FC = React.memo(() => {
     setGuardianName(student.guardian_name);
     setPhone(student.phone || '');
     setSelectedStudentId(student.id);
-    // Limpiar el término de búsqueda para que desaparezcan las sugerencias
     setStudentSearchTerm('');
     setShowStudentSuggestions(false);
     setStudentSearchResults([]);
     showToast(`Alumno seleccionado`, 'success');
   }, [showToast]);
 
-  // Manejar cambio en el campo de cliente
   const handleCustomerSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomerSearchTerm(value);
-    // También actualizamos customerName para mantener compatibilidad
     setCustomerName(value);
   }, []);
 
-  // Manejar cambio en el campo de alumno
   const handleStudentSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setStudentSearchTerm(value);
-    // También actualizamos studentName para mantener compatibilidad
     setStudentName(value);
   }, []);
 
@@ -1631,8 +1617,8 @@ const OrderReception: React.FC = React.memo(() => {
           section: selectedSection,
           guardianName: guardianName,
           phone: phone
-        } : undefined
-        orderType: activeTab === 'fullDay' ? 'fullday' : 'regular' // <-- AÑADIR ESTA LÍNEA
+        } : undefined,
+        orderType: activeTab === 'fullDay' ? 'fullday' : 'regular' // CAMPO OBLIGATORIO
       };
 
       setLastOrder(tempOrder);
@@ -1644,7 +1630,6 @@ const OrderReception: React.FC = React.memo(() => {
       setAddress('');
       setTableNumber('');
       setOrderNotes('');
-      // Limpiar campos de búsqueda
       setCustomerSearchTerm('');
       setStudentName('');
       setGuardianName('');
@@ -1829,13 +1814,13 @@ const OrderReception: React.FC = React.memo(() => {
                       )}
                     </div>
 
-                    {/* Nombre del alumno (solo lectura después de seleccionar) */}
+                    {/* Nombre del alumno */}
                     <input
                       type="text"
                       value={studentName}
                       onChange={(e) => setStudentName(e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-gray-50"
-                      placeholder="Nombre del alumno (se llena automáticamente)"
+                      placeholder="Nombre del alumno"
                       readOnly
                     />
 
@@ -1890,13 +1875,13 @@ const OrderReception: React.FC = React.memo(() => {
                       )}
                     </div>
 
-                    {/* Nombre del cliente (solo lectura después de seleccionar) */}
+                    {/* Nombre del cliente */}
                     <input
                       type="text"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50"
-                      placeholder="Nombre del cliente (se llena automáticamente)"
+                      placeholder="Nombre del cliente"
                       readOnly
                     />
 
@@ -2175,7 +2160,7 @@ const OrderReception: React.FC = React.memo(() => {
                           )}
                         </div>
 
-                        {/* Nombre del alumno (solo lectura después de seleccionar) */}
+                        {/* Nombre del alumno */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Nombre del Alumno *
@@ -2253,7 +2238,7 @@ const OrderReception: React.FC = React.memo(() => {
                           </div>
                         </div>
 
-                        {/* Nombre del cliente (solo lectura después de seleccionar) */}
+                        {/* Nombre del cliente */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
                           <input
@@ -2442,4 +2427,3 @@ const OrderReception: React.FC = React.memo(() => {
 });
 
 export default OrderReception;
-
