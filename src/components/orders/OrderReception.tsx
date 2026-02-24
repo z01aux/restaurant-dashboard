@@ -4,7 +4,7 @@ import {
   Settings, RotateCcw, Search, Tag, FolderPlus, Edit
 } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
-import OrderTicket from './OrderTicket';
+//import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useOrders } from '../../hooks/useOrders';
@@ -2445,3 +2445,4 @@ const OrderReception: React.FC = React.memo(() => {
 });
 
 export default OrderReception;
+
