@@ -1,3 +1,7 @@
+// ============================================
+// ARCHIVO: src/App.tsx (COMPLETO ACTUALIZADO)
+// ============================================
+
 import React from 'react';
 import DashboardLayout from './components/layout/DashboardLayout';
 import StatsCards from './components/dashboard/StatsCards';
@@ -7,6 +11,7 @@ import OrderReception from './components/orders/OrderReception';
 import CustomersManager from './components/customers/CustomersManager';
 import KitchenManager from './components/kitchen/KitchenManager';
 import UserManager from './components/users/UserManager';
+import StudentManager from './components/students/StudentManager';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 import { OrderProvider } from './contexts/OrderContext';
@@ -17,18 +22,15 @@ function App() {
   const { user } = useAuth();
   const { fetchOrders } = useOrders();
 
-  // Función para refrescar órdenes
   const refreshOrders = async () => {
     await fetchOrders(500);
   };
 
-  // Función para agregar nueva orden inmediatamente
   const addNewOrder = (order: any) => {
     const event = new CustomEvent('newOrderCreated', { detail: order });
     window.dispatchEvent(event);
   };
 
-  // Tabs base para todos los usuarios
   const baseTabs = [
     { id: 'reception', name: '🎯 Recepción', shortName: '🎯' },
     { id: 'orders', name: '📋 Órdenes', shortName: '📋' },
@@ -38,9 +40,11 @@ function App() {
     { id: 'dashboard', name: '📊 Dashboard', shortName: '📊' },
   ];
 
-  // Solo administradores ven la pestaña de Usuarios
   const adminTabs = user?.role === 'admin' 
-    ? [{ id: 'users', name: '🔧 Usuarios', shortName: '🔧' }]
+    ? [
+        { id: 'users', name: '🔧 Usuarios', shortName: '🔧' },
+        { id: 'students', name: '🎒 Alumnos FullDay', shortName: '🎒' }
+      ]
     : [];
 
   const tabs = [...baseTabs, ...adminTabs];
@@ -52,12 +56,12 @@ function App() {
           {/* Navigation Tabs Responsive */}
           <div className="mb-4 sm:mb-6 lg:mb-8">
             <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-1 sm:p-2 w-full max-w-4xl mx-auto">
-              <nav className="flex space-x-1">
+              <nav className="flex space-x-1 overflow-x-auto hide-scrollbar">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex-1 sm:flex-none px-2 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 ${
+                    className={`flex-1 sm:flex-none px-2 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap ${
                       activeTab === tab.id
                         ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
                         : 'text-gray-600 hover:text-red-600 hover:bg-white/50'
@@ -105,6 +109,7 @@ function App() {
           {activeTab === 'customers' && <CustomersManager />}
           {activeTab === 'kitchen' && <KitchenManager />}
           {activeTab === 'users' && <UserManager />}
+          {activeTab === 'students' && <StudentManager />}
         </DashboardLayout>
       </OrderProvider>
     </ProtectedRoute>
