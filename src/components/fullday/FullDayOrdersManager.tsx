@@ -4,12 +4,11 @@
 // ============================================
 
 import React, { useState, useMemo } from 'react';
-import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
-import { GraduationCap, Download, Filter, Calendar, DollarSign, Users } from 'lucide-react';
+import { GraduationCap, Download, Calendar, DollarSign, Users } from 'lucide-react'; // Eliminado 'Filter' que no se usaba
 
 export const FullDayOrdersManager: React.FC = () => {
-  const { getFullDayOrders } = useOrders(); // CORREGIDO: era "getFullDayOrders roboto"
+  const { getFullDayOrders } = useOrders();
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [searchTerm, setSearchTerm] = useState('');
 
