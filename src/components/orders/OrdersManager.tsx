@@ -298,7 +298,12 @@ const OrdersManager: React.FC = () => {
           case 'waiting-time':
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           case 'delivery-priority':
-            const typeOrder = { delivery: 1, phone: 2, 'walk-in': 3 };
+            const typeOrder: Record<Order['source']['type'], number> = { 
+              delivery: 1, 
+              phone: 2, 
+              'walk-in': 3,
+              'fullDay': 4 
+            };
             return typeOrder[a.source.type] - typeOrder[b.source.type];
           case 'total-desc':
             return b.total - a.total;
