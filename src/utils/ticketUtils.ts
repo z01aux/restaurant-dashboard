@@ -1,8 +1,9 @@
 // ============================================
-// ARCHIVO: src/utils/ticketUtils.ts
+// ARCHIVO: src/utils/ticketUtils.ts (ACTUALIZADO CON DATEUTILS)
 // ============================================
 
 import { Order } from '../types';
+import { formatDateForDisplay, formatTimeForDisplay, getStartOfDay, getEndOfDay } from './dateUtils';
 
 interface TicketSummary {
   totalOrders: number;
@@ -71,13 +72,13 @@ export const generateTicketSummary = (orders: Order[], startDate: Date, endDate:
   const dailyMap = new Map<string, { orders: number; total: number }>();
   const currentDate = new Date(startDate);
   while (currentDate <= endDate) {
-    const dateStr = currentDate.toLocaleDateString('es-PE');
+    const dateStr = formatDateForDisplay(currentDate);
     dailyMap.set(dateStr, { orders: 0, total: 0 });
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
   orders.forEach(order => {
-    const dateStr = order.createdAt.toLocaleDateString('es-PE');
+    const dateStr = formatDateForDisplay(order.createdAt);
     const day = dailyMap.get(dateStr);
     if (day) {
       day.orders++;
@@ -103,15 +104,13 @@ export const generateTicketSummary = (orders: Order[], startDate: Date, endDate:
 };
 
 /**
- * Genera el contenido HTML para el ticket de resumen (SIN EMOTICONES)
+ * Genera el contenido HTML para el ticket de resumen
  */
 export const generateResumenTicketHTML = (
   summary: TicketSummary,
   startDate: Date,
   endDate: Date
 ): string => {
-  const formatDate = (date: Date) => date.toLocaleDateString('es-PE');
-  const formatTime = () => new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
   const formatCurrency = (amount: number) => `S/ ${amount.toFixed(2)}`;
 
   const getCurrentUserName = () => {
@@ -127,9 +126,9 @@ export const generateResumenTicketHTML = (
     return 'Sistema';
   };
 
-  const periodText = startDate.toDateString() === endDate.toDateString()
-    ? `DIA: ${formatDate(startDate)}`
-    : `PERIODO: ${formatDate(startDate)} AL ${formatDate(endDate)}`;
+  const periodText = formatDateForDisplay(startDate) === formatDateForDisplay(endDate)
+    ? `DIA: ${formatDateForDisplay(startDate)}`
+    : `PERIODO: ${formatDateForDisplay(startDate)} AL ${formatDateForDisplay(endDate)}`;
 
   return `
     <div class="ticket" style="font-family: 'Courier New', monospace; width: 80mm; padding: 8px; margin: 0 auto; background: white; color: black; font-size: 11px; line-height: 1.3;">
@@ -140,7 +139,7 @@ export const generateResumenTicketHTML = (
         <div style="font-size: 10px;">INVERSIONES AROMO S.A.C.</div>
         <div style="font-size: 10px;">RUC: 20505262086</div>
         <div style="font-size: 9px;">${periodText}</div>
-        <div style="font-size: 9px;">EMITIDO: ${formatDate(new Date())} ${formatTime()}</div>
+        <div style="font-size: 9px;">EMITIDO: ${formatDateForDisplay(new Date())} ${formatTimeForDisplay(new Date())}</div>
         <div style="font-size: 9px;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
         <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
       </div>
@@ -243,7 +242,7 @@ export const printResumenTicket = (summary: TicketSummary, startDate: Date, endD
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Resumen ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}</title>
+          <title>Resumen ${formatDateForDisplay(startDate)} - ${formatDateForDisplay(endDate)}</title>
           <style>
             @media print {
               @page {

@@ -1,35 +1,23 @@
 // ============================================
-// ARCHIVO: src/utils/exportUtils.ts
+// ARCHIVO: src/utils/exportUtils.ts (CORREGIDO - CON DATEUTILS)
 // ============================================
 
 import * as XLSX from 'xlsx';
 import { Order } from '../types';
 import { SalesClosure } from '../types/sales';
 import { supabase } from '../lib/supabase';
+import {
+  toLocalDateString,
+  fromLocalDateString,
+  getStartOfDay,
+  getEndOfDay,
+  formatDateForDisplay,
+  formatTimeForDisplay,
+  parseDatabaseDate
+} from './dateUtils';
 
 /**
- * Formatea una fecha para mostrar en Excel
- */
-const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('es-PE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-};
-
-/**
- * Formatea hora para mostrar en Excel
- */
-const formatTime = (date: Date): string => {
-  return date.toLocaleTimeString('es-PE', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-
-/**
- * Interfaz para el resumen diario (simplificada)
+ * Interfaz para el resumen diario
  */
 interface DailySummary {
   date: string;
@@ -62,7 +50,6 @@ const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date,
   // Encontrar día con más ventas
   let mejorDia = { fecha: '', total: 0 };
   
-  // Verificar si existe daily_breakdown y es un array
   const dailyBreakdown = (closure as any).daily_breakdown;
   if (dailyBreakdown && Array.isArray(dailyBreakdown) && dailyBreakdown.length > 0) {
     dailyBreakdown.forEach((day: any) => {
@@ -73,22 +60,22 @@ const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date,
   }
 
   return [
-    ['📊 REPORTE DE VENTAS (DATOS DE CIERRE)', ''],
-    ['Período', `${formatDate(startDate)} al ${formatDate(endDate)}`],
+    ['REPORTE DE VENTAS (DATOS DE CIERRE)', ''],
+    ['Período', `${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
     ['Fecha de generación', new Date().toLocaleString('es-PE')],
     ['N° de Cierre', closure.closure_number],
     ['', ''],
-    ['📈 ESTADÍSTICAS GENERALES', ''],
+    ['ESTADISTICAS GENERALES', ''],
     ['Total de Órdenes', totalOrders],
     ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
     ['', ''],
-    ['💰 VENTAS POR MÉTODO DE PAGO', ''],
+    ['VENTAS POR METODO DE PAGO', ''],
     ['EFECTIVO', `S/ ${closure.total_efectivo.toFixed(2)}`, `${((closure.total_efectivo / totalVentas) * 100).toFixed(1)}%`],
     ['YAPE/PLIN', `S/ ${closure.total_yape_plin.toFixed(2)}`, `${((closure.total_yape_plin / totalVentas) * 100).toFixed(1)}%`],
     ['TARJETA', `S/ ${closure.total_tarjeta.toFixed(2)}`, `${((closure.total_tarjeta / totalVentas) * 100).toFixed(1)}%`],
     ['NO APLICA', `S/ ${closure.total_no_aplica.toFixed(2)}`],
     ['', ''],
-    ['🏆 ESTADÍSTICAS DESTACADAS', ''],
+    ['ESTADISTICAS DESTACADAS', ''],
     ['Día con más ventas', mejorDia.fecha || 'N/A', mejorDia.total > 0 ? `S/ ${mejorDia.total.toFixed(2)}` : ''],
     ['Promedio diario', `S/ ${(totalVentas / (totalOrders || 1)).toFixed(2)}`]
   ];
@@ -100,13 +87,11 @@ const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date,
 const generateDiarioSheetFromClosure = (closure: SalesClosure): DailySummary[] => {
   const result: DailySummary[] = [];
   
-  // Verificar si existe daily_breakdown y es un array
   const dailyBreakdown = (closure as any).daily_breakdown;
   if (dailyBreakdown && Array.isArray(dailyBreakdown) && dailyBreakdown.length > 0) {
-    // Mapear solo los campos que necesitamos
     dailyBreakdown.forEach((day: any) => {
       result.push({
-        date: day.date || formatDate(new Date(closure.closure_date)),
+        date: day.date || formatDateForDisplay(new Date(closure.closure_date)),
         orders: day.orders || 0,
         efectivo: day.efectivo || 0,
         yapePlin: day.yapePlin || 0,
@@ -116,9 +101,8 @@ const generateDiarioSheetFromClosure = (closure: SalesClosure): DailySummary[] =
       });
     });
   } else {
-    // Si no hay desglose guardado, crear un solo día con los totales
     result.push({
-      date: formatDate(new Date(closure.closure_date)),
+      date: formatDateForDisplay(new Date(closure.closure_date)),
       orders: closure.total_orders,
       efectivo: closure.total_efectivo,
       yapePlin: closure.total_yape_plin,
@@ -136,7 +120,6 @@ const generateDiarioSheetFromClosure = (closure: SalesClosure): DailySummary[] =
  */
 const generateTopProductsFromClosure = (closure: SalesClosure): any[] => {
   if (closure.top_products && Array.isArray(closure.top_products) && closure.top_products.length > 0) {
-    // Limitar a TOP 5 productos
     return closure.top_products.slice(0, 5).map(p => ({
       name: p.name || 'Producto',
       quantity: p.quantity || 0,
@@ -152,13 +135,13 @@ const generateTopProductsFromClosure = (closure: SalesClosure): any[] => {
  */
 const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
   return orders.map(order => ({
-    'FECHA': formatDate(order.createdAt),
-    'HORA': formatTime(order.createdAt),
+    'FECHA': formatDateForDisplay(order.createdAt),
+    'HORA': formatTimeForDisplay(order.createdAt),
     'N° ORDEN': order.orderNumber || `ORD-${order.id.slice(-8)}`,
     'CLIENTE': order.customerName.toUpperCase(),
     'TELÉFONO': order.phone,
     'MONTO': `S/ ${order.total.toFixed(2)}`,
-    'MÉTODO': order.paymentMethod || 'NO APLICA',
+    'METODO': order.paymentMethod || 'NO APLICA',
     'PRODUCTOS': order.items.map(item => 
       `${item.quantity}x ${item.menuItem.name}`
     ).join('\n')
@@ -166,17 +149,37 @@ const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
 };
 
 /**
- * Exporta órdenes por rango de fechas
+ * Exporta órdenes por rango de fechas - CORREGIDO CON DATEUTILS
  */
 export const exportOrdersByDateRange = async (
   orders: Order[], 
   startDate: Date, 
   endDate: Date
 ) => {
+  console.log('🔍 FECHAS RECIBIDAS:', {
+    startDate: startDate.toString(),
+    endDate: endDate.toString(),
+    startLocal: formatDateForDisplay(startDate),
+    endLocal: formatDateForDisplay(endDate)
+  });
+
+  // Obtener inicio y fin del día en hora LOCAL
+  const startOfDay = getStartOfDay(startDate);
+  const endOfDay = getEndOfDay(endDate);
+  
+  console.log('📅 RANGO LOCAL AJUSTADO:', {
+    startOfDay: startOfDay.toString(),
+    endOfDay: endOfDay.toString(),
+    startOfDayLocal: formatDateForDisplay(startOfDay),
+    endOfDayLocal: formatDateForDisplay(endOfDay)
+  });
+
   // Verificar si existe un cierre para este rango de fechas
   try {
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
+    const startStr = toLocalDateString(startDate);
+    const endStr = toLocalDateString(endDate);
+    
+    console.log('🔍 BUSCANDO CIERRES ENTRE:', startStr, 'y', endStr);
     
     const { data: closures, error } = await supabase
       .from('sales_closures')
@@ -191,33 +194,27 @@ export const exportOrdersByDateRange = async (
     if (closures && closures.length > 0) {
       console.log('📊 Usando datos de cierre guardados para el reporte');
       
-      // Crear libro de Excel
       const wb = XLSX.utils.book_new();
 
-      // Para múltiples cierres, combinamos la información
       if (closures.length === 1) {
-        // Un solo cierre - usar todos sus datos
         const closure = closures[0] as SalesClosure;
         
-        // HOJA 1: RESUMEN GENERAL
         const resumenData = generateResumenSheetFromClosure(closure, startDate, endDate);
         const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
         wsResumen['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
         XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
 
-        // HOJA 2: DESGLOSE DIARIO
         const diarioData = generateDiarioSheetFromClosure(closure);
         const wsDiario = XLSX.utils.json_to_sheet(diarioData);
         
-        // Renombrar headers
         const diarioHeaders = [
           { v: 'FECHA', position: 'A1' },
-          { v: 'ÓRDENES', position: 'B1' },
+          { v: 'ORDENES', position: 'B1' },
           { v: 'EFECTIVO', position: 'C1' },
           { v: 'YAPE/PLIN', position: 'D1' },
           { v: 'TARJETA', position: 'E1' },
           { v: 'NO APLICA', position: 'F1' },
-          { v: 'TOTAL DÍA', position: 'G1' }
+          { v: 'TOTAL DIA', position: 'G1' }
         ];
         
         diarioHeaders.forEach(h => {
@@ -231,7 +228,6 @@ export const exportOrdersByDateRange = async (
         ];
         XLSX.utils.book_append_sheet(wb, wsDiario, 'DIARIO');
 
-        // HOJA 3: TOP 5 PRODUCTOS
         const topProducts = generateTopProductsFromClosure(closure);
         const wsProductos = XLSX.utils.json_to_sheet(topProducts);
 
@@ -239,7 +235,7 @@ export const exportOrdersByDateRange = async (
           { v: 'PRODUCTO', position: 'A1' },
           { v: 'CANTIDAD', position: 'B1' },
           { v: 'TOTAL VENDIDO', position: 'C1' },
-          { v: 'CATEGORÍA', position: 'D1' }
+          { v: 'CATEGORIA', position: 'D1' }
         ];
 
         productHeaders.forEach(h => {
@@ -251,13 +247,11 @@ export const exportOrdersByDateRange = async (
         XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
 
       } else {
-        // Múltiples cierres - crear un resumen combinado
         const combinedResumen = generateCombinedResumen(closures as SalesClosure[], startDate, endDate);
         const wsResumen = XLSX.utils.aoa_to_sheet(combinedResumen);
         wsResumen['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
         XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
 
-        // Desglose diario combinado de todos los cierres
         const allDailyBreakdown: DailySummary[] = [];
         closures.forEach(closure => {
           const c = closure as SalesClosure;
@@ -268,7 +262,6 @@ export const exportOrdersByDateRange = async (
         const wsDiario = XLSX.utils.json_to_sheet(allDailyBreakdown.sort((a, b) => a.date.localeCompare(b.date)));
         XLSX.utils.book_append_sheet(wb, wsDiario, 'DIARIO');
 
-        // Top 5 productos combinados
         const combinedProducts = combineTopProducts(closures as SalesClosure[]).slice(0, 5);
         const wsProductos = XLSX.utils.json_to_sheet(combinedProducts);
         XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
@@ -276,13 +269,20 @@ export const exportOrdersByDateRange = async (
 
       // HOJA 4: DETALLE COMPLETO
       const filteredOrders = orders.filter(order => {
+        // Convertir la fecha de la orden a formato local para comparar
         const orderDate = new Date(order.createdAt);
-        orderDate.setHours(0, 0, 0, 0);
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        return orderDate >= start && orderDate <= end;
+        const orderDateLocal = new Date(
+          orderDate.getFullYear(),
+          orderDate.getMonth(),
+          orderDate.getDate()
+        );
+        
+        return orderDateLocal >= startOfDay && orderDateLocal <= endOfDay;
+      });
+
+      console.log('📊 ÓRDENES FILTRADAS PARA DETALLE:', {
+        total: orders.length,
+        filtradas: filteredOrders.length
       });
 
       if (filteredOrders.length > 0) {
@@ -295,12 +295,10 @@ export const exportOrdersByDateRange = async (
         XLSX.utils.book_append_sheet(wb, wsDetalle, 'DETALLE');
       }
 
-      // Generar nombre del archivo
       const startStr = startDate.toISOString().split('T')[0].replace(/-/g, '');
       const endStr = endDate.toISOString().split('T')[0].replace(/-/g, '');
       const fileName = `ventas_${startStr}_al_${endStr}_CON_CORTE.xlsx`;
 
-      // Guardar archivo
       XLSX.writeFile(wb, fileName);
       return;
     }
@@ -311,16 +309,23 @@ export const exportOrdersByDateRange = async (
   // Si no hay cierres, usar el método tradicional
   console.log('📊 No se encontraron cierres, usando cálculo en vivo');
   
-  // Filtrar órdenes por rango de fechas
+  // Filtrar órdenes por rango de fechas - CORREGIDO
   const filteredOrders = orders.filter(order => {
+    // Convertir la fecha de la orden a formato local para comparar
     const orderDate = new Date(order.createdAt);
-    orderDate.setHours(0, 0, 0, 0);
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const orderDateLocal = new Date(
+      orderDate.getFullYear(),
+      orderDate.getMonth(),
+      orderDate.getDate()
+    );
     
-    return orderDate >= start && orderDate <= end;
+    return orderDateLocal >= startOfDay && orderDateLocal <= endOfDay;
+  });
+
+  console.log('📊 ÓRDENES FILTRADAS:', {
+    total: orders.length,
+    filtradas: filteredOrders.length,
+    primera: filteredOrders.length > 0 ? filteredOrders[0].createdAt : 'ninguna'
   });
 
   if (filteredOrders.length === 0) {
@@ -328,7 +333,6 @@ export const exportOrdersByDateRange = async (
     return;
   }
 
-  // Crear libro de Excel
   const wb = XLSX.utils.book_new();
 
   // HOJA 1: RESUMEN GENERAL
@@ -343,12 +347,12 @@ export const exportOrdersByDateRange = async (
   
   const diarioHeaders = [
     { v: 'FECHA', position: 'A1' },
-    { v: 'ÓRDENES', position: 'B1' },
+    { v: 'ORDENES', position: 'B1' },
     { v: 'EFECTIVO', position: 'C1' },
     { v: 'YAPE/PLIN', position: 'D1' },
     { v: 'TARJETA', position: 'E1' },
     { v: 'NO APLICA', position: 'F1' },
-    { v: 'TOTAL DÍA', position: 'G1' }
+    { v: 'TOTAL DIA', position: 'G1' }
   ];
   
   diarioHeaders.forEach(h => {
@@ -370,7 +374,7 @@ export const exportOrdersByDateRange = async (
     { v: 'PRODUCTO', position: 'A1' },
     { v: 'CANTIDAD', position: 'B1' },
     { v: 'TOTAL VENDIDO', position: 'C1' },
-    { v: 'CATEGORÍA', position: 'D1' }
+    { v: 'CATEGORIA', position: 'D1' }
   ];
 
   productHeaders.forEach(h => {
@@ -390,12 +394,10 @@ export const exportOrdersByDateRange = async (
   ];
   XLSX.utils.book_append_sheet(wb, wsDetalle, 'DETALLE');
 
-  // Generar nombre del archivo
   const startStr = startDate.toISOString().split('T')[0].replace(/-/g, '');
   const endStr = endDate.toISOString().split('T')[0].replace(/-/g, '');
   const fileName = `ventas_${startStr}_al_${endStr}.xlsx`;
 
-  // Guardar archivo
   XLSX.writeFile(wb, fileName);
 };
 
@@ -417,7 +419,7 @@ const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): 
 
   const ventasPorDia = new Map<string, number>();
   orders.forEach(order => {
-    const date = formatDate(order.createdAt);
+    const date = formatDateForDisplay(order.createdAt);
     ventasPorDia.set(date, (ventasPorDia.get(date) || 0) + order.total);
   });
 
@@ -429,21 +431,21 @@ const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): 
   });
 
   return [
-    ['📊 REPORTE DE VENTAS', ''],
-    ['Período', `${formatDate(startDate)} al ${formatDate(endDate)}`],
+    ['REPORTE DE VENTAS', ''],
+    ['Período', `${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
     ['Fecha de generación', new Date().toLocaleString('es-PE')],
     ['', ''],
-    ['📈 ESTADÍSTICAS GENERALES', ''],
+    ['ESTADISTICAS GENERALES', ''],
     ['Total de Órdenes', totalOrders],
     ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
     ['', ''],
-    ['💰 VENTAS POR MÉTODO DE PAGO', ''],
+    ['VENTAS POR METODO DE PAGO', ''],
     ['EFECTIVO', `S/ ${efectivo.toFixed(2)}`, `${efectivoPct.toFixed(1)}%`],
     ['YAPE/PLIN', `S/ ${yapePlin.toFixed(2)}`, `${yapePlinPct.toFixed(1)}%`],
     ['TARJETA', `S/ ${tarjeta.toFixed(2)}`, `${tarjetaPct.toFixed(1)}%`],
     ['NO APLICA', `S/ ${noAplica.toFixed(2)}`],
     ['', ''],
-    ['🏆 ESTADÍSTICAS DESTACADAS', ''],
+    ['ESTADISTICAS DESTACADAS', ''],
     ['Día con más ventas', mejorDia.fecha, `S/ ${mejorDia.total.toFixed(2)}`],
     ['Promedio diario', `S/ ${(totalVentas / (ventasPorDia.size || 1)).toFixed(2)}`]
   ];
@@ -457,7 +459,7 @@ const generateDiarioSheet = (orders: Order[], startDate: Date, endDate: Date): D
 
   const currentDate = new Date(startDate);
   while (currentDate <= endDate) {
-    const dateStr = formatDate(currentDate);
+    const dateStr = formatDateForDisplay(currentDate);
     dailyMap.set(dateStr, {
       date: dateStr,
       orders: 0,
@@ -471,7 +473,7 @@ const generateDiarioSheet = (orders: Order[], startDate: Date, endDate: Date): D
   }
 
   orders.forEach(order => {
-    const dateStr = formatDate(order.createdAt);
+    const dateStr = formatDateForDisplay(order.createdAt);
     const day = dailyMap.get(dateStr);
     
     if (day) {
@@ -550,16 +552,16 @@ const generateCombinedResumen = (closures: SalesClosure[], startDate: Date, endD
   const tarjetaPct = totalVentas > 0 ? (totalTarjeta / totalVentas) * 100 : 0;
 
   return [
-    ['📊 REPORTE DE VENTAS COMBINADO (MÚLTIPLES CIERRES)', ''],
-    ['Período', `${formatDate(startDate)} al ${formatDate(endDate)}`],
+    ['REPORTE DE VENTAS COMBINADO (MULTIPLES CIERRES)', ''],
+    ['Período', `${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
     ['Fecha de generación', new Date().toLocaleString('es-PE')],
     ['Cantidad de cierres', closures.length],
     ['', ''],
-    ['📈 ESTADÍSTICAS GENERALES', ''],
+    ['ESTADISTICAS GENERALES', ''],
     ['Total de Órdenes', totalOrders],
     ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
     ['', ''],
-    ['💰 VENTAS POR MÉTODO DE PAGO', ''],
+    ['VENTAS POR METODO DE PAGO', ''],
     ['EFECTIVO', `S/ ${totalEfectivo.toFixed(2)}`, `${efectivoPct.toFixed(1)}%`],
     ['YAPE/PLIN', `S/ ${totalYapePlin.toFixed(2)}`, `${yapePlinPct.toFixed(1)}%`],
     ['TARJETA', `S/ ${totalTarjeta.toFixed(2)}`, `${tarjetaPct.toFixed(1)}%`],
@@ -609,11 +611,8 @@ export const exportOrdersToExcel = (orders: Order[], tipo: 'today' | 'all' = 'to
   }
 
   const data = orders.map(order => {
-    const fecha = order.createdAt.toLocaleDateString('es-PE');
-    const hora = order.createdAt.toLocaleTimeString('es-PE', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    const fecha = formatDateForDisplay(order.createdAt);
+    const hora = formatTimeForDisplay(order.createdAt);
 
     const productosList = order.items.map(item => 
       `${item.quantity}x ${item.menuItem.name}`
@@ -622,11 +621,11 @@ export const exportOrdersToExcel = (orders: Order[], tipo: 'today' | 'all' = 'to
     return {
       'CLIENTE': order.customerName.toUpperCase(),
       'MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
-      'MÉTODO PAGO': order.paymentMethod || 'NO APLICA',
+      'METODO PAGO': order.paymentMethod || 'NO APLICA',
       'FECHA': fecha,
       'HORA': hora,
       'N° ORDEN': order.orderNumber || `ORD-${order.id.slice(-8)}`,
-      'TELÉFONO': order.phone,
+      'TELEFONO': order.phone,
       'PRODUCTOS': productosList
     };
   });
@@ -668,7 +667,6 @@ export const exportClosureToExcel = async (closureId: string) => {
 
     const wb = XLSX.utils.book_new();
 
-    // HOJA 1: RESUMEN
     const startDate = new Date(closure.opened_at);
     const endDate = new Date(closure.closed_at);
     const resumenData = generateResumenSheetFromClosure(closure, startDate, endDate);
@@ -676,17 +674,14 @@ export const exportClosureToExcel = async (closureId: string) => {
     wsResumen['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
 
-    // HOJA 2: DESGLOSE DIARIO
     const diarioData = generateDiarioSheetFromClosure(closure);
     const wsDiario = XLSX.utils.json_to_sheet(diarioData);
     XLSX.utils.book_append_sheet(wb, wsDiario, 'DIARIO');
 
-    // HOJA 3: TOP 5 PRODUCTOS
     const topProducts = generateTopProductsFromClosure(closure);
     const wsProductos = XLSX.utils.json_to_sheet(topProducts);
     XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
 
-    // Guardar archivo
     const fileName = `cierre_${closure.closure_number}.xlsx`;
     XLSX.writeFile(wb, fileName);
 
