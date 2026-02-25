@@ -1,7 +1,7 @@
 // ============================================
-// ARCHIVO: src/utils/fulldayTicketUtils.ts
+// ARCHIVO: src/utils/fulldayTicketUtils.ts (ACTUALIZADO)
 // Utilidades para tickets de resumen de FullDay
-// Diseño profesional para impresora térmica
+// Con IGV 10% incluido en el precio
 // ============================================
 
 import { FullDayOrder } from '../hooks/useFullDay';
@@ -27,6 +27,20 @@ interface FullDayTicketSummary {
     total: number;
   }>;
 }
+
+/**
+ * Calcula el subtotal (sin IGV) a partir del total (con IGV incluido)
+ */
+const calculateSubtotal = (total: number): number => {
+  return total / 1.10;
+};
+
+/**
+ * Calcula el IGV a partir del total (con IGV incluido)
+ */
+const calculateIGV = (total: number): number => {
+  return total - (total / 1.10);
+};
 
 /**
  * Genera un resumen para ticket a partir de los pedidos FullDay
@@ -111,6 +125,7 @@ export const generateFullDayTicketSummary = (
 
 /**
  * Genera el contenido HTML para el ticket de resumen de FullDay
+ * CON IGV 10% INCLUIDO
  */
 export const generateFullDayResumenTicketHTML = (
   summary: FullDayTicketSummary,
@@ -118,6 +133,10 @@ export const generateFullDayResumenTicketHTML = (
   endDate: Date
 ): string => {
   const formatCurrency = (amount: number) => `S/ ${amount.toFixed(2)}`;
+
+  // Calcular subtotal e IGV del total general
+  const subtotal = calculateSubtotal(summary.totalAmount);
+  const igv = calculateIGV(summary.totalAmount);
 
   const getCurrentUserName = () => {
     try {
@@ -189,6 +208,25 @@ export const generateFullDayResumenTicketHTML = (
 
       <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
 
+      <!-- DESGLOSE DE IGV -->
+      <div style="margin-bottom: 8px;">
+        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">DETALLE DE IGV (10%)</div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>Subtotal:</span>
+          <span>${formatCurrency(subtotal)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>IGV (10%):</span>
+          <span>${formatCurrency(igv)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px;">
+          <span>TOTAL:</span>
+          <span>${formatCurrency(summary.totalAmount)}</span>
+        </div>
+      </div>
+
+      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+
       <!-- TOP 5 PRODUCTOS -->
       ${summary.topProducts.length > 0 ? `
         <div style="margin-bottom: 8px;">
@@ -207,12 +245,30 @@ export const generateFullDayResumenTicketHTML = (
       ${summary.dailyBreakdown.length > 1 ? `
         <div style="margin-bottom: 8px;">
           <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">DESGLOSE DIARIO</div>
-          ${summary.dailyBreakdown.map(day => `
-            <div style="display: flex; justify-content: space-between; font-size: 9px;">
-              <span>${day.date}:</span>
-              <span>${day.orders} ped - ${formatCurrency(day.total)}</span>
-            </div>
-          `).join('')}
+          ${summary.dailyBreakdown.map(day => {
+            const daySubtotal = calculateSubtotal(day.total);
+            const dayIgv = calculateIGV(day.total);
+            return `
+              <div style="font-size: 9px; margin-bottom: 4px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>${day.date}:</span>
+                  <span>${day.orders} ped</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-left: 10px;">
+                  <span>Subtotal:</span>
+                  <span>${formatCurrency(daySubtotal)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-left: 10px;">
+                  <span>IGV:</span>
+                  <span>${formatCurrency(dayIgv)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                  <span>TOTAL DÍA:</span>
+                  <span>${formatCurrency(day.total)}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
         </div>
         <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
       ` : ''}

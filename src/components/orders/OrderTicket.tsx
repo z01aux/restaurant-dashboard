@@ -4,8 +4,8 @@ import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer
 
 interface OrderTicketProps {
   order: Order;
-  onMouseEnter?: () => void; // Nuevo
-  onMouseLeave?: () => void; // Nuevo
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
 const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseLeave }) => {
@@ -49,16 +49,28 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     return 'NO APLICA';
   };
 
-  // CONSTANTES PARA EL ANCHO DE IMPRESIÓN - CAMBIADO A 80mm
-  const TICKET_WIDTH = 80; // 80mm para impresoras térmicas estándar
-  const PAGE_WIDTH = TICKET_WIDTH * 2.83465; // Convertir mm a puntos (1mm = 2.83465 puntos)
+  // Cálculos de IGV (10% incluido en el precio)
+  const calculateSubtotal = (total: number) => {
+    return total / 1.10;
+  };
+
+  const calculateIGV = (total: number) => {
+    return total - (total / 1.10);
+  };
+
+  const subtotal = calculateSubtotal(order.total);
+  const igv = calculateIGV(order.total);
+
+  // CONSTANTES PARA EL ANCHO DE IMPRESIÓN
+  const TICKET_WIDTH = 80;
+  const PAGE_WIDTH = TICKET_WIDTH * 2.83465;
   const FONT_SIZE_SMALL = 7;
   const FONT_SIZE_NORMAL = 8;
   const FONT_SIZE_LARGE = 9;
   const FONT_SIZE_XLARGE = 10;
   const PADDING = 8;
 
-  // Estilos para el PDF de COCINA - HELVETICA CON PESOS ESPECÍFICOS
+  // Estilos para el PDF de COCINA
   const kitchenStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
@@ -166,7 +178,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   });
 
-  // Estilos normales para otros tipos de pedido - HELVETICA CON PESOS ESPECÍFICOS
+  // Estilos normales para otros tipos de pedido
   const normalStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
@@ -289,7 +301,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     },
   });
 
-  // Componente del documento PDF para COCINA - ACTUALIZADO
+  // Componente del documento PDF para COCINA
   const KitchenTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
@@ -329,7 +341,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
         
         <View style={kitchenStyles.divider} />
 
-        {/* LISTA DE PRODUCTOS CON NOTAS */}
         <View style={kitchenStyles.productsContainer}>
           {(order.items || []).map((item, index) => (
             <View key={index}>
@@ -337,7 +348,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 <Text style={kitchenStyles.quantity}>{item.quantity}x</Text>
                 <Text style={kitchenStyles.productName}>{item.menuItem.name.toUpperCase()}</Text>
               </View>
-              {/* NOTAS */}
               {item.notes?.trim() && (
                 <Text style={kitchenStyles.notes}>- {item.notes}</Text>
               )}
@@ -354,7 +364,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     </Document>
   );
 
-  // Componente del documento PDF normal - ACTUALIZADO CON NOMBRE EN NEGRITA
+  // Componente del documento PDF normal - CON IGV 10% INCLUIDO
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -424,7 +434,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
             <Text style={normalStyles.colPrice}>Precio</Text>
           </View>
 
-          {/* PRODUCTOS CON NOTAS */}
           {(order.items || []).map((item, index) => (
             <View key={index}>
               <View style={normalStyles.tableRow}>
@@ -436,7 +445,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                   S/ {(item.menuItem.price * item.quantity).toFixed(2)}
                 </Text>
               </View>
-              {/* NOTAS */}
               {item.notes?.trim() && (
                 <View style={normalStyles.tableRow}>
                   <Text style={normalStyles.colQuantity}></Text>
@@ -453,11 +461,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
         <View style={normalStyles.calculations}>
           <View style={normalStyles.calculationRow}>
             <Text>Subtotal:</Text>
-            <Text>S/ {(order.total / 1.18).toFixed(2)}</Text>
+            <Text>S/ {subtotal.toFixed(2)}</Text>
           </View>
           <View style={normalStyles.calculationRow}>
-            <Text>IGV (18%):</Text>
-            <Text>S/ {(order.total - (order.total / 1.18)).toFixed(2)}</Text>
+            <Text>IGV (10%):</Text>
+            <Text>S/ {igv.toFixed(2)}</Text>
           </View>
           <View style={[normalStyles.row, normalStyles.total, normalStyles.bold]}>
             <Text>TOTAL:</Text>
@@ -513,7 +521,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   };
 
-  // Función para imprimir - ACTUALIZADA CON NOMBRE EN NEGRITA
+  // Función para imprimir
   const handlePrint = (e: React.MouseEvent) => {
     e.stopPropagation();
     const iframe = document.createElement('iframe');
@@ -690,7 +698,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   };
 
-  // Generar contenido HTML para impresión - ACTUALIZADO CON NOMBRE EN NEGRITA
+  // Generar contenido HTML para impresión
   const generateTicketContent = () => {
     if (isPhoneOrder) {
       return `
@@ -744,9 +752,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
         </div>
       `;
     } else {
-      const subtotal = order.total / 1.18;
-      const igv = order.total - subtotal;
-      
       return `
         <div class="ticket">
           <div class="center">
@@ -834,7 +839,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
               <span class="normal">S/ ${subtotal.toFixed(2)}</span>
             </div>
             <div class="info-row">
-              <span class="normal">IGV (18%):</span>
+              <span class="normal">IGV (10%):</span>
               <span class="normal">S/ ${igv.toFixed(2)}</span>
             </div>
             <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
@@ -929,6 +934,5 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     </div>
   );
 };
-
 
 export default OrderTicket;
