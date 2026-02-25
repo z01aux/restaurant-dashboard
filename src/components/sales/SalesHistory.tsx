@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { Calendar, Download, Eye, ChevronDown, ChevronUp, DollarSign, ShoppingBag, X } from 'lucide-react';
+import { Calendar, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { SalesClosure } from '../../types/sales';
 import * as XLSX from 'xlsx';
@@ -12,6 +12,7 @@ export const SalesHistory: React.FC = () => {
   const { closures, loading, getClosureById } = useSalesClosure();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedClosure, setSelectedClosure] = useState<SalesClosure | null>(null);
+  const [filter, setFilter] = useState<'all' | 'week' | 'month'>('week');
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -24,154 +25,170 @@ export const SalesHistory: React.FC = () => {
     }
   };
 
-  const exportClosureToExcel = (closure: SalesClosure) => {
+  const exportClosure = (closure: SalesClosure) => {
     const wb = XLSX.utils.book_new();
-
-    const resumenData = [
-      ['CIERRE DE CAJA', ''],
-      ['Número', closure.closure_number],
-      ['Fecha Apertura', new Date(closure.opened_at).toLocaleString('es-PE')],
-      ['Fecha Cierre', new Date(closure.closed_at).toLocaleString('es-PE')],
-      ['', ''],
-      ['RESUMEN DE VENTAS', ''],
-      ['Total Órdenes', closure.total_orders],
-      ['Total Ventas', `S/ ${closure.total_amount.toFixed(2)}`],
+    
+    const data = [
+      ['CIERRE DE CAJA', closure.closure_number],
+      ['Fecha', new Date(closure.closed_at).toLocaleString('es-PE')],
+      ['Total', `S/ ${closure.total_amount.toFixed(2)}`],
+      ['Órdenes', closure.total_orders]
     ];
-
-    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
-    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
-
+    
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Cierre');
     XLSX.writeFile(wb, `cierre_${closure.closure_number}.xlsx`);
   };
 
+  // Filtrar cierres
+  const filteredClosures = React.useMemo(() => {
+    const now = new Date();
+    const weekAgo = new Date(now.setDate(now.getDate() - 7));
+    const monthAgo = new Date(now.setMonth(now.getMonth() - 1));
+    
+    return closures.filter(c => {
+      const date = new Date(c.closed_at);
+      if (filter === 'week') return date >= weekAgo;
+      if (filter === 'month') return date >= monthAgo;
+      return true;
+    });
+  }, [closures, filter]);
+
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
-        <p className="text-gray-600 mt-2">Cargando historial...</p>
+      <div className="text-center py-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mx-auto"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-        <Calendar className="mr-2" size={20} />
-        Historial de Cierres
-      </h3>
-
-      {closures.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded-lg">
-          <div className="text-4xl text-gray-300 mb-3">📅</div>
-          <p className="text-gray-600">No hay cierres registrados</p>
-          <p className="text-gray-400 text-sm mt-1">
-            Los cierres aparecerán aquí cuando realices tu primer cierre de caja
-          </p>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Header compacto */}
+      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Calendar size={16} className="text-gray-500" />
+          <h3 className="text-sm font-semibold text-gray-700">Historial de Cierres</h3>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {closures.map((closure) => (
-            <div
-              key={closure.id}
-              className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-red-300 transition-colors"
-            >
-              {/* Header */}
-              <div
-                className="p-4 cursor-pointer flex items-center justify-between"
+        
+        {/* Filtros rápidos */}
+        <div className="flex space-x-1 text-xs">
+          <button
+            onClick={() => setFilter('week')}
+            className={`px-2 py-1 rounded ${filter === 'week' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'}`}
+          >
+            Semana
+          </button>
+          <button
+            onClick={() => setFilter('month')}
+            className={`px-2 py-1 rounded ${filter === 'month' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'}`}
+          >
+            Mes
+          </button>
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-2 py-1 rounded ${filter === 'all' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'}`}
+          >
+            Todo
+          </button>
+        </div>
+      </div>
+
+      {/* Lista compacta */}
+      <div className="divide-y divide-gray-100">
+        {filteredClosures.length === 0 ? (
+          <div className="text-center py-6 text-gray-500 text-sm">
+            No hay cierres registrados
+          </div>
+        ) : (
+          filteredClosures.map((closure) => (
+            <div key={closure.id} className="text-sm">
+              {/* Fila principal */}
+              <div 
+                className="px-4 py-2 flex items-center justify-between hover:bg-gray-50 cursor-pointer"
                 onClick={() => toggleExpand(closure.id)}
               >
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <span className="text-lg font-semibold text-gray-900">
-                      {closure.closure_number}
-                    </span>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      {new Date(closure.closed_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    <span className="flex items-center">
-                      <DollarSign size={14} className="mr-1" />
-                      S/ {closure.total_amount.toFixed(2)}
-                    </span>
-                    <span className="flex items-center">
-                      <ShoppingBag size={14} className="mr-1" />
-                      {closure.total_orders} pedidos
-                    </span>
-                  </div>
+                <div className="flex items-center space-x-3">
+                  <span className="font-mono text-xs text-gray-500">
+                    {new Date(closure.closed_at).toLocaleDateString()}
+                  </span>
+                  <span className="font-semibold text-gray-900">
+                    S/ {closure.total_amount.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {closure.total_orders} ped
+                  </span>
                 </div>
+                
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      exportClosureToExcel(closure);
+                      exportClosure(closure);
                     }}
-                    className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
-                    title="Exportar a Excel"
+                    className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"
+                    title="Exportar"
                   >
-                    <Download size={18} />
+                    <Download size={14} />
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      viewDetails(closure.id);
-                    }}
-                    className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Ver detalles"
-                  >
-                    <Eye size={18} />
-                  </button>
-                  {expandedId === closure.id ? (
-                    <ChevronUp size={20} className="text-gray-400" />
-                  ) : (
-                    <ChevronDown size={20} className="text-gray-400" />
-                  )}
+                  {expandedId === closure.id ? 
+                    <ChevronUp size={16} className="text-gray-400" /> : 
+                    <ChevronDown size={16} className="text-gray-400" />
+                  }
                 </div>
               </div>
 
-              {/* Expanded content */}
+              {/* Detalles expandidos */}
               {expandedId === closure.id && (
-                <div className="px-4 pb-4 border-t border-gray-100 pt-3">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <div className="text-xs text-gray-500">Apertura</div>
-                      <div className="font-semibold">S/ {closure.initial_cash.toFixed(2)}</div>
+                <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-xs">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-gray-500">Apertura:</span>
+                      <span className="ml-2 font-medium">S/ {closure.initial_cash.toFixed(2)}</span>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <div className="text-xs text-gray-500">Cierre</div>
-                      <div className="font-semibold">S/ {closure.final_cash.toFixed(2)}</div>
+                    <div>
+                      <span className="text-gray-500">Cierre:</span>
+                      <span className="ml-2 font-medium">S/ {closure.final_cash.toFixed(2)}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">N° Cierre:</span>
+                      <span className="ml-2 font-mono">{closure.closure_number}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Cerrado por:</span>
+                      <span className="ml-2">{(closure as any).closed_by?.name || 'Sistema'}</span>
                     </div>
                   </div>
-
+                  
                   {closure.notes && (
-                    <div className="bg-yellow-50 rounded-lg p-3 text-sm">
-                      <span className="font-semibold">Notas:</span> {closure.notes}
+                    <div className="mt-2 pt-2 border-t border-gray-200 text-gray-600">
+                      📝 {closure.notes}
                     </div>
                   )}
+                  
+                  <button
+                    onClick={() => viewDetails(closure.id)}
+                    className="mt-2 w-full text-center text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Ver detalles completos
+                  </button>
                 </div>
               )}
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
-      {/* Modal de detalles */}
+      {/* Modal simple para detalles completos */}
       {selectedClosure && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-900">
-                Detalles del Cierre: {selectedClosure.closure_number}
-              </h3>
-              <button
-                onClick={() => setSelectedClosure(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
-              </button>
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[80vh] overflow-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-3 flex justify-between items-center">
+              <h3 className="font-semibold">Detalles: {selectedClosure.closure_number}</h3>
+              <button onClick={() => setSelectedClosure(null)} className="text-gray-500">✕</button>
             </div>
-            <div className="p-6">
-              <pre className="bg-gray-50 p-4 rounded-lg overflow-auto text-sm">
+            <div className="p-4">
+              <pre className="text-xs bg-gray-50 p-2 rounded overflow-auto">
                 {JSON.stringify(selectedClosure, null, 2)}
               </pre>
             </div>
