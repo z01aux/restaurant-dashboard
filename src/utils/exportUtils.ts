@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/utils/exportUtils.ts (CORREGIDO)
+// ARCHIVO: src/utils/exportUtils.ts (ACTUALIZADO)
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -10,7 +10,8 @@ import {
   getStartOfDay,
   getEndOfDay,
   formatDateForDisplay,
-  formatTimeForDisplay
+  formatTimeForDisplay,
+  toLocalDateString
 } from './dateUtils';
 
 /**
@@ -146,14 +147,14 @@ const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
 };
 
 /**
- * Exporta órdenes por rango de fechas - CORREGIDO
+ * Exporta órdenes por rango de fechas - CORREGIDO CON LAS MISMAS FUNCIONES DEL TICKET
  */
 export const exportOrdersByDateRange = async (
   orders: Order[], 
   startDate: Date, 
   endDate: Date
 ) => {
-  console.log('🔍 FECHAS RECIBIDAS (Perú):', {
+  console.log('🔍 FECHAS RECIBIDAS EN EXCEL (Perú):', {
     startDate: formatDateForDisplay(startDate),
     endDate: formatDateForDisplay(endDate),
     startISO: startDate.toISOString(),
@@ -164,7 +165,7 @@ export const exportOrdersByDateRange = async (
   const startOfDay = getStartOfDay(startDate);
   const endOfDay = getEndOfDay(endDate);
   
-  console.log('📅 RANGO PERUANO AJUSTADO:', {
+  console.log('📅 RANGO PERUANO AJUSTADO PARA EXCEL:', {
     startOfDay: startOfDay.toString(),
     endOfDay: endOfDay.toString(),
     startLocal: formatDateForDisplay(startOfDay),
@@ -173,8 +174,8 @@ export const exportOrdersByDateRange = async (
 
   // Verificar si existe un cierre para este rango de fechas
   try {
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
+    const startStr = toLocalDateString(startDate);
+    const endStr = toLocalDateString(endDate);
     
     console.log('🔍 BUSCANDO CIERRES ENTRE:', startStr, 'y', endStr);
     
@@ -267,14 +268,12 @@ export const exportOrdersByDateRange = async (
       // HOJA 4: DETALLE COMPLETO
       const filteredOrders = orders.filter(order => {
         const orderDate = new Date(order.createdAt);
-        // Usamos la fecha en hora local de Perú para comparar
-        const orderDatePeru = new Date(
-          orderDate.getFullYear(),
-          orderDate.getMonth(),
-          orderDate.getDate()
-        );
+        // Comparamos usando el día en Perú (ignorando la hora)
+        const orderDay = formatDateForDisplay(orderDate);
+        const startDay = formatDateForDisplay(startOfDay);
+        const endDay = formatDateForDisplay(endOfDay);
         
-        return orderDatePeru >= startOfDay && orderDatePeru <= endOfDay;
+        return orderDay >= startDay && orderDay <= endDay;
       });
 
       console.log('📊 ÓRDENES FILTRADAS PARA DETALLE:', {
@@ -306,24 +305,23 @@ export const exportOrdersByDateRange = async (
   // Si no hay cierres, usar el método tradicional
   console.log('📊 No se encontraron cierres, usando cálculo en vivo');
   
-  // Filtrar órdenes por rango de fechas - CORREGIDO
+  // Filtrar órdenes por rango de fechas - USANDO EL MISMO MÉTODO QUE EL TICKET
   const filteredOrders = orders.filter(order => {
     const orderDate = new Date(order.createdAt);
-    // Usamos la fecha en hora local de Perú para comparar
-    const orderDatePeru = new Date(
-      orderDate.getFullYear(),
-      orderDate.getMonth(),
-      orderDate.getDate()
-    );
+    // Comparamos usando el día en Perú (ignorando la hora)
+    const orderDay = formatDateForDisplay(orderDate);
+    const startDay = formatDateForDisplay(startOfDay);
+    const endDay = formatDateForDisplay(endOfDay);
     
-    return orderDatePeru >= startOfDay && orderDatePeru <= endOfDay;
+    return orderDay >= startDay && orderDay <= endDay;
   });
 
-  console.log('📊 ÓRDENES FILTRADAS:', {
+  console.log('📊 ÓRDENES FILTRADAS PARA EXCEL:', {
     total: orders.length,
     filtradas: filteredOrders.length,
-    primera: filteredOrders.length > 0 ? filteredOrders[0].createdAt : 'ninguna',
-    ultima: filteredOrders.length > 0 ? filteredOrders[filteredOrders.length - 1].createdAt : 'ninguna'
+    rango: `${formatDateForDisplay(startOfDay)} - ${formatDateForDisplay(endOfDay)}`,
+    primera: filteredOrders.length > 0 ? formatDateForDisplay(filteredOrders[0].createdAt) : 'ninguna',
+    ultima: filteredOrders.length > 0 ? formatDateForDisplay(filteredOrders[filteredOrders.length - 1].createdAt) : 'ninguna'
   });
 
   if (filteredOrders.length === 0) {
@@ -639,7 +637,7 @@ export const exportOrdersToExcel = (orders: Order[], tipo: 'today' | 'all' = 'to
   const nombreHoja = tipo === 'today' ? 'Ventas del Día' : 'Todas las Ventas';
   XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
 
-  const fecha = new Date().toISOString().split('T')[0];
+  const fecha = new Date().toLocaleDateString('es-PE', { timeZone: 'America/Lima' }).replace(/\//g, '-');
   const tipoTexto = tipo === 'today' ? 'diarias' : 'totales';
   const fileName = `ventas_${tipoTexto}_${fecha}.xlsx`;
 
