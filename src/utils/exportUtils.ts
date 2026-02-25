@@ -129,7 +129,7 @@ const generateTopProductsFromClosure = (closure: SalesClosure): any[] => {
 };
 
 /**
- * Genera hoja de detalle a partir de órdenes (SOLO PARA DETALLE)
+ * Genera hoja de detalle a partir de órdenes
  */
 const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
   return orders.map(order => ({
@@ -146,8 +146,223 @@ const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
   }));
 };
 
+// ============================================
+// FUNCIONES PARA CÁLCULO EN VIVO (CUANDO NO HAY CIERRE)
+// ============================================
+
 /**
- * Exporta órdenes por rango de fechas - CORREGIDO: USA SIEMPRE DATOS DE CIERRE CUANDO EXISTEN
+ * Genera los datos para la hoja de resumen (cálculo en vivo)
+ */
+const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): any[][] => {
+  const totalOrders = orders.length;
+  const totalVentas = orders.reduce((sum, o) => sum + o.total, 0);
+
+  const efectivo = orders.filter(o => o.paymentMethod === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0);
+  const yapePlin = orders.filter(o => o.paymentMethod === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0);
+  const tarjeta = orders.filter(o => o.paymentMethod === 'TARJETA').reduce((sum, o) => sum + o.total, 0);
+  const noAplica = orders.filter(o => !o.paymentMethod).reduce((sum, o) => sum + o.total, 0);
+
+  const efectivoPct = totalVentas > 0 ? (efectivo / totalVentas) * 100 : 0;
+  const yapePlinPct = totalVentas > 0 ? (yapePlin / totalVentas) * 100 : 0;
+  const tarjetaPct = totalVentas > 0 ? (tarjeta / totalVentas) * 100 : 0;
+
+  const ventasPorDia = new Map<string, number>();
+  orders.forEach(order => {
+    const date = formatDateForDisplay(order.createdAt);
+    ventasPorDia.set(date, (ventasPorDia.get(date) || 0) + order.total);
+  });
+
+  let mejorDia = { fecha: '', total: 0 };
+  ventasPorDia.forEach((total, fecha) => {
+    if (total > mejorDia.total) {
+      mejorDia = { fecha, total };
+    }
+  });
+
+  return [
+    ['REPORTE DE VENTAS', ''],
+    ['Período', `${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
+    ['Fecha de generación', new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' })],
+    ['', ''],
+    ['ESTADISTICAS GENERALES', ''],
+    ['Total de Órdenes', totalOrders],
+    ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
+    ['', ''],
+    ['VENTAS POR METODO DE PAGO', ''],
+    ['EFECTIVO', `S/ ${efectivo.toFixed(2)}`, `${efectivoPct.toFixed(1)}%`],
+    ['YAPE/PLIN', `S/ ${yapePlin.toFixed(2)}`, `${yapePlinPct.toFixed(1)}%`],
+    ['TARJETA', `S/ ${tarjeta.toFixed(2)}`, `${tarjetaPct.toFixed(1)}%`],
+    ['NO APLICA', `S/ ${noAplica.toFixed(2)}`],
+    ['', ''],
+    ['ESTADISTICAS DESTACADAS', ''],
+    ['Día con más ventas', mejorDia.fecha, `S/ ${mejorDia.total.toFixed(2)}`],
+    ['Promedio diario', `S/ ${(totalVentas / (ventasPorDia.size || 1)).toFixed(2)}`]
+  ];
+};
+
+/**
+ * Genera los datos para la hoja de desglose diario (cálculo en vivo)
+ */
+const generateDiarioSheet = (orders: Order[], startDate: Date, endDate: Date): DailySummary[] => {
+  const dailyMap = new Map<string, DailySummary>();
+
+  const currentDate = new Date(startDate);
+  while (currentDate <= endDate) {
+    const dateStr = formatDateForDisplay(currentDate);
+    dailyMap.set(dateStr, {
+      date: dateStr,
+      orders: 0,
+      efectivo: 0,
+      yapePlin: 0,
+      tarjeta: 0,
+      noAplica: 0,
+      total: 0
+    });
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  orders.forEach(order => {
+    const dateStr = formatDateForDisplay(order.createdAt);
+    const day = dailyMap.get(dateStr);
+    
+    if (day) {
+      day.orders++;
+      day.total += order.total;
+
+      switch (order.paymentMethod) {
+        case 'EFECTIVO':
+          day.efectivo += order.total;
+          break;
+        case 'YAPE/PLIN':
+          day.yapePlin += order.total;
+          break;
+        case 'TARJETA':
+          day.tarjeta += order.total;
+          break;
+        default:
+          day.noAplica += order.total;
+      }
+    }
+  });
+
+  return Array.from(dailyMap.values()).sort((a, b) => 
+    a.date.localeCompare(b.date)
+  );
+};
+
+/**
+ * Genera el top de productos más vendidos (cálculo en vivo)
+ */
+const generateTopProducts = (orders: Order[]): any[] => {
+  const productMap = new Map<string, ProductSummary>();
+
+  orders.forEach(order => {
+    order.items.forEach(item => {
+      const existing = productMap.get(item.menuItem.id);
+      if (existing) {
+        existing.quantity += item.quantity;
+        existing.total += item.menuItem.price * item.quantity;
+      } else {
+        productMap.set(item.menuItem.id, {
+          id: item.menuItem.id,
+          name: item.menuItem.name,
+          quantity: item.quantity,
+          total: item.menuItem.price * item.quantity,
+          category: item.menuItem.category
+        });
+      }
+    });
+  });
+
+  return Array.from(productMap.values())
+    .sort((a, b) => b.quantity - a.quantity)
+    .map(p => ({
+      name: p.name,
+      quantity: p.quantity,
+      total: `S/ ${p.total.toFixed(2)}`,
+      category: p.category
+    }));
+};
+
+// ============================================
+// FUNCIONES PARA COMBINAR MÚLTIPLES CIERRES
+// ============================================
+
+/**
+ * Genera resumen combinado para múltiples cierres
+ */
+const generateCombinedResumen = (closures: SalesClosure[], startDate: Date, endDate: Date): any[][] => {
+  const totalOrders = closures.reduce((sum, c) => sum + c.total_orders, 0);
+  const totalVentas = closures.reduce((sum, c) => sum + c.total_amount, 0);
+
+  const totalEfectivo = closures.reduce((sum, c) => sum + c.total_efectivo, 0);
+  const totalYapePlin = closures.reduce((sum, c) => sum + c.total_yape_plin, 0);
+  const totalTarjeta = closures.reduce((sum, c) => sum + c.total_tarjeta, 0);
+  const totalNoAplica = closures.reduce((sum, c) => sum + c.total_no_aplica, 0);
+
+  const efectivoPct = totalVentas > 0 ? (totalEfectivo / totalVentas) * 100 : 0;
+  const yapePlinPct = totalVentas > 0 ? (totalYapePlin / totalVentas) * 100 : 0;
+  const tarjetaPct = totalVentas > 0 ? (totalTarjeta / totalVentas) * 100 : 0;
+
+  return [
+    ['REPORTE DE VENTAS COMBINADO (MULTIPLES CIERRES)', ''],
+    ['Período', `${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
+    ['Fecha de generación', new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' })],
+    ['Cantidad de cierres', closures.length],
+    ['', ''],
+    ['ESTADISTICAS GENERALES', ''],
+    ['Total de Órdenes', totalOrders],
+    ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
+    ['', ''],
+    ['VENTAS POR METODO DE PAGO', ''],
+    ['EFECTIVO', `S/ ${totalEfectivo.toFixed(2)}`, `${efectivoPct.toFixed(1)}%`],
+    ['YAPE/PLIN', `S/ ${totalYapePlin.toFixed(2)}`, `${yapePlinPct.toFixed(1)}%`],
+    ['TARJETA', `S/ ${totalTarjeta.toFixed(2)}`, `${tarjetaPct.toFixed(1)}%`],
+    ['NO APLICA', `S/ ${totalNoAplica.toFixed(2)}`]
+  ];
+};
+
+/**
+ * Combina top productos de múltiples cierres
+ */
+const combineTopProducts = (closures: SalesClosure[]): any[] => {
+  const productMap = new Map<string, { quantity: number; total: number; name: string; category: string }>();
+
+  closures.forEach(closure => {
+    if (closure.top_products && Array.isArray(closure.top_products)) {
+      closure.top_products.forEach(product => {
+        const existing = productMap.get(product.id);
+        if (existing) {
+          existing.quantity += product.quantity;
+          existing.total += product.total;
+        } else {
+          productMap.set(product.id, {
+            name: product.name,
+            quantity: product.quantity,
+            total: product.total,
+            category: product.category
+          });
+        }
+      });
+    }
+  });
+
+  return Array.from(productMap.values())
+    .sort((a, b) => b.quantity - a.quantity)
+    .map(p => ({
+      name: p.name,
+      quantity: p.quantity,
+      total: `S/ ${p.total.toFixed(2)}`,
+      category: p.category
+    }));
+};
+
+// ============================================
+// FUNCIÓN PRINCIPAL DE EXPORTACIÓN
+// ============================================
+
+/**
+ * Exporta órdenes por rango de fechas - USA DATOS DE CIERRE SI EXISTEN
  */
 export const exportOrdersByDateRange = async (
   orders: Order[], 
@@ -240,8 +455,28 @@ export const exportOrdersByDateRange = async (
         wsProductos['!cols'] = [{ wch: 35 }, { wch: 10 }, { wch: 15 }, { wch: 20 }];
         XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
 
-        // HOJA 4: DETALLE (SOLO PARA REFERENCIA, CON LAS ÓRDENES ACTUALES)
-        // Nota: Esta hoja muestra las órdenes actuales, pero los totales ya están congelados
+        // HOJA 4: NOTA INFORMATIVA
+        const notaData = [
+          ['NOTA IMPORTANTE:'],
+          ['Los totales de este reporte corresponden al CIERRE DE CAJA #' + closure.closure_number],
+          ['Fecha del cierre: ' + new Date(closure.closed_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })],
+          [''],
+          ['Si se eliminaron o modificaron órdenes DESPUÉS del cierre,'],
+          ['los totales mostrados (S/ ' + closure.total_amount.toFixed(2) + ') son los CORRECTOS y oficiales.'],
+          [''],
+          ['La hoja "DETALLE" muestra las órdenes actuales en el sistema,']
+        ];
+        
+        if (closure.total_amount !== orders.reduce((sum, o) => sum + o.total, 0)) {
+          notaData.push(['⚠️ Hay diferencia con las órdenes actuales!']);
+          notaData.push(['Total del cierre: S/ ' + closure.total_amount.toFixed(2)]);
+          notaData.push(['Total actual: S/ ' + orders.reduce((sum, o) => sum + o.total, 0).toFixed(2)]);
+        }
+        
+        const wsNota = XLSX.utils.aoa_to_sheet(notaData);
+        XLSX.utils.book_append_sheet(wb, wsNota, 'INFORMACION');
+
+        // HOJA 5: DETALLE ACTUAL (opcional, para referencia)
         const filteredOrders = orders.filter(order => {
           const orderDate = new Date(order.createdAt);
           const orderDay = formatDateForDisplay(orderDate);
@@ -257,16 +492,6 @@ export const exportOrdersByDateRange = async (
             { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 25 },
             { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 50 }
           ];
-          
-          // Agregar nota de que los totales son del cierre
-          const nota = [
-            ['NOTA: Los totales de este reporte corresponden al CIERRE DE CAJA #' + closure.closure_number],
-            ['Las órdenes detalladas abajo son las que existen ACTUALMENTE en el sistema'],
-            ['Si se eliminaron órdenes después del cierre, los totales NO coincidirán con el detalle']
-          ];
-          const wsNota = XLSX.utils.aoa_to_sheet(nota);
-          XLSX.utils.book_append_sheet(wb, wsNota, 'NOTA IMPORTANTE');
-          
           XLSX.utils.book_append_sheet(wb, wsDetalle, 'DETALLE ACTUAL');
         }
 
@@ -387,4 +612,96 @@ export const exportOrdersByDateRange = async (
   XLSX.writeFile(wb, fileName);
 };
 
-// ... (el resto de las funciones auxiliares se mantienen igual)
+// ============================================
+// FUNCIONES DE EXPORTACIÓN ADICIONALES
+// ============================================
+
+/**
+ * Exporta órdenes a Excel con formato profesional
+ */
+export const exportOrdersToExcel = (orders: Order[], tipo: 'today' | 'all' = 'today') => {
+  if (orders.length === 0) {
+    alert('No hay órdenes para exportar');
+    return;
+  }
+
+  const data = orders.map(order => {
+    const fecha = formatDateForDisplay(order.createdAt);
+    const hora = formatTimeForDisplay(order.createdAt);
+
+    const productosList = order.items.map(item => 
+      `${item.quantity}x ${item.menuItem.name}`
+    ).join('\n');
+
+    return {
+      'CLIENTE': order.customerName.toUpperCase(),
+      'MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
+      'METODO PAGO': order.paymentMethod || 'NO APLICA',
+      'FECHA': fecha,
+      'HORA': hora,
+      'N° ORDEN': order.orderNumber || `ORD-${order.id.slice(-8)}`,
+      'TELEFONO': order.phone,
+      'PRODUCTOS': productosList
+    };
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(data);
+  
+  ws['!cols'] = [
+    { wch: 25 }, { wch: 12 }, { wch: 12 }, 
+    { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 40 }
+  ];
+
+  const nombreHoja = tipo === 'today' ? 'Ventas del Día' : 'Todas las Ventas';
+  XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+
+  const fecha = new Date().toLocaleDateString('es-PE', { timeZone: 'America/Lima' }).replace(/\//g, '-');
+  const tipoTexto = tipo === 'today' ? 'diarias' : 'totales';
+  const fileName = `ventas_${tipoTexto}_${fecha}.xlsx`;
+
+  XLSX.writeFile(wb, fileName);
+};
+
+/**
+ * Exporta un cierre específico a Excel
+ */
+export const exportClosureToExcel = async (closureId: string) => {
+  try {
+    const { data: closure, error } = await supabase
+      .from('sales_closures')
+      .select('*')
+      .eq('id', closureId)
+      .single();
+
+    if (error) throw error;
+    if (!closure) {
+      alert('No se encontró el cierre');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    const startDate = new Date(closure.opened_at);
+    const endDate = new Date(closure.closed_at);
+    const resumenData = generateResumenSheetFromClosure(closure, startDate, endDate);
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+    wsResumen['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
+
+    const diarioData = generateDiarioSheetFromClosure(closure);
+    const wsDiario = XLSX.utils.json_to_sheet(diarioData);
+    XLSX.utils.book_append_sheet(wb, wsDiario, 'DIARIO');
+
+    const topProducts = generateTopProductsFromClosure(closure);
+    const wsProductos = XLSX.utils.json_to_sheet(topProducts);
+    XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
+
+    const fileName = `cierre_${closure.closure_number}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+  } catch (error: any) {
+    console.error('Error exporting closure:', error);
+    alert('Error al exportar cierre: ' + error.message);
+  }
+};
