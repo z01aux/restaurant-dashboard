@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/types/sales.ts
+// ARCHIVO: src/types/sales.ts (ACTUALIZADO)
 // ============================================
 
 export interface TopProduct {
@@ -8,6 +8,19 @@ export interface TopProduct {
   quantity: number;
   total: number;
   category: string;
+}
+
+export interface DailyBreakdown {
+  date: string;
+  orders: number;
+  efectivo: number;
+  yapePlin: number;
+  tarjeta: number;
+  noAplica: number;
+  total: number;
+  phone: number;
+  walkIn: number;
+  delivery: number;
 }
 
 export interface SalesClosure {
@@ -23,26 +36,32 @@ export interface SalesClosure {
   initial_cash: number;
   final_cash: number;
   
+  // Resumen por método de pago
   total_efectivo: number;
   total_yape_plin: number;
   total_tarjeta: number;
   total_no_aplica: number;
   
+  // Resumen por tipo de pedido
   total_phone: number;
   total_walk_in: number;
   total_delivery: number;
   
+  // Totales generales
   total_orders: number;
   total_amount: number;
   
+  // Conteo por estado
   orders_pending: number;
   orders_preparing: number;
   orders_ready: number;
   orders_delivered: number;
   orders_cancelled: number;
   
+  // Datos adicionales guardados
   notes: string;
   top_products: TopProduct[];
+  daily_breakdown?: DailyBreakdown[]; // NUEVO: Desglose diario guardado
   
   created_at: string;
   updated_at: string;
@@ -80,4 +99,5 @@ export interface DailySummary {
     cancelled: number;
   };
   top_products: TopProduct[];
+  daily_breakdown?: DailyBreakdown[]; // NUEVO
 }

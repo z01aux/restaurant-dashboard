@@ -82,9 +82,9 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
   const setThisWeek = () => {
     const today = new Date();
     const firstDay = new Date(today);
-    firstDay.setDate(today.getDate() - today.getDay());
+    firstDay.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Lunes
     
-    const lastDay = new Date(today);
+    const lastDay = new Date(firstDay);
     lastDay.setDate(firstDay.getDate() + 6);
     
     setStartDate(firstDay.toISOString().split('T')[0]);
@@ -201,7 +201,8 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
               Formatos disponibles:
             </h3>
             <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-              <li>📊 EXCEL: Reporte completo con 4 hojas (Resumen, Diario, Top Productos, Detalle)</li>
+              <li>📊 EXCEL: Si existen cierres para el rango, se usarán los DATOS GUARDADOS (trazabilidad garantizada)</li>
+              <li>📊 EXCEL: Si no hay cierres, se calcula en vivo con las órdenes actuales</li>
               <li>🧾 TICKET: Resumen en formato ticket para impresión térmica (80mm)</li>
             </ul>
           </div>

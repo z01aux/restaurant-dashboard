@@ -160,6 +160,7 @@ const OrdersManager: React.FC = () => {
   
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [exporting, setExporting] = useState(false); // Nuevo estado para controlar exportación
   
   // Hooks
   const { user } = useAuth();
@@ -171,20 +172,21 @@ const OrdersManager: React.FC = () => {
     exportOrdersToCSV,
     getTodayOrders,
     fetchOrders,
-    getRegularOrders // NUEVO: Solo pedidos regulares
+    getRegularOrders
   } = useOrders();
 
   const { 
     cashRegister, 
     loading: salesLoading, 
     openCashRegister, 
-    closeCashRegister
+    closeCashRegister,
+    getTodaySummary
   } = useSalesClosure();
 
   // Obtener solo pedidos regulares (excluir FullDay)
   const regularOrders = useMemo(() => {
     return getRegularOrders();
-  }, [getRegularOrders, orders]); // Se actualiza cuando cambian las órdenes
+  }, [getRegularOrders, orders]);
 
   // Inicializar órdenes locales cuando se cargan las de la BD
   useEffect(() => {
@@ -200,7 +202,6 @@ const OrdersManager: React.FC = () => {
       const newOrder = event.detail;
       console.log('📦 Nueva orden recibida en OrdersManager:', newOrder);
       
-      // Solo agregar si es un pedido regular (no FullDay)
       if (newOrder.orderType !== 'fullday') {
         setLocalOrders(prev => {
           if (prev.some(o => o.id === newOrder.id)) {
@@ -255,7 +256,7 @@ const OrdersManager: React.FC = () => {
     { value: 'created-asc', label: '📅 Más Antiguas' }
   ], []);
 
-  // Filtrar órdenes del día (solo regulares)
+  // Filtrar órdenes del día
   const todayOrders = useMemo(() => {
     if (!showOnlyToday) return localOrders;
     
@@ -435,9 +436,52 @@ const OrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment, localOrders]);
 
-  const handleExportExcel = useCallback((startDate: Date, endDate: Date) => {
-    exportOrdersByDateRange(regularOrders, startDate, endDate);
-  }, [regularOrders]);
+  // ============================================
+  // MANEJADOR DE EXPORTACIÓN POR FECHAS (ACTUALIZADO)
+  // ============================================
+  const handleExportExcel = useCallback(async (startDate: Date, endDate: Date) => {
+    // Prevenir múltiples exportaciones simultáneas
+    if (exporting) return;
+    
+    setExporting(true);
+    
+    // Crear toast de carga
+    const loadingToast = document.createElement('div');
+    loadingToast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+    loadingToast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando reporte...</span></div>';
+    document.body.appendChild(loadingToast);
+    
+    try {
+      // Obtener el resumen del día para mostrarlo en consola (debug)
+      const todaySummary = await getTodaySummary(regularOrders);
+      console.log('📊 Resumen del día para exportación:', todaySummary);
+      
+      // Llamar a la función asíncrona que ahora busca cierres guardados
+      await exportOrdersByDateRange(regularOrders, startDate, endDate);
+      
+    } catch (error: any) {
+      console.error('Error en exportación:', error);
+      
+      // Mostrar error
+      const errorToast = document.createElement('div');
+      errorToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      errorToast.innerHTML = `<div>❌ Error: ${error.message}</div>`;
+      document.body.appendChild(errorToast);
+      
+      setTimeout(() => {
+        if (document.body.contains(errorToast)) {
+          document.body.removeChild(errorToast);
+        }
+      }, 3000);
+      
+    } finally {
+      // Eliminar el toast de carga
+      if (document.body.contains(loadingToast)) {
+        document.body.removeChild(loadingToast);
+      }
+      setExporting(false);
+    }
+  }, [regularOrders, getTodaySummary, exporting]);
 
   const handlePrintTicket = useCallback((startDate: Date, endDate: Date) => {
     const filteredOrders = regularOrders.filter(order => {
@@ -500,12 +544,32 @@ const OrdersManager: React.FC = () => {
       if (result.success) {
         alert('✅ Caja abierta correctamente');
         setShowCashModal(false);
+      } else {
+        alert('❌ Error al abrir caja: ' + result.error);
       }
     } else {
       const result = await closeCashRegister(regularOrders, data.finalCash!, data.notes || '');
       if (result.success) {
         alert('✅ Caja cerrada correctamente');
         setShowCashModal(false);
+        
+        // Mostrar resumen del cierre
+        console.log('📊 Cierre exitoso:', result.closure);
+        
+        // Opcional: Mostrar toast con número de cierre
+        const successToast = document.createElement('div');
+        successToast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+        successToast.innerHTML = `<div>✅ Cierre #${result.closure?.closure_number} guardado</div>`;
+        document.body.appendChild(successToast);
+        
+        setTimeout(() => {
+          if (document.body.contains(successToast)) {
+            document.body.removeChild(successToast);
+          }
+        }, 3000);
+        
+      } else {
+        alert('❌ Error al cerrar caja: ' + result.error);
       }
     }
   }, [cashModalType, openCashRegister, closeCashRegister, regularOrders]);
@@ -631,6 +695,7 @@ const OrdersManager: React.FC = () => {
         <button 
           onClick={handleExportTodayCSV} 
           className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1"
+          disabled={exporting}
         >
           <Download size={16} />
           <span>CSV Hoy</span>
@@ -639,6 +704,7 @@ const OrdersManager: React.FC = () => {
         <button 
           onClick={handleExportAllCSV} 
           className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1"
+          disabled={exporting}
         >
           <Download size={16} />
           <span>CSV Todo</span>
@@ -647,6 +713,7 @@ const OrdersManager: React.FC = () => {
         <button 
           onClick={handleExportTodayExcel} 
           className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1"
+          disabled={exporting}
         >
           <Download size={16} />
           <span>Excel Hoy</span>
@@ -655,6 +722,7 @@ const OrdersManager: React.FC = () => {
         <button 
           onClick={handleExportAllExcel} 
           className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1"
+          disabled={exporting}
         >
           <Download size={16} />
           <span>Excel Todo</span>
@@ -663,14 +731,19 @@ const OrdersManager: React.FC = () => {
         <button 
           onClick={() => setShowDateRangeModal(true)} 
           className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 transition-colors flex items-center space-x-1"
+          disabled={exporting}
         >
           <Download size={16} />
           <span>Reportes por Fechas</span>
+          {exporting && (
+            <div className="ml-2 animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+          )}
         </button>
 
         <button 
           onClick={handleNewOrder} 
           className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm hover:from-red-600 hover:to-amber-600 flex items-center space-x-1"
+          disabled={exporting}
         >
           <span>➕</span>
           <span>Nueva Orden</span>
@@ -702,12 +775,14 @@ const OrdersManager: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por cliente, teléfono..."
               className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+              disabled={exporting}
             />
           </div>
           <select 
             value={paymentFilter}
             onChange={(e) => setPaymentFilter(e.target.value)}
             className="px-3 py-2 border rounded-lg text-sm"
+            disabled={exporting}
           >
             <option value="">Todos los pagos</option>
             <option value="EFECTIVO">💵 Efectivo</option>
@@ -724,6 +799,7 @@ const OrdersManager: React.FC = () => {
             <button
               onClick={() => setPaymentFilter('')}
               className="text-xs text-red-500 hover:text-red-700"
+              disabled={exporting}
             >
               Limpiar
             </button>
@@ -808,6 +884,12 @@ const OrdersManager: React.FC = () => {
               <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
             </div>
           </div>
+          {exporting && (
+            <div className="mt-2 text-xs text-blue-600 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+              Generando reporte, por favor espera...
+            </div>
+          )}
         </div>
       )}
     </div>
