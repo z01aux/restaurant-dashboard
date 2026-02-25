@@ -1,6 +1,5 @@
 // ============================================
 // ARCHIVO: src/utils/ticketUtils.ts
-// Utilidades para generar tickets de resumen
 // ============================================
 
 import { Order } from '../types';
@@ -8,17 +7,11 @@ import { Order } from '../types';
 interface TicketSummary {
   totalOrders: number;
   totalAmount: number;
-  averageTicket: number;
   byPaymentMethod: {
     EFECTIVO: number;
     YAPE_PLIN: number;
     TARJETA: number;
     NO_APLICA: number;
-  };
-  byOrderType: {
-    phone: number;
-    walkIn: number;
-    delivery: number;
   };
   topProducts: Array<{
     name: string;
@@ -38,7 +31,6 @@ interface TicketSummary {
 export const generateTicketSummary = (orders: Order[], startDate: Date, endDate: Date): TicketSummary => {
   const totalOrders = orders.length;
   const totalAmount = orders.reduce((sum, o) => sum + o.total, 0);
-  const averageTicket = totalOrders > 0 ? totalAmount / totalOrders : 0;
 
   // Totales por método de pago
   const byPaymentMethod = {
@@ -46,13 +38,6 @@ export const generateTicketSummary = (orders: Order[], startDate: Date, endDate:
     YAPE_PLIN: orders.filter(o => o.paymentMethod === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0),
     TARJETA: orders.filter(o => o.paymentMethod === 'TARJETA').reduce((sum, o) => sum + o.total, 0),
     NO_APLICA: orders.filter(o => !o.paymentMethod).reduce((sum, o) => sum + o.total, 0),
-  };
-
-  // Totales por tipo de pedido
-  const byOrderType = {
-    phone: orders.filter(o => o.source.type === 'phone').reduce((sum, o) => sum + o.total, 0),
-    walkIn: orders.filter(o => o.source.type === 'walk-in').reduce((sum, o) => sum + o.total, 0),
-    delivery: orders.filter(o => o.source.type === 'delivery').reduce((sum, o) => sum + o.total, 0),
   };
 
   // Top productos
@@ -111,9 +96,7 @@ export const generateTicketSummary = (orders: Order[], startDate: Date, endDate:
   return {
     totalOrders,
     totalAmount,
-    averageTicket,
     byPaymentMethod,
-    byOrderType,
     topProducts,
     dailyBreakdown
   };
@@ -173,10 +156,6 @@ export const generateResumenTicketHTML = (
           <span>Total Ventas:</span>
           <span style="font-weight: bold;">${formatCurrency(summary.totalAmount)}</span>
         </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>Ticket Promedio:</span>
-          <span>${formatCurrency(summary.averageTicket)}</span>
-        </div>
       </div>
 
       <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
@@ -204,26 +183,8 @@ export const generateResumenTicketHTML = (
 
       <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
 
-      <!-- POR TIPO DE PEDIDO -->
-      <div style="margin-bottom: 8px;">
-        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">📋 POR TIPO DE PEDIDO</div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>Cocina (Tel.):</span>
-          <span>${formatCurrency(summary.byOrderType.phone)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>Local:</span>
-          <span>${formatCurrency(summary.byOrderType.walkIn)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>Delivery:</span>
-          <span>${formatCurrency(summary.byOrderType.delivery)}</span>
-        </div>
-      </div>
-
-      <!-- TOP 5 PRODUCTOS (solo si hay) -->
+      <!-- TOP 5 PRODUCTOS -->
       ${summary.topProducts.length > 0 ? `
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
         <div style="margin-bottom: 8px;">
           <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">🔥 TOP 5 PRODUCTOS</div>
           ${summary.topProducts.map((p, i) => `
@@ -233,11 +194,11 @@ export const generateResumenTicketHTML = (
             </div>
           `).join('')}
         </div>
+        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
       ` : ''}
 
-      <!-- DESGLOSE DIARIO (solo si es más de un día) -->
+      <!-- DESGLOSE DIARIO -->
       ${summary.dailyBreakdown.length > 1 ? `
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
         <div style="margin-bottom: 8px;">
           <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">📅 DESGLOSE DIARIO</div>
           ${summary.dailyBreakdown.map(day => `
@@ -247,10 +208,10 @@ export const generateResumenTicketHTML = (
             </div>
           `).join('')}
         </div>
+        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
       ` : ''}
 
       <!-- FOOTER -->
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
       <div style="text-align: center; font-size: 9px;">
         <div>¡GRACIAS POR SU TRABAJO!</div>
         <div style="margin-top: 4px;">********************************</div>
