@@ -1,5 +1,7 @@
 // ============================================
-// ARCHIVO: src/utils/ticketUtils.ts
+// ARCHIVO: src/utils/ticketUtils.ts (VERSIÓN PROFESIONAL - SIN EMOTICONES)
+// Utilidades para generar tickets de resumen
+// Diseño profesional para impresora térmica
 // ============================================
 
 import { Order } from '../types';
@@ -103,7 +105,7 @@ export const generateTicketSummary = (orders: Order[], startDate: Date, endDate:
 };
 
 /**
- * Genera el contenido HTML para el ticket de resumen
+ * Genera el contenido HTML para el ticket de resumen (SIN EMOTICONES)
  */
 export const generateResumenTicketHTML = (
   summary: TicketSummary,
@@ -128,8 +130,8 @@ export const generateResumenTicketHTML = (
   };
 
   const periodText = startDate.toDateString() === endDate.toDateString()
-    ? `DÍA: ${formatDate(startDate)}`
-    : `PERÍODO: ${formatDate(startDate)} AL ${formatDate(endDate)}`;
+    ? `DIA: ${formatDate(startDate)}`
+    : `PERIODO: ${formatDate(startDate)} AL ${formatDate(endDate)}`;
 
   return `
     <div class="ticket" style="font-family: 'Courier New', monospace; width: 80mm; padding: 8px; margin: 0 auto; background: white; color: black; font-size: 11px; line-height: 1.3;">
@@ -147,36 +149,36 @@ export const generateResumenTicketHTML = (
 
       <!-- RESUMEN GENERAL -->
       <div style="margin-bottom: 8px;">
-        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">📊 RESUMEN GENERAL</div>
+        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">RESUMEN GENERAL</div>
         <div style="display: flex; justify-content: space-between;">
-          <span>Total Órdenes:</span>
+          <span>TOTAL ORDENES:</span>
           <span style="font-weight: bold;">${summary.totalOrders}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span>Total Ventas:</span>
+          <span>TOTAL VENTAS:</span>
           <span style="font-weight: bold;">${formatCurrency(summary.totalAmount)}</span>
         </div>
       </div>
 
       <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
 
-      <!-- POR MÉTODO DE PAGO -->
+      <!-- METODO DE PAGO -->
       <div style="margin-bottom: 8px;">
-        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">💰 POR MÉTODO DE PAGO</div>
+        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">METODO DE PAGO</div>
         <div style="display: flex; justify-content: space-between;">
-          <span>Efectivo:</span>
+          <span>EFECTIVO:</span>
           <span>${formatCurrency(summary.byPaymentMethod.EFECTIVO)}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span>Yape/Plin:</span>
+          <span>YAPE/PLIN:</span>
           <span>${formatCurrency(summary.byPaymentMethod.YAPE_PLIN)}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span>Tarjeta:</span>
+          <span>TARJETA:</span>
           <span>${formatCurrency(summary.byPaymentMethod.TARJETA)}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span>No Aplica:</span>
+          <span>NO APLICA:</span>
           <span>${formatCurrency(summary.byPaymentMethod.NO_APLICA)}</span>
         </div>
       </div>
@@ -186,7 +188,7 @@ export const generateResumenTicketHTML = (
       <!-- TOP 5 PRODUCTOS -->
       ${summary.topProducts.length > 0 ? `
         <div style="margin-bottom: 8px;">
-          <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">🔥 TOP 5 PRODUCTOS</div>
+          <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">TOP 5 PRODUCTOS</div>
           ${summary.topProducts.map((p, i) => `
             <div style="display: flex; justify-content: space-between; font-size: 10px;">
               <span>${i+1}. ${p.name.substring(0, 20)}${p.name.length > 20 ? '...' : ''}</span>
@@ -200,7 +202,7 @@ export const generateResumenTicketHTML = (
       <!-- DESGLOSE DIARIO -->
       ${summary.dailyBreakdown.length > 1 ? `
         <div style="margin-bottom: 8px;">
-          <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">📅 DESGLOSE DIARIO</div>
+          <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">DESGLOSE DIARIO</div>
           ${summary.dailyBreakdown.map(day => `
             <div style="display: flex; justify-content: space-between; font-size: 9px;">
               <span>${day.date}:</span>
@@ -213,7 +215,7 @@ export const generateResumenTicketHTML = (
 
       <!-- FOOTER -->
       <div style="text-align: center; font-size: 9px;">
-        <div>¡GRACIAS POR SU TRABAJO!</div>
+        <div>GRACIAS POR SU TRABAJO</div>
         <div style="margin-top: 4px;">********************************</div>
       </div>
     </div>
@@ -256,12 +258,17 @@ export const printResumenTicket = (summary: TicketSummary, startDate: Date, endD
                 margin: 0 auto !important;
                 padding: 0 !important;
                 background: white !important;
+                font-family: 'Courier New', monospace !important;
               }
             }
             body {
               margin: 0;
               padding: 0;
               background: white;
+              font-family: 'Courier New', monospace;
+            }
+            .ticket {
+              font-family: 'Courier New', monospace;
             }
           </style>
         </head>
