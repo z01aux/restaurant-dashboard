@@ -12,6 +12,30 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   // Verificar si es un pedido por teléfono para ticket de cocina
   const isPhoneOrder = order.source.type === 'phone';
   
+  // Determinar la tasa de IGV (10% por defecto, pero puede venir de la orden)
+  const getIgvRate = (): number => {
+    // Si la orden tiene una propiedad igvRate, úsala
+    if ((order as any).igvRate) {
+      return (order as any).igvRate;
+    }
+    // Por defecto, usar 10%
+    return 10;
+  };
+
+  const igvRate = getIgvRate();
+
+  // Cálculos de IGV con la tasa correcta
+  const calculateSubtotal = (total: number) => {
+    return total / (1 + (igvRate / 100));
+  };
+
+  const calculateIGV = (total: number) => {
+    return total - (total / (1 + (igvRate / 100)));
+  };
+
+  const subtotal = calculateSubtotal(order.total);
+  const igv = calculateIGV(order.total);
+  
   // Obtener el nombre del usuario actual desde localStorage
   const getCurrentUserName = () => {
     try {
@@ -49,28 +73,16 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     return 'NO APLICA';
   };
 
-  // Cálculos de IGV (10% incluido en el precio)
-  const calculateSubtotal = (total: number) => {
-    return total / 1.10;
-  };
-
-  const calculateIGV = (total: number) => {
-    return total - (total / 1.10);
-  };
-
-  const subtotal = calculateSubtotal(order.total);
-  const igv = calculateIGV(order.total);
-
   // CONSTANTES PARA EL ANCHO DE IMPRESIÓN
   const TICKET_WIDTH = 80;
   const PAGE_WIDTH = TICKET_WIDTH * 2.83465;
   
   // TAMAÑOS DE FUENTE - AUMENTADOS PARA MEJOR LEGIBILIDAD
-  const FONT_SIZE_SMALL = 8;      // Antes era 7
-  const FONT_SIZE_NORMAL = 9;      // Antes era 8
-  const FONT_SIZE_LARGE = 10;      // Antes era 9
-  const FONT_SIZE_XLARGE = 11;     // Antes era 10
-  const FONT_SIZE_PRODUCT = 10;    // NUEVO: Para nombres de productos
+  const FONT_SIZE_SMALL = 8;
+  const FONT_SIZE_NORMAL = 9;
+  const FONT_SIZE_LARGE = 10;
+  const FONT_SIZE_XLARGE = 11;
+  const FONT_SIZE_PRODUCT = 10;
   
   const PADDING = 8;
 
@@ -148,15 +160,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     quantity: {
       width: '15%',
       fontWeight: 'bold',
-      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
+      fontSize: FONT_SIZE_PRODUCT,
     },
     productName: {
       width: '85%',
       fontWeight: 'bold',
       textTransform: 'uppercase',
-      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
+      fontSize: FONT_SIZE_PRODUCT,
       flexWrap: 'wrap',
-      lineHeight: 1.4, // Mejor espaciado
+      lineHeight: 1.4,
     },
     notes: {
       fontStyle: 'italic',
@@ -243,18 +255,18 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     },
     colQuantity: {
       width: '15%',
-      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
+      fontSize: FONT_SIZE_PRODUCT,
       fontWeight: 'bold',
     },
     colDescription: {
       width: '50%',
-      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
+      fontSize: FONT_SIZE_PRODUCT,
       fontWeight: 'normal',
     },
     colPrice: {
       width: '35%',
       textAlign: 'right',
-      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
+      fontSize: FONT_SIZE_PRODUCT,
       fontWeight: 'normal',
     },
     quantity: {
@@ -263,7 +275,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     productName: {
       fontWeight: 'bold',
       textTransform: 'uppercase',
-      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
+      fontSize: FONT_SIZE_PRODUCT,
       flexWrap: 'wrap',
       lineHeight: 1.4,
     },
@@ -370,7 +382,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     </Document>
   );
 
-  // Componente del documento PDF normal - CON IGV 10% CORREGIDO
+  // Componente del documento PDF normal - CON IGV DINÁMICO
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -470,7 +482,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
             <Text>S/ {subtotal.toFixed(2)}</Text>
           </View>
           <View style={normalStyles.calculationRow}>
-            <Text>IGV (10%):</Text> {/* CORREGIDO: de 18% a 10% */}
+            <Text>IGV ({igvRate}%):</Text>
             <Text>S/ {igv.toFixed(2)}</Text>
           </View>
           <View style={[normalStyles.row, normalStyles.total, normalStyles.bold]}>
@@ -527,7 +539,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   };
 
-  // Función para imprimir - CON IGV 10% CORREGIDO
+  // Función para imprimir
   const handlePrint = (e: React.MouseEvent) => {
     e.stopPropagation();
     const iframe = document.createElement('iframe');
@@ -716,7 +728,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   };
 
-  // Generar contenido HTML para impresión - CON IGV 10% CORREGIDO
+  // Generar contenido HTML para impresión
   const generateTicketContent = () => {
     if (isPhoneOrder) {
       return `
@@ -857,7 +869,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
               <span class="normal">S/ ${subtotal.toFixed(2)}</span>
             </div>
             <div class="info-row">
-              <span class="normal">IGV (10%):</span> <!-- CORREGIDO: de 18% a 10% -->
+              <span class="normal">IGV (${igvRate}%):</span>
               <span class="normal">S/ ${igv.toFixed(2)}</span>
             </div>
             <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">

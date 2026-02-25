@@ -48,7 +48,8 @@ export interface Order {
     guardianName: string;
     phone?: string;
   };
-  orderType: 'regular' | 'fullday'; // NUEVO CAMPO
+  orderType: 'regular' | 'fullday';
+  igvRate?: number; // NUEVO: Tasa de IGV (10% por defecto)
 }
 
 export interface DatabaseOrder {
@@ -67,7 +68,7 @@ export interface DatabaseOrder {
   created_at: string;
   updated_at: string;
   student_id?: string;
-  order_type: string; // NUEVO CAMPO
+  order_type: string;
 }
 
 export interface DatabaseOrderItem {
