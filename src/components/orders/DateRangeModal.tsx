@@ -8,31 +8,43 @@ interface DateRangeModalProps {
   onConfirmTicket: (startDate: Date, endDate: Date) => void;
 }
 
+/**
+ * Convierte una fecha local (YYYY-MM-DD) a un objeto Date en hora local de Perú
+ */
+const createPeruDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  // Crear fecha en hora local de Perú (00:00:00)
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+};
+
+/**
+ * Obtiene la fecha de hoy en formato YYYY-MM-DD (hora local de Perú)
+ */
+const getTodayString = (): string => {
+  const now = new Date();
+  // Ajustar a hora local de Perú
+  const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+  const year = peruDate.getFullYear();
+  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+  const day = String(peruDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const DateRangeModal: React.FC<DateRangeModalProps> = ({
   isOpen,
   onClose,
   onConfirmExcel,
   onConfirmTicket
 }) => {
-  const [startDate, setStartDate] = useState<string>(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today.toISOString().split('T')[0];
-  });
-
-  const [endDate, setEndDate] = useState<string>(() => {
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    return today.toISOString().split('T')[0];
-  });
-
+  const [startDate, setStartDate] = useState<string>(getTodayString());
+  const [endDate, setEndDate] = useState<string>(getTodayString());
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const validateDates = (): boolean => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = createPeruDate(startDate);
+    const end = createPeruDate(endDate);
 
     if (start > end) {
       setError('La fecha de inicio no puede ser mayor que la fecha de fin');
@@ -53,51 +65,92 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
 
   const handleExcel = () => {
     if (validateDates()) {
-      onConfirmExcel(new Date(startDate), new Date(endDate));
+      console.log('📅 Enviando fechas (Perú):', { startDate, endDate });
+      const start = createPeruDate(startDate);
+      const end = createPeruDate(endDate);
+      console.log('📅 Fechas convertidas:', {
+        start: start.toString(),
+        end: end.toString(),
+        startISO: start.toISOString(),
+        endISO: end.toISOString()
+      });
+      onConfirmExcel(start, end);
       onClose();
     }
   };
 
   const handleTicket = () => {
     if (validateDates()) {
-      onConfirmTicket(new Date(startDate), new Date(endDate));
+      console.log('📅 Enviando fechas para ticket (Perú):', { startDate, endDate });
+      const start = createPeruDate(startDate);
+      const end = createPeruDate(endDate);
+      onConfirmTicket(start, end);
       onClose();
     }
   };
 
-  // Opciones rápidas
+  // Opciones rápidas (siempre en hora local de Perú)
   const setToday = () => {
-    const today = new Date();
-    setStartDate(today.toISOString().split('T')[0]);
-    setEndDate(today.toISOString().split('T')[0]);
+    const today = getTodayString();
+    setStartDate(today);
+    setEndDate(today);
   };
 
   const setYesterday = () => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    setStartDate(yesterday.toISOString().split('T')[0]);
-    setEndDate(yesterday.toISOString().split('T')[0]);
+    const today = new Date();
+    const peruDate = new Date(today.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    peruDate.setDate(peruDate.getDate() - 1);
+    
+    const year = peruDate.getFullYear();
+    const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+    const day = String(peruDate.getDate()).padStart(2, '0');
+    const yesterdayStr = `${year}-${month}-${day}`;
+    
+    setStartDate(yesterdayStr);
+    setEndDate(yesterdayStr);
   };
 
   const setThisWeek = () => {
     const today = new Date();
-    const firstDay = new Date(today);
-    firstDay.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Lunes
+    const peruDate = new Date(today.toLocaleString('en-US', { timeZone: 'America/Lima' }));
     
-    const lastDay = new Date(firstDay);
-    lastDay.setDate(firstDay.getDate() + 6);
+    // Obtener el lunes de esta semana
+    const monday = new Date(peruDate);
+    const dayOfWeek = peruDate.getDay(); // 0 = domingo, 1 = lunes, ...
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Si es domingo, restar 6 para llegar al lunes anterior
+    monday.setDate(peruDate.getDate() - diff);
     
-    setStartDate(firstDay.toISOString().split('T')[0]);
-    setEndDate(lastDay.toISOString().split('T')[0]);
+    // Obtener el domingo de esta semana
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const formatDate = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+    
+    setStartDate(formatDate(monday));
+    setEndDate(formatDate(sunday));
   };
 
   const setThisMonth = () => {
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const peruDate = new Date(today.toLocaleString('en-US', { timeZone: 'America/Lima' }));
     
-    setStartDate(firstDay.toISOString().split('T')[0]);
-    setEndDate(lastDay.toISOString().split('T')[0]);
+    const firstDay = new Date(peruDate.getFullYear(), peruDate.getMonth(), 1);
+    const lastDay = new Date(peruDate.getFullYear(), peruDate.getMonth() + 1, 0);
+    
+    const formatDate = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+    
+    setStartDate(formatDate(firstDay));
+    setEndDate(formatDate(lastDay));
   };
 
   return (
@@ -198,12 +251,12 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
           <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <h3 className="text-sm font-semibold text-blue-800 mb-2 flex items-center">
               <Download size={16} className="mr-2" />
-              Formatos disponibles:
+              Información:
             </h3>
             <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-              <li>📊 EXCEL: Si existen cierres para el rango, se usarán los DATOS GUARDADOS (trazabilidad garantizada)</li>
-              <li>📊 EXCEL: Si no hay cierres, se calcula en vivo con las órdenes actuales</li>
-              <li>🧾 TICKET: Resumen en formato ticket para impresión térmica (80mm)</li>
+              <li>Las fechas se interpretan en hora de Perú (UTC-5)</li>
+              <li>Hoy es: {new Date().toLocaleDateString('es-PE', { timeZone: 'America/Lima' })}</li>
+              <li>Si seleccionas "Hoy", se buscarán órdenes desde las 00:00 hasta las 23:59</li>
             </ul>
           </div>
 
