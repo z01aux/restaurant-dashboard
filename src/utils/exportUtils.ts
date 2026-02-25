@@ -1,6 +1,6 @@
 // ============================================
-// ARCHIVO: src/utils/exportUtils.ts (ACTUALIZADO)
-// Versión mejorada: Usa datos de cierre cuando existen
+// ARCHIVO: src/utils/exportUtils.ts (VERSIÓN FINAL)
+// Versión simplificada: Sin ticket promedio, sin tipo de pedido
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -40,9 +40,6 @@ interface DailySummary {
   tarjeta: number;
   noAplica: number;
   total: number;
-  phone: number;
-  walkIn: number;
-  delivery: number;
 }
 
 /**
@@ -57,12 +54,11 @@ interface ProductSummary {
 }
 
 /**
- * Genera hoja de resumen a partir de un cierre guardado
+ * Genera hoja de resumen a partir de un cierre guardado (SIN TICKET PROMEDIO, SIN TIPO PEDIDO)
  */
 const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date, endDate: Date): any[][] => {
   const totalOrders = closure.total_orders;
   const totalVentas = closure.total_amount;
-  const ticketPromedio = totalOrders > 0 ? totalVentas / totalOrders : 0;
 
   // Encontrar día con más ventas (del desglose diario si existe)
   let mejorDia = { fecha: '', total: 0 };
@@ -83,18 +79,12 @@ const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date,
     ['📈 ESTADÍSTICAS GENERALES', ''],
     ['Total de Órdenes', totalOrders, ''],
     ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`, ''],
-    ['Ticket Promedio', `S/ ${ticketPromedio.toFixed(2)}`, ''],
     ['', ''],
     ['💰 VENTAS POR MÉTODO DE PAGO', ''],
     ['EFECTIVO', `S/ ${closure.total_efectivo.toFixed(2)}`, `${((closure.total_efectivo / totalVentas) * 100).toFixed(1)}%`],
     ['YAPE/PLIN', `S/ ${closure.total_yape_plin.toFixed(2)}`, `${((closure.total_yape_plin / totalVentas) * 100).toFixed(1)}%`],
     ['TARJETA', `S/ ${closure.total_tarjeta.toFixed(2)}`, `${((closure.total_tarjeta / totalVentas) * 100).toFixed(1)}%`],
     ['NO APLICA', `S/ ${closure.total_no_aplica.toFixed(2)}`, ''],
-    ['', ''],
-    ['📋 VENTAS POR TIPO DE PEDIDO', ''],
-    ['COCINA (Teléfono)', `S/ ${closure.total_phone.toFixed(2)}`, `${((closure.total_phone / totalVentas) * 100).toFixed(1)}%`],
-    ['LOCAL (Presencial)', `S/ ${closure.total_walk_in.toFixed(2)}`, `${((closure.total_walk_in / totalVentas) * 100).toFixed(1)}%`],
-    ['DELIVERY', `S/ ${closure.total_delivery.toFixed(2)}`, `${((closure.total_delivery / totalVentas) * 100).toFixed(1)}%`],
     ['', ''],
     ['🏆 ESTADÍSTICAS DESTACADAS', ''],
     ['Día con más ventas', mejorDia.fecha || 'N/A', mejorDia.total > 0 ? `S/ ${mejorDia.total.toFixed(2)}` : ''],
@@ -103,11 +93,20 @@ const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date,
 };
 
 /**
- * Genera hoja de desglose diario a partir de un cierre guardado
+ * Genera hoja de desglose diario a partir de un cierre guardado (SIN TIPO PEDIDO)
  */
-const generateDiarioSheetFromClosure = (closure: SalesClosure): DailyBreakdown[] => {
+const generateDiarioSheetFromClosure = (closure: SalesClosure): DailySummary[] => {
   if (closure.daily_breakdown && closure.daily_breakdown.length > 0) {
-    return closure.daily_breakdown;
+    // Mapear solo los campos que necesitamos (sin phone, walkIn, delivery)
+    return closure.daily_breakdown.map(day => ({
+      date: day.date,
+      orders: day.orders,
+      efectivo: day.efectivo,
+      yapePlin: day.yapePlin,
+      tarjeta: day.tarjeta,
+      noAplica: day.noAplica,
+      total: day.total
+    }));
   }
   
   // Si no hay desglose guardado (versiones anteriores), crear un solo día con los totales
@@ -118,10 +117,7 @@ const generateDiarioSheetFromClosure = (closure: SalesClosure): DailyBreakdown[]
     yapePlin: closure.total_yape_plin,
     tarjeta: closure.total_tarjeta,
     noAplica: closure.total_no_aplica,
-    total: closure.total_amount,
-    phone: closure.total_phone,
-    walkIn: closure.total_walk_in,
-    delivery: closure.total_delivery
+    total: closure.total_amount
   }];
 };
 
@@ -130,7 +126,8 @@ const generateDiarioSheetFromClosure = (closure: SalesClosure): DailyBreakdown[]
  */
 const generateTopProductsFromClosure = (closure: SalesClosure): any[] => {
   if (closure.top_products && closure.top_products.length > 0) {
-    return closure.top_products.map(p => ({
+    // Limitar a TOP 5 productos
+    return closure.top_products.slice(0, 5).map(p => ({
       name: p.name,
       quantity: p.quantity,
       total: `S/ ${p.total.toFixed(2)}`,
@@ -152,9 +149,6 @@ const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
     'TELÉFONO': order.phone,
     'MONTO': `S/ ${order.total.toFixed(2)}`,
     'MÉTODO': order.paymentMethod || 'NO APLICA',
-    'TIPO': order.source.type === 'phone' ? 'COCINA' : 
-            order.source.type === 'walk-in' ? 'LOCAL' : 
-            order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY',
     'PRODUCTOS': order.items.map(item => 
       `${item.quantity}x ${item.menuItem.name}`
     ).join('\n'),
@@ -164,15 +158,15 @@ const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
 
 /**
  * Exporta órdenes por rango de fechas - AHORA USA DATOS DE CIERRE SI EXISTEN
+ * SIN TICKET PROMEDIO, SIN TIPO DE PEDIDO
  */
 export const exportOrdersByDateRange = async (
   orders: Order[], 
   startDate: Date, 
   endDate: Date
+  // ya no necesitamos closures como parámetro porque lo buscamos aquí
 ) => {
   // Verificar si existe un cierre para este rango de fechas
-  // Nota: Idealmente esto debería recibir los cierres como parámetro, pero para simplificar,
-  // haremos una consulta directa a Supabase
   try {
     const startStr = startDate.toISOString().split('T')[0];
     const endStr = endDate.toISOString().split('T')[0];
@@ -200,13 +194,13 @@ export const exportOrdersByDateRange = async (
         // Un solo cierre - usar todos sus datos
         const closure = closures[0];
         
-        // HOJA 1: RESUMEN GENERAL
+        // HOJA 1: RESUMEN GENERAL (SIN TICKET PROMEDIO, SIN TIPO PEDIDO)
         const resumenData = generateResumenSheetFromClosure(closure, startDate, endDate);
         const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
         wsResumen['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
         XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
 
-        // HOJA 2: DESGLOSE DIARIO
+        // HOJA 2: DESGLOSE DIARIO (SIN TIPO PEDIDO)
         const diarioData = generateDiarioSheetFromClosure(closure);
         const wsDiario = XLSX.utils.json_to_sheet(diarioData);
         
@@ -218,10 +212,7 @@ export const exportOrdersByDateRange = async (
           { v: 'YAPE/PLIN', position: 'D1' },
           { v: 'TARJETA', position: 'E1' },
           { v: 'NO APLICA', position: 'F1' },
-          { v: 'TOTAL DÍA', position: 'G1' },
-          { v: 'TELÉFONO', position: 'H1' },
-          { v: 'LOCAL', position: 'I1' },
-          { v: 'DELIVERY', position: 'J1' }
+          { v: 'TOTAL DÍA', position: 'G1' }
         ];
         
         diarioHeaders.forEach(h => {
@@ -230,12 +221,12 @@ export const exportOrdersByDateRange = async (
         });
 
         wsDiario['!cols'] = [
-          { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, 
-          { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }
+          { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, 
+          { wch: 12 }, { wch: 12 }, { wch: 12 }
         ];
         XLSX.utils.book_append_sheet(wb, wsDiario, 'DIARIO');
 
-        // HOJA 3: TOP PRODUCTOS
+        // HOJA 3: TOP 5 PRODUCTOS
         const topProducts = generateTopProductsFromClosure(closure);
         const wsProductos = XLSX.utils.json_to_sheet(topProducts);
 
@@ -252,7 +243,7 @@ export const exportOrdersByDateRange = async (
         });
 
         wsProductos['!cols'] = [{ wch: 35 }, { wch: 10 }, { wch: 15 }, { wch: 20 }];
-        XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP PRODUCTOS');
+        XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
 
       } else {
         // Múltiples cierres - crear un resumen combinado
@@ -262,10 +253,20 @@ export const exportOrdersByDateRange = async (
         XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
 
         // Desglose diario combinado de todos los cierres
-        const allDailyBreakdown: DailyBreakdown[] = [];
+        const allDailyBreakdown: DailySummary[] = [];
         closures.forEach(closure => {
           if (closure.daily_breakdown) {
-            allDailyBreakdown.push(...closure.daily_breakdown);
+            closure.daily_breakdown.forEach(day => {
+              allDailyBreakdown.push({
+                date: day.date,
+                orders: day.orders,
+                efectivo: day.efectivo,
+                yapePlin: day.yapePlin,
+                tarjeta: day.tarjeta,
+                noAplica: day.noAplica,
+                total: day.total
+              });
+            });
           } else {
             allDailyBreakdown.push({
               date: formatDate(new Date(closure.closure_date)),
@@ -274,10 +275,7 @@ export const exportOrdersByDateRange = async (
               yapePlin: closure.total_yape_plin,
               tarjeta: closure.total_tarjeta,
               noAplica: closure.total_no_aplica,
-              total: closure.total_amount,
-              phone: closure.total_phone,
-              walkIn: closure.total_walk_in,
-              delivery: closure.total_delivery
+              total: closure.total_amount
             });
           }
         });
@@ -285,10 +283,10 @@ export const exportOrdersByDateRange = async (
         const wsDiario = XLSX.utils.json_to_sheet(allDailyBreakdown.sort((a, b) => a.date.localeCompare(b.date)));
         XLSX.utils.book_append_sheet(wb, wsDiario, 'DIARIO');
 
-        // Top productos combinados
-        const combinedProducts = combineTopProducts(closures);
+        // Top 5 productos combinados
+        const combinedProducts = combineTopProducts(closures).slice(0, 5);
         const wsProductos = XLSX.utils.json_to_sheet(combinedProducts);
-        XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP PRODUCTOS');
+        XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
       }
 
       // HOJA 4: DETALLE COMPLETO (siempre en vivo)
@@ -307,7 +305,7 @@ export const exportOrdersByDateRange = async (
         const wsDetalle = XLSX.utils.json_to_sheet(detalleData);
         wsDetalle['!cols'] = [
           { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 25 },
-          { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 50 }, { wch: 10 }
+          { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 50 }, { wch: 10 }
         ];
         XLSX.utils.book_append_sheet(wb, wsDetalle, 'DETALLE');
       }
@@ -348,13 +346,13 @@ export const exportOrdersByDateRange = async (
   // Crear libro de Excel
   const wb = XLSX.utils.book_new();
 
-  // HOJA 1: RESUMEN GENERAL
+  // HOJA 1: RESUMEN GENERAL (SIN TICKET PROMEDIO, SIN TIPO PEDIDO)
   const resumenData = generateResumenSheet(filteredOrders, startDate, endDate);
   const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
   wsResumen['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
   XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
 
-  // HOJA 2: DESGLOSE DIARIO
+  // HOJA 2: DESGLOSE DIARIO (SIN TIPO PEDIDO)
   const diarioData = generateDiarioSheet(filteredOrders, startDate, endDate);
   const wsDiario = XLSX.utils.json_to_sheet(diarioData);
   
@@ -365,10 +363,7 @@ export const exportOrdersByDateRange = async (
     { v: 'YAPE/PLIN', position: 'D1' },
     { v: 'TARJETA', position: 'E1' },
     { v: 'NO APLICA', position: 'F1' },
-    { v: 'TOTAL DÍA', position: 'G1' },
-    { v: 'TELÉFONO', position: 'H1' },
-    { v: 'LOCAL', position: 'I1' },
-    { v: 'DELIVERY', position: 'J1' }
+    { v: 'TOTAL DÍA', position: 'G1' }
   ];
   
   diarioHeaders.forEach(h => {
@@ -377,13 +372,13 @@ export const exportOrdersByDateRange = async (
   });
 
   wsDiario['!cols'] = [
-    { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, 
-    { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }
+    { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, 
+    { wch: 12 }, { wch: 12 }, { wch: 12 }
   ];
   XLSX.utils.book_append_sheet(wb, wsDiario, 'DIARIO');
 
-  // HOJA 3: TOP PRODUCTOS
-  const topProducts = generateTopProducts(filteredOrders);
+  // HOJA 3: TOP 5 PRODUCTOS
+  const topProducts = generateTopProducts(filteredOrders).slice(0, 5);
   const wsProductos = XLSX.utils.json_to_sheet(topProducts);
 
   const productHeaders = [
@@ -399,14 +394,14 @@ export const exportOrdersByDateRange = async (
   });
 
   wsProductos['!cols'] = [{ wch: 35 }, { wch: 10 }, { wch: 15 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP PRODUCTOS');
+  XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
 
   // HOJA 4: DETALLE COMPLETO
   const detalleData = generateDetalleSheetFromOrders(filteredOrders);
   const wsDetalle = XLSX.utils.json_to_sheet(detalleData);
   wsDetalle['!cols'] = [
     { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 25 },
-    { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 50 }, { wch: 10 }
+    { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 50 }, { wch: 10 }
   ];
   XLSX.utils.book_append_sheet(wb, wsDetalle, 'DETALLE');
 
@@ -420,30 +415,20 @@ export const exportOrdersByDateRange = async (
 };
 
 /**
- * Funciones auxiliares existentes (sin cambios)
+ * Genera los datos para la hoja de resumen (cálculo en vivo - SIN TICKET PROMEDIO, SIN TIPO PEDIDO)
  */
-
 const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): any[][] => {
   const totalOrders = orders.length;
   const totalVentas = orders.reduce((sum, o) => sum + o.total, 0);
-  const ticketPromedio = totalVentas / totalOrders;
 
   const efectivo = orders.filter(o => o.paymentMethod === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0);
   const yapePlin = orders.filter(o => o.paymentMethod === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0);
   const tarjeta = orders.filter(o => o.paymentMethod === 'TARJETA').reduce((sum, o) => sum + o.total, 0);
   const noAplica = orders.filter(o => !o.paymentMethod).reduce((sum, o) => sum + o.total, 0);
 
-  const phone = orders.filter(o => o.source.type === 'phone').reduce((sum, o) => sum + o.total, 0);
-  const walkIn = orders.filter(o => o.source.type === 'walk-in').reduce((sum, o) => sum + o.total, 0);
-  const delivery = orders.filter(o => o.source.type === 'delivery').reduce((sum, o) => sum + o.total, 0);
-
   const efectivoPct = (efectivo / totalVentas) * 100;
   const yapePlinPct = (yapePlin / totalVentas) * 100;
   const tarjetaPct = (tarjeta / totalVentas) * 100;
-
-  const phonePct = (phone / totalVentas) * 100;
-  const walkInPct = (walkIn / totalVentas) * 100;
-  const deliveryPct = (delivery / totalVentas) * 100;
 
   const ventasPorDia = new Map<string, number>();
   orders.forEach(order => {
@@ -466,7 +451,6 @@ const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): 
     ['📈 ESTADÍSTICAS GENERALES', ''],
     ['Total de Órdenes', totalOrders, ''],
     ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`, ''],
-    ['Ticket Promedio', `S/ ${ticketPromedio.toFixed(2)}`, ''],
     ['', ''],
     ['💰 VENTAS POR MÉTODO DE PAGO', ''],
     ['EFECTIVO', `S/ ${efectivo.toFixed(2)}`, `${efectivoPct.toFixed(1)}%`],
@@ -474,17 +458,15 @@ const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): 
     ['TARJETA', `S/ ${tarjeta.toFixed(2)}`, `${tarjetaPct.toFixed(1)}%`],
     ['NO APLICA', `S/ ${noAplica.toFixed(2)}`, ''],
     ['', ''],
-    ['📋 VENTAS POR TIPO DE PEDIDO', ''],
-    ['COCINA (Teléfono)', `S/ ${phone.toFixed(2)}`, `${phonePct.toFixed(1)}%`],
-    ['LOCAL (Presencial)', `S/ ${walkIn.toFixed(2)}`, `${walkInPct.toFixed(1)}%`],
-    ['DELIVERY', `S/ ${delivery.toFixed(2)}`, `${deliveryPct.toFixed(1)}%`],
-    ['', ''],
     ['🏆 ESTADÍSTICAS DESTACADAS', ''],
     ['Día con más ventas', mejorDia.fecha, `S/ ${mejorDia.total.toFixed(2)}`],
     ['Promedio diario', `S/ ${(totalVentas / ventasPorDia.size).toFixed(2)}`, '']
   ];
 };
 
+/**
+ * Genera los datos para la hoja de desglose diario (cálculo en vivo - SIN TIPO PEDIDO)
+ */
 const generateDiarioSheet = (orders: Order[], startDate: Date, endDate: Date): DailySummary[] => {
   const dailyMap = new Map<string, DailySummary>();
 
@@ -498,10 +480,7 @@ const generateDiarioSheet = (orders: Order[], startDate: Date, endDate: Date): D
       yapePlin: 0,
       tarjeta: 0,
       noAplica: 0,
-      total: 0,
-      phone: 0,
-      walkIn: 0,
-      delivery: 0
+      total: 0
     });
     currentDate.setDate(currentDate.getDate() + 1);
   }
@@ -527,18 +506,6 @@ const generateDiarioSheet = (orders: Order[], startDate: Date, endDate: Date): D
         default:
           day.noAplica += order.total;
       }
-
-      switch (order.source.type) {
-        case 'phone':
-          day.phone += order.total;
-          break;
-        case 'walk-in':
-          day.walkIn += order.total;
-          break;
-        case 'delivery':
-          day.delivery += order.total;
-          break;
-      }
     }
   });
 
@@ -547,6 +514,9 @@ const generateDiarioSheet = (orders: Order[], startDate: Date, endDate: Date): D
   );
 };
 
+/**
+ * Genera el top de productos más vendidos
+ */
 const generateTopProducts = (orders: Order[]): any[] => {
   const productMap = new Map<string, ProductSummary>();
 
@@ -584,24 +554,15 @@ const generateTopProducts = (orders: Order[]): any[] => {
 const generateCombinedResumen = (closures: SalesClosure[], startDate: Date, endDate: Date): any[][] => {
   const totalOrders = closures.reduce((sum, c) => sum + c.total_orders, 0);
   const totalVentas = closures.reduce((sum, c) => sum + c.total_amount, 0);
-  const ticketPromedio = totalOrders > 0 ? totalVentas / totalOrders : 0;
 
   const totalEfectivo = closures.reduce((sum, c) => sum + c.total_efectivo, 0);
   const totalYapePlin = closures.reduce((sum, c) => sum + c.total_yape_plin, 0);
   const totalTarjeta = closures.reduce((sum, c) => sum + c.total_tarjeta, 0);
   const totalNoAplica = closures.reduce((sum, c) => sum + c.total_no_aplica, 0);
 
-  const totalPhone = closures.reduce((sum, c) => sum + c.total_phone, 0);
-  const totalWalkIn = closures.reduce((sum, c) => sum + c.total_walk_in, 0);
-  const totalDelivery = closures.reduce((sum, c) => sum + c.total_delivery, 0);
-
   const efectivoPct = (totalEfectivo / totalVentas) * 100;
   const yapePlinPct = (totalYapePlin / totalVentas) * 100;
   const tarjetaPct = (totalTarjeta / totalVentas) * 100;
-
-  const phonePct = (totalPhone / totalVentas) * 100;
-  const walkInPct = (totalWalkIn / totalVentas) * 100;
-  const deliveryPct = (totalDelivery / totalVentas) * 100;
 
   return [
     ['📊 REPORTE DE VENTAS COMBINADO (MÚLTIPLES CIERRES)', ''],
@@ -612,18 +573,12 @@ const generateCombinedResumen = (closures: SalesClosure[], startDate: Date, endD
     ['📈 ESTADÍSTICAS GENERALES', ''],
     ['Total de Órdenes', totalOrders, ''],
     ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`, ''],
-    ['Ticket Promedio', `S/ ${ticketPromedio.toFixed(2)}`, ''],
     ['', ''],
     ['💰 VENTAS POR MÉTODO DE PAGO', ''],
     ['EFECTIVO', `S/ ${totalEfectivo.toFixed(2)}`, `${efectivoPct.toFixed(1)}%`],
     ['YAPE/PLIN', `S/ ${totalYapePlin.toFixed(2)}`, `${yapePlinPct.toFixed(1)}%`],
     ['TARJETA', `S/ ${totalTarjeta.toFixed(2)}`, `${tarjetaPct.toFixed(1)}%`],
-    ['NO APLICA', `S/ ${totalNoAplica.toFixed(2)}`, ''],
-    ['', ''],
-    ['📋 VENTAS POR TIPO DE PEDIDO', ''],
-    ['COCINA (Teléfono)', `S/ ${totalPhone.toFixed(2)}`, `${phonePct.toFixed(1)}%`],
-    ['LOCAL (Presencial)', `S/ ${totalWalkIn.toFixed(2)}`, `${walkInPct.toFixed(1)}%`],
-    ['DELIVERY', `S/ ${totalDelivery.toFixed(2)}`, `${deliveryPct.toFixed(1)}%`],
+    ['NO APLICA', `S/ ${totalNoAplica.toFixed(2)}`, '']
   ];
 };
 
@@ -683,8 +638,6 @@ export const exportOrdersToExcel = (orders: Order[], tipo: 'today' | 'all' = 'to
       'CLIENTE': order.customerName.toUpperCase(),
       'MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
       'MÉTODO PAGO': order.paymentMethod || 'NO APLICA',
-      'TIPO': order.source.type === 'phone' ? 'COCINA' : 
-              order.source.type === 'walk-in' ? 'LOCAL' : 'DELIVERY',
       'FECHA': fecha,
       'HORA': hora,
       'N° ORDEN': order.orderNumber || `ORD-${order.id.slice(-8)}`,
@@ -697,7 +650,7 @@ export const exportOrdersToExcel = (orders: Order[], tipo: 'today' | 'all' = 'to
   const ws = XLSX.utils.json_to_sheet(data);
   
   ws['!cols'] = [
-    { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
+    { wch: 25 }, { wch: 12 }, { wch: 12 }, 
     { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 40 }
   ];
 
@@ -747,10 +700,10 @@ export const exportClosureToExcel = async (closureId: string) => {
     const wsDiario = XLSX.utils.json_to_sheet(diarioData);
     XLSX.utils.book_append_sheet(wb, wsDiario, 'DIARIO');
 
-    // HOJA 3: TOP PRODUCTOS
+    // HOJA 3: TOP 5 PRODUCTOS
     const topProducts = generateTopProductsFromClosure(closure);
     const wsProductos = XLSX.utils.json_to_sheet(topProducts);
-    XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP PRODUCTOS');
+    XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
 
     // Guardar archivo
     const fileName = `cierre_${closure.closure_number}.xlsx`;
