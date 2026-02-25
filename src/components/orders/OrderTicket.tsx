@@ -64,10 +64,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   // CONSTANTES PARA EL ANCHO DE IMPRESIÓN
   const TICKET_WIDTH = 80;
   const PAGE_WIDTH = TICKET_WIDTH * 2.83465;
-  const FONT_SIZE_SMALL = 7;
-  const FONT_SIZE_NORMAL = 8;
-  const FONT_SIZE_LARGE = 9;
-  const FONT_SIZE_XLARGE = 10;
+  
+  // TAMAÑOS DE FUENTE - AUMENTADOS PARA MEJOR LEGIBILIDAD
+  const FONT_SIZE_SMALL = 8;      // Antes era 7
+  const FONT_SIZE_NORMAL = 9;      // Antes era 8
+  const FONT_SIZE_LARGE = 10;      // Antes era 9
+  const FONT_SIZE_XLARGE = 11;     // Antes era 10
+  const FONT_SIZE_PRODUCT = 10;    // NUEVO: Para nombres de productos
+  
   const PADDING = 8;
 
   // Estilos para el PDF de COCINA
@@ -139,23 +143,24 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     },
     productRow: {
       flexDirection: 'row',
-      marginBottom: 2,
+      marginBottom: 3,
     },
     quantity: {
       width: '15%',
       fontWeight: 'bold',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
     },
     productName: {
       width: '85%',
       fontWeight: 'bold',
       textTransform: 'uppercase',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
       flexWrap: 'wrap',
+      lineHeight: 1.4, // Mejor espaciado
     },
     notes: {
       fontStyle: 'italic',
-      fontSize: FONT_SIZE_SMALL - 1,
+      fontSize: FONT_SIZE_SMALL,
       marginLeft: '15%',
       marginBottom: 3,
       flexWrap: 'wrap',
@@ -234,22 +239,22 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     },
     tableRow: {
       flexDirection: 'row',
-      marginBottom: 2,
+      marginBottom: 3,
     },
     colQuantity: {
       width: '15%',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
       fontWeight: 'bold',
     },
     colDescription: {
       width: '50%',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
       fontWeight: 'normal',
     },
     colPrice: {
       width: '35%',
       textAlign: 'right',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
       fontWeight: 'normal',
     },
     quantity: {
@@ -258,12 +263,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     productName: {
       fontWeight: 'bold',
       textTransform: 'uppercase',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_PRODUCT, // Productos más grandes
       flexWrap: 'wrap',
+      lineHeight: 1.4,
     },
     notes: {
       fontStyle: 'italic',
-      fontSize: FONT_SIZE_SMALL - 1,
+      fontSize: FONT_SIZE_SMALL,
       marginLeft: 0,
       marginTop: 1,
       flexWrap: 'wrap',
@@ -364,7 +370,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     </Document>
   );
 
-  // Componente del documento PDF normal - CON IGV 10% INCLUIDO
+  // Componente del documento PDF normal - CON IGV 10% CORREGIDO
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -464,7 +470,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
             <Text>S/ {subtotal.toFixed(2)}</Text>
           </View>
           <View style={normalStyles.calculationRow}>
-            <Text>IGV (10%):</Text>
+            <Text>IGV (10%):</Text> {/* CORREGIDO: de 18% a 10% */}
             <Text>S/ {igv.toFixed(2)}</Text>
           </View>
           <View style={[normalStyles.row, normalStyles.total, normalStyles.bold]}>
@@ -521,7 +527,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   };
 
-  // Función para imprimir
+  // Función para imprimir - CON IGV 10% CORREGIDO
   const handlePrint = (e: React.MouseEvent) => {
     e.stopPropagation();
     const iframe = document.createElement('iframe');
@@ -555,19 +561,18 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                   width: 80mm !important;
                   margin: 0 auto !important;
                   padding: 0 !important;
-                  font-size: 12px !important;
-                  font-family: "Helvetica", "Arial", sans-serif !important;
+                  font-family: "Courier New", monospace !important;
                   font-weight: normal !important;
                 }
                 * {
-                  font-family: inherit !important;
+                  font-family: "Courier New", monospace !important;
                 }
               }
               body {
-                font-family: "Helvetica", "Arial", sans-serif;
+                font-family: "Courier New", monospace;
                 font-weight: normal;
                 font-size: 12px;
-                line-height: 1.2;
+                line-height: 1.3;
                 width: 80mm;
                 margin: 0 auto;
                 padding: 8px;
@@ -575,7 +580,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 color: black;
               }
               .ticket, .ticket *, div, span, td, th {
-                font-family: "Helvetica", "Arial", sans-serif !important;
+                font-family: "Courier New", monospace !important;
               }
               .center {
                 text-align: center;
@@ -597,6 +602,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 display: flex;
                 justify-content: space-between;
                 margin-bottom: 3px;
+                font-size: 11px;
               }
               .label {
                 font-weight: bold !important;
@@ -608,12 +614,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 font-weight: bold !important;
                 max-width: 60%;
                 word-wrap: break-word;
+                font-size: 12px;
               }
               .header-title {
                 font-weight: bold !important;
+                font-size: 13px;
               }
               .header-subtitle {
                 font-weight: normal !important;
+                font-size: 11px;
               }
               .notes {
                 font-style: italic;
@@ -639,6 +648,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 text-transform: uppercase;
                 border-bottom: 1px solid #000;
                 padding-bottom: 3px;
+                font-size: 12px;
               }
               .product-row {
                 display: flex;
@@ -647,15 +657,18 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
               .quantity {
                 width: 15%;
                 font-weight: bold !important;
+                font-size: 12px;
               }
               .product-name {
                 width: 85%;
                 font-weight: bold !important;
                 text-transform: uppercase;
+                font-size: 12px;
+                line-height: 1.4;
               }
               .asterisk-line {
                 text-align: center;
-                font-size: 9px;
+                font-size: 10px;
                 letter-spacing: 1px;
                 margin: 3px 0;
                 font-weight: normal !important;
@@ -664,6 +677,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 width: 100%;
                 border-collapse: collapse;
                 margin: 5px 0;
+                font-size: 12px;
               }
               th, td {
                 padding: 2px 0;
@@ -673,6 +687,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
               th {
                 border-bottom: 1px solid #000;
                 font-weight: bold !important;
+                font-size: 11px;
+              }
+              td {
+                font-size: 12px;
               }
               .notes-row td {
                 padding-top: 0;
@@ -698,7 +716,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   };
 
-  // Generar contenido HTML para impresión
+  // Generar contenido HTML para impresión - CON IGV 10% CORREGIDO
   const generateTicketContent = () => {
     if (isPhoneOrder) {
       return `
@@ -820,12 +838,12 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
             <tbody>
               ${(order.items || []).map(item => `
                 <tr>
-                  <td class="quantity" style="vertical-align: top;">${item.quantity}x</td>
-                  <td style="vertical-align: top;">
-                    <div class="product-name bold">${item.menuItem.name}</div>
-                    ${item.notes?.trim() ? `<div class="table-notes">Nota: ${item.notes}</div>` : ''}
+                  <td class="quantity" style="vertical-align: top; font-size: 12px;">${item.quantity}x</td>
+                  <td style="vertical-align: top; font-size: 12px;">
+                    <div class="product-name bold" style="font-size: 12px;">${item.menuItem.name}</div>
+                    ${item.notes?.trim() ? `<div class="table-notes" style="font-size: 10px;">Nota: ${item.notes}</div>` : ''}
                   </td>
-                  <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
+                  <td style="text-align: right; vertical-align: top; font-size: 12px;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -839,7 +857,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
               <span class="normal">S/ ${subtotal.toFixed(2)}</span>
             </div>
             <div class="info-row">
-              <span class="normal">IGV (10%):</span>
+              <span class="normal">IGV (10%):</span> <!-- CORREGIDO: de 18% a 10% -->
               <span class="normal">S/ ${igv.toFixed(2)}</span>
             </div>
             <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
