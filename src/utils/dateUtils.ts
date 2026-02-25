@@ -1,10 +1,15 @@
 // ============================================
 // ARCHIVO: src/utils/dateUtils.ts
-// Utilidades para manejo consistente de fechas
+// Utilidades para manejo consistente de fechas en Perú (UTC-5)
 // ============================================
 
 /**
- * Convierte una fecha a string YYYY-MM-DD en zona horaria local
+ * Offset de Perú: UTC-5 (5 horas detrás de UTC)
+ */
+const PERU_OFFSET = -5;
+
+/**
+ * Convierte una fecha a string YYYY-MM-DD en zona horaria de Perú
  */
 export const toLocalDateString = (date: Date): string => {
   const year = date.getFullYear();
@@ -14,17 +19,18 @@ export const toLocalDateString = (date: Date): string => {
 };
 
 /**
- * Crea una fecha a partir de string YYYY-MM-DD en zona horaria local
- * IMPORTANTE: Esto crea la fecha a las 00:00:00 en hora LOCAL
+ * Crea una fecha a partir de string YYYY-MM-DD en zona horaria de Perú
+ * IMPORTANTE: Esto crea la fecha a las 00:00:00 en hora de Perú
  */
 export const fromLocalDateString = (dateStr: string): Date => {
   const [year, month, day] = dateStr.split('-').map(Number);
-  const date = new Date(year, month - 1, day, 0, 0, 0, 0);
+  // Creamos la fecha en UTC pero ajustamos para que represente la hora de Perú
+  const date = new Date(Date.UTC(year, month - 1, day, 5, 0, 0)); // 5 = 0 UTC + 5 (para Perú)
   return date;
 };
 
 /**
- * Obtiene el inicio del día en zona horaria local (00:00:00.000)
+ * Obtiene el inicio del día en zona horaria de Perú (00:00:00.000)
  */
 export const getStartOfDay = (date: Date): Date => {
   return new Date(
@@ -36,7 +42,7 @@ export const getStartOfDay = (date: Date): Date => {
 };
 
 /**
- * Obtiene el fin del día en zona horaria local (23:59:59.999)
+ * Obtiene el fin del día en zona horaria de Perú (23:59:59.999)
  */
 export const getEndOfDay = (date: Date): Date => {
   return new Date(
@@ -57,41 +63,43 @@ export const isSameDay = (date1: Date, date2: Date): boolean => {
 };
 
 /**
- * Formatea una fecha para mostrar en el formato local peruano
+ * Formatea una fecha para mostrar en el formato peruano
  */
 export const formatDateForDisplay = (date: Date): string => {
   return date.toLocaleDateString('es-PE', {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
+    day: '2-digit',
+    timeZone: 'America/Lima'
   });
 };
 
 /**
- * Formatea una hora para mostrar
+ * Formatea una hora para mostrar en formato peruano
  */
 export const formatTimeForDisplay = (date: Date): string => {
   return date.toLocaleTimeString('es-PE', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'America/Lima'
   });
 };
 
 /**
  * Parsea una fecha de la base de datos (string ISO) a Date
- * y la ajusta a zona horaria local para comparaciones
+ * y la ajusta a zona horaria de Perú
  */
 export const parseDatabaseDate = (isoString: string): Date => {
   // La fecha de la BD viene en UTC, la convertimos a Date
   const utcDate = new Date(isoString);
   
-  // Creamos una nueva fecha con los componentes locales
-  return new Date(
-    utcDate.getFullYear(),
-    utcDate.getMonth(),
-    utcDate.getDate(),
-    utcDate.getHours(),
-    utcDate.getMinutes(),
-    utcDate.getSeconds()
-  );
+  // Devolvemos la fecha en UTC, que luego se convertirá automáticamente
+  return utcDate;
+};
+
+/**
+ * Obtiene la fecha actual en Perú
+ */
+export const getPeruDate = (): Date => {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
 };

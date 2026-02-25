@@ -1,9 +1,9 @@
 // ============================================
-// ARCHIVO: src/utils/ticketUtils.ts (ACTUALIZADO CON DATEUTILS)
+// ARCHIVO: src/utils/ticketUtils.ts (CORREGIDO)
 // ============================================
 
 import { Order } from '../types';
-import { formatDateForDisplay, formatTimeForDisplay, getStartOfDay, getEndOfDay } from './dateUtils';
+import { formatDateForDisplay, formatTimeForDisplay } from './dateUtils';
 
 interface TicketSummary {
   totalOrders: number;

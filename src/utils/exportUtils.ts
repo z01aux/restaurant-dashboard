@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/utils/exportUtils.ts (CORREGIDO - CON DATEUTILS)
+// ARCHIVO: src/utils/exportUtils.ts (CORREGIDO)
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -7,13 +7,10 @@ import { Order } from '../types';
 import { SalesClosure } from '../types/sales';
 import { supabase } from '../lib/supabase';
 import {
-  toLocalDateString,
-  fromLocalDateString,
   getStartOfDay,
   getEndOfDay,
   formatDateForDisplay,
-  formatTimeForDisplay,
-  parseDatabaseDate
+  formatTimeForDisplay
 } from './dateUtils';
 
 /**
@@ -62,7 +59,7 @@ const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date,
   return [
     ['REPORTE DE VENTAS (DATOS DE CIERRE)', ''],
     ['Período', `${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
-    ['Fecha de generación', new Date().toLocaleString('es-PE')],
+    ['Fecha de generación', new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' })],
     ['N° de Cierre', closure.closure_number],
     ['', ''],
     ['ESTADISTICAS GENERALES', ''],
@@ -149,35 +146,35 @@ const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
 };
 
 /**
- * Exporta órdenes por rango de fechas - CORREGIDO CON DATEUTILS
+ * Exporta órdenes por rango de fechas - CORREGIDO
  */
 export const exportOrdersByDateRange = async (
   orders: Order[], 
   startDate: Date, 
   endDate: Date
 ) => {
-  console.log('🔍 FECHAS RECIBIDAS:', {
-    startDate: startDate.toString(),
-    endDate: endDate.toString(),
-    startLocal: formatDateForDisplay(startDate),
-    endLocal: formatDateForDisplay(endDate)
+  console.log('🔍 FECHAS RECIBIDAS (Perú):', {
+    startDate: formatDateForDisplay(startDate),
+    endDate: formatDateForDisplay(endDate),
+    startISO: startDate.toISOString(),
+    endISO: endDate.toISOString()
   });
 
-  // Obtener inicio y fin del día en hora LOCAL
+  // Obtener inicio y fin del día en hora LOCAL (Perú)
   const startOfDay = getStartOfDay(startDate);
   const endOfDay = getEndOfDay(endDate);
   
-  console.log('📅 RANGO LOCAL AJUSTADO:', {
+  console.log('📅 RANGO PERUANO AJUSTADO:', {
     startOfDay: startOfDay.toString(),
     endOfDay: endOfDay.toString(),
-    startOfDayLocal: formatDateForDisplay(startOfDay),
-    endOfDayLocal: formatDateForDisplay(endOfDay)
+    startLocal: formatDateForDisplay(startOfDay),
+    endLocal: formatDateForDisplay(endOfDay)
   });
 
   // Verificar si existe un cierre para este rango de fechas
   try {
-    const startStr = toLocalDateString(startDate);
-    const endStr = toLocalDateString(endDate);
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
     
     console.log('🔍 BUSCANDO CIERRES ENTRE:', startStr, 'y', endStr);
     
@@ -269,15 +266,15 @@ export const exportOrdersByDateRange = async (
 
       // HOJA 4: DETALLE COMPLETO
       const filteredOrders = orders.filter(order => {
-        // Convertir la fecha de la orden a formato local para comparar
         const orderDate = new Date(order.createdAt);
-        const orderDateLocal = new Date(
+        // Usamos la fecha en hora local de Perú para comparar
+        const orderDatePeru = new Date(
           orderDate.getFullYear(),
           orderDate.getMonth(),
           orderDate.getDate()
         );
         
-        return orderDateLocal >= startOfDay && orderDateLocal <= endOfDay;
+        return orderDatePeru >= startOfDay && orderDatePeru <= endOfDay;
       });
 
       console.log('📊 ÓRDENES FILTRADAS PARA DETALLE:', {
@@ -311,21 +308,22 @@ export const exportOrdersByDateRange = async (
   
   // Filtrar órdenes por rango de fechas - CORREGIDO
   const filteredOrders = orders.filter(order => {
-    // Convertir la fecha de la orden a formato local para comparar
     const orderDate = new Date(order.createdAt);
-    const orderDateLocal = new Date(
+    // Usamos la fecha en hora local de Perú para comparar
+    const orderDatePeru = new Date(
       orderDate.getFullYear(),
       orderDate.getMonth(),
       orderDate.getDate()
     );
     
-    return orderDateLocal >= startOfDay && orderDateLocal <= endOfDay;
+    return orderDatePeru >= startOfDay && orderDatePeru <= endOfDay;
   });
 
   console.log('📊 ÓRDENES FILTRADAS:', {
     total: orders.length,
     filtradas: filteredOrders.length,
-    primera: filteredOrders.length > 0 ? filteredOrders[0].createdAt : 'ninguna'
+    primera: filteredOrders.length > 0 ? filteredOrders[0].createdAt : 'ninguna',
+    ultima: filteredOrders.length > 0 ? filteredOrders[filteredOrders.length - 1].createdAt : 'ninguna'
   });
 
   if (filteredOrders.length === 0) {
@@ -433,7 +431,7 @@ const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): 
   return [
     ['REPORTE DE VENTAS', ''],
     ['Período', `${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
-    ['Fecha de generación', new Date().toLocaleString('es-PE')],
+    ['Fecha de generación', new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' })],
     ['', ''],
     ['ESTADISTICAS GENERALES', ''],
     ['Total de Órdenes', totalOrders],
@@ -554,7 +552,7 @@ const generateCombinedResumen = (closures: SalesClosure[], startDate: Date, endD
   return [
     ['REPORTE DE VENTAS COMBINADO (MULTIPLES CIERRES)', ''],
     ['Período', `${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
-    ['Fecha de generación', new Date().toLocaleString('es-PE')],
+    ['Fecha de generación', new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' })],
     ['Cantidad de cierres', closures.length],
     ['', ''],
     ['ESTADISTICAS GENERALES', ''],
