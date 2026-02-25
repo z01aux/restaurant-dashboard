@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/utils/exportUtils.ts 
+// ARCHIVO: src/utils/exportUtils.ts
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -79,18 +79,18 @@ const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date,
     ['N° de Cierre', closure.closure_number],
     ['', ''],
     ['📈 ESTADÍSTICAS GENERALES', ''],
-    ['Total de Órdenes', totalOrders, ''],
-    ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`, ''],
+    ['Total de Órdenes', totalOrders],
+    ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
     ['', ''],
     ['💰 VENTAS POR MÉTODO DE PAGO', ''],
     ['EFECTIVO', `S/ ${closure.total_efectivo.toFixed(2)}`, `${((closure.total_efectivo / totalVentas) * 100).toFixed(1)}%`],
     ['YAPE/PLIN', `S/ ${closure.total_yape_plin.toFixed(2)}`, `${((closure.total_yape_plin / totalVentas) * 100).toFixed(1)}%`],
     ['TARJETA', `S/ ${closure.total_tarjeta.toFixed(2)}`, `${((closure.total_tarjeta / totalVentas) * 100).toFixed(1)}%`],
-    ['NO APLICA', `S/ ${closure.total_no_aplica.toFixed(2)}`, ''],
+    ['NO APLICA', `S/ ${closure.total_no_aplica.toFixed(2)}`],
     ['', ''],
     ['🏆 ESTADÍSTICAS DESTACADAS', ''],
     ['Día con más ventas', mejorDia.fecha || 'N/A', mejorDia.total > 0 ? `S/ ${mejorDia.total.toFixed(2)}` : ''],
-    ['Promedio diario', `S/ ${(totalVentas / (totalOrders || 1)).toFixed(2)}`, '']
+    ['Promedio diario', `S/ ${(totalVentas / (totalOrders || 1)).toFixed(2)}`]
   ];
 };
 
@@ -161,8 +161,7 @@ const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
     'MÉTODO': order.paymentMethod || 'NO APLICA',
     'PRODUCTOS': order.items.map(item => 
       `${item.quantity}x ${item.menuItem.name}`
-    ).join('\n'),
-    'TIPO ORDEN': order.orderType === 'fullday' ? 'FULLDAY' : 'REGULAR'
+    ).join('\n')
   }));
 };
 
@@ -291,7 +290,7 @@ export const exportOrdersByDateRange = async (
         const wsDetalle = XLSX.utils.json_to_sheet(detalleData);
         wsDetalle['!cols'] = [
           { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 25 },
-          { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 50 }, { wch: 10 }
+          { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 50 }
         ];
         XLSX.utils.book_append_sheet(wb, wsDetalle, 'DETALLE');
       }
@@ -387,7 +386,7 @@ export const exportOrdersByDateRange = async (
   const wsDetalle = XLSX.utils.json_to_sheet(detalleData);
   wsDetalle['!cols'] = [
     { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 25 },
-    { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 50 }, { wch: 10 }
+    { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 50 }
   ];
   XLSX.utils.book_append_sheet(wb, wsDetalle, 'DETALLE');
 
@@ -435,18 +434,18 @@ const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): 
     ['Fecha de generación', new Date().toLocaleString('es-PE')],
     ['', ''],
     ['📈 ESTADÍSTICAS GENERALES', ''],
-    ['Total de Órdenes', totalOrders, ''],
-    ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`, ''],
+    ['Total de Órdenes', totalOrders],
+    ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
     ['', ''],
     ['💰 VENTAS POR MÉTODO DE PAGO', ''],
     ['EFECTIVO', `S/ ${efectivo.toFixed(2)}`, `${efectivoPct.toFixed(1)}%`],
     ['YAPE/PLIN', `S/ ${yapePlin.toFixed(2)}`, `${yapePlinPct.toFixed(1)}%`],
     ['TARJETA', `S/ ${tarjeta.toFixed(2)}`, `${tarjetaPct.toFixed(1)}%`],
-    ['NO APLICA', `S/ ${noAplica.toFixed(2)}`, ''],
+    ['NO APLICA', `S/ ${noAplica.toFixed(2)}`],
     ['', ''],
     ['🏆 ESTADÍSTICAS DESTACADAS', ''],
     ['Día con más ventas', mejorDia.fecha, `S/ ${mejorDia.total.toFixed(2)}`],
-    ['Promedio diario', `S/ ${(totalVentas / (ventasPorDia.size || 1)).toFixed(2)}`, '']
+    ['Promedio diario', `S/ ${(totalVentas / (ventasPorDia.size || 1)).toFixed(2)}`]
   ];
 };
 
@@ -554,17 +553,17 @@ const generateCombinedResumen = (closures: SalesClosure[], startDate: Date, endD
     ['📊 REPORTE DE VENTAS COMBINADO (MÚLTIPLES CIERRES)', ''],
     ['Período', `${formatDate(startDate)} al ${formatDate(endDate)}`],
     ['Fecha de generación', new Date().toLocaleString('es-PE')],
-    ['Cantidad de cierres', closures.length, ''],
+    ['Cantidad de cierres', closures.length],
     ['', ''],
     ['📈 ESTADÍSTICAS GENERALES', ''],
-    ['Total de Órdenes', totalOrders, ''],
-    ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`, ''],
+    ['Total de Órdenes', totalOrders],
+    ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
     ['', ''],
     ['💰 VENTAS POR MÉTODO DE PAGO', ''],
     ['EFECTIVO', `S/ ${totalEfectivo.toFixed(2)}`, `${efectivoPct.toFixed(1)}%`],
     ['YAPE/PLIN', `S/ ${totalYapePlin.toFixed(2)}`, `${yapePlinPct.toFixed(1)}%`],
     ['TARJETA', `S/ ${totalTarjeta.toFixed(2)}`, `${tarjetaPct.toFixed(1)}%`],
-    ['NO APLICA', `S/ ${totalNoAplica.toFixed(2)}`, '']
+    ['NO APLICA', `S/ ${totalNoAplica.toFixed(2)}`]
   ];
 };
 
@@ -628,7 +627,7 @@ export const exportOrdersToExcel = (orders: Order[], tipo: 'today' | 'all' = 'to
       'HORA': hora,
       'N° ORDEN': order.orderNumber || `ORD-${order.id.slice(-8)}`,
       'TELÉFONO': order.phone,
-      'PRODUCTOS': productosList,
+      'PRODUCTOS': productosList
     };
   });
 
