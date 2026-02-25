@@ -1,11 +1,10 @@
 // ============================================
-// ARCHIVO: src/utils/exportUtils.ts (VERSIÓN FINAL)
-// Versión simplificada: Sin ticket promedio, sin tipo de pedido
+// ARCHIVO: src/utils/exportUtils.ts 
 // ============================================
 
 import * as XLSX from 'xlsx';
 import { Order } from '../types';
-import { SalesClosure, DailyBreakdown } from '../types/sales';
+import { SalesClosure } from '../types/sales';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -30,7 +29,7 @@ const formatTime = (date: Date): string => {
 };
 
 /**
- * Interfaz para el resumen diario
+ * Interfaz para el resumen diario (simplificada)
  */
 interface DailySummary {
   date: string;
@@ -54,18 +53,21 @@ interface ProductSummary {
 }
 
 /**
- * Genera hoja de resumen a partir de un cierre guardado (SIN TICKET PROMEDIO, SIN TIPO PEDIDO)
+ * Genera hoja de resumen a partir de un cierre guardado
  */
 const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date, endDate: Date): any[][] => {
   const totalOrders = closure.total_orders;
   const totalVentas = closure.total_amount;
 
-  // Encontrar día con más ventas (del desglose diario si existe)
+  // Encontrar día con más ventas
   let mejorDia = { fecha: '', total: 0 };
-  if (closure.daily_breakdown && closure.daily_breakdown.length > 0) {
-    closure.daily_breakdown.forEach(day => {
-      if (day.total > mejorDia.total) {
-        mejorDia = { fecha: day.date, total: day.total };
+  
+  // Verificar si existe daily_breakdown y es un array
+  const dailyBreakdown = (closure as any).daily_breakdown;
+  if (dailyBreakdown && Array.isArray(dailyBreakdown) && dailyBreakdown.length > 0) {
+    dailyBreakdown.forEach((day: any) => {
+      if (day.total && day.total > mejorDia.total) {
+        mejorDia = { fecha: day.date || '', total: day.total };
       }
     });
   }
@@ -88,57 +90,65 @@ const generateResumenSheetFromClosure = (closure: SalesClosure, startDate: Date,
     ['', ''],
     ['🏆 ESTADÍSTICAS DESTACADAS', ''],
     ['Día con más ventas', mejorDia.fecha || 'N/A', mejorDia.total > 0 ? `S/ ${mejorDia.total.toFixed(2)}` : ''],
-    ['Promedio diario', `S/ ${(totalVentas / (closure.daily_breakdown?.length || 1)).toFixed(2)}`, '']
+    ['Promedio diario', `S/ ${(totalVentas / (totalOrders || 1)).toFixed(2)}`, '']
   ];
 };
 
 /**
- * Genera hoja de desglose diario a partir de un cierre guardado (SIN TIPO PEDIDO)
+ * Genera hoja de desglose diario a partir de un cierre guardado
  */
 const generateDiarioSheetFromClosure = (closure: SalesClosure): DailySummary[] => {
-  if (closure.daily_breakdown && closure.daily_breakdown.length > 0) {
-    // Mapear solo los campos que necesitamos (sin phone, walkIn, delivery)
-    return closure.daily_breakdown.map(day => ({
-      date: day.date,
-      orders: day.orders,
-      efectivo: day.efectivo,
-      yapePlin: day.yapePlin,
-      tarjeta: day.tarjeta,
-      noAplica: day.noAplica,
-      total: day.total
-    }));
+  const result: DailySummary[] = [];
+  
+  // Verificar si existe daily_breakdown y es un array
+  const dailyBreakdown = (closure as any).daily_breakdown;
+  if (dailyBreakdown && Array.isArray(dailyBreakdown) && dailyBreakdown.length > 0) {
+    // Mapear solo los campos que necesitamos
+    dailyBreakdown.forEach((day: any) => {
+      result.push({
+        date: day.date || formatDate(new Date(closure.closure_date)),
+        orders: day.orders || 0,
+        efectivo: day.efectivo || 0,
+        yapePlin: day.yapePlin || 0,
+        tarjeta: day.tarjeta || 0,
+        noAplica: day.noAplica || 0,
+        total: day.total || 0
+      });
+    });
+  } else {
+    // Si no hay desglose guardado, crear un solo día con los totales
+    result.push({
+      date: formatDate(new Date(closure.closure_date)),
+      orders: closure.total_orders,
+      efectivo: closure.total_efectivo,
+      yapePlin: closure.total_yape_plin,
+      tarjeta: closure.total_tarjeta,
+      noAplica: closure.total_no_aplica,
+      total: closure.total_amount
+    });
   }
   
-  // Si no hay desglose guardado (versiones anteriores), crear un solo día con los totales
-  return [{
-    date: formatDate(new Date(closure.closure_date)),
-    orders: closure.total_orders,
-    efectivo: closure.total_efectivo,
-    yapePlin: closure.total_yape_plin,
-    tarjeta: closure.total_tarjeta,
-    noAplica: closure.total_no_aplica,
-    total: closure.total_amount
-  }];
+  return result;
 };
 
 /**
  * Genera hoja de top productos a partir de un cierre guardado
  */
 const generateTopProductsFromClosure = (closure: SalesClosure): any[] => {
-  if (closure.top_products && closure.top_products.length > 0) {
+  if (closure.top_products && Array.isArray(closure.top_products) && closure.top_products.length > 0) {
     // Limitar a TOP 5 productos
     return closure.top_products.slice(0, 5).map(p => ({
-      name: p.name,
-      quantity: p.quantity,
-      total: `S/ ${p.total.toFixed(2)}`,
-      category: p.category
+      name: p.name || 'Producto',
+      quantity: p.quantity || 0,
+      total: `S/ ${(p.total || 0).toFixed(2)}`,
+      category: p.category || 'Sin categoría'
     }));
   }
   return [];
 };
 
 /**
- * Genera hoja de detalle a partir de órdenes (siempre en vivo)
+ * Genera hoja de detalle a partir de órdenes
  */
 const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
   return orders.map(order => ({
@@ -157,14 +167,12 @@ const generateDetalleSheetFromOrders = (orders: Order[]): any[] => {
 };
 
 /**
- * Exporta órdenes por rango de fechas - AHORA USA DATOS DE CIERRE SI EXISTEN
- * SIN TICKET PROMEDIO, SIN TIPO DE PEDIDO
+ * Exporta órdenes por rango de fechas
  */
 export const exportOrdersByDateRange = async (
   orders: Order[], 
   startDate: Date, 
   endDate: Date
-  // ya no necesitamos closures como parámetro porque lo buscamos aquí
 ) => {
   // Verificar si existe un cierre para este rango de fechas
   try {
@@ -180,10 +188,8 @@ export const exportOrdersByDateRange = async (
 
     if (error) throw error;
 
-    // Si encontramos cierres para todas las fechas, usamos esos datos
-    const hasCompleteClosures = closures && closures.length > 0;
-    
-    if (hasCompleteClosures) {
+    // Si encontramos cierres, usamos esos datos
+    if (closures && closures.length > 0) {
       console.log('📊 Usando datos de cierre guardados para el reporte');
       
       // Crear libro de Excel
@@ -192,15 +198,15 @@ export const exportOrdersByDateRange = async (
       // Para múltiples cierres, combinamos la información
       if (closures.length === 1) {
         // Un solo cierre - usar todos sus datos
-        const closure = closures[0];
+        const closure = closures[0] as SalesClosure;
         
-        // HOJA 1: RESUMEN GENERAL (SIN TICKET PROMEDIO, SIN TIPO PEDIDO)
+        // HOJA 1: RESUMEN GENERAL
         const resumenData = generateResumenSheetFromClosure(closure, startDate, endDate);
         const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
         wsResumen['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
         XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
 
-        // HOJA 2: DESGLOSE DIARIO (SIN TIPO PEDIDO)
+        // HOJA 2: DESGLOSE DIARIO
         const diarioData = generateDiarioSheetFromClosure(closure);
         const wsDiario = XLSX.utils.json_to_sheet(diarioData);
         
@@ -247,7 +253,7 @@ export const exportOrdersByDateRange = async (
 
       } else {
         // Múltiples cierres - crear un resumen combinado
-        const combinedResumen = generateCombinedResumen(closures, startDate, endDate);
+        const combinedResumen = generateCombinedResumen(closures as SalesClosure[], startDate, endDate);
         const wsResumen = XLSX.utils.aoa_to_sheet(combinedResumen);
         wsResumen['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
         XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
@@ -255,41 +261,21 @@ export const exportOrdersByDateRange = async (
         // Desglose diario combinado de todos los cierres
         const allDailyBreakdown: DailySummary[] = [];
         closures.forEach(closure => {
-          if (closure.daily_breakdown) {
-            closure.daily_breakdown.forEach(day => {
-              allDailyBreakdown.push({
-                date: day.date,
-                orders: day.orders,
-                efectivo: day.efectivo,
-                yapePlin: day.yapePlin,
-                tarjeta: day.tarjeta,
-                noAplica: day.noAplica,
-                total: day.total
-              });
-            });
-          } else {
-            allDailyBreakdown.push({
-              date: formatDate(new Date(closure.closure_date)),
-              orders: closure.total_orders,
-              efectivo: closure.total_efectivo,
-              yapePlin: closure.total_yape_plin,
-              tarjeta: closure.total_tarjeta,
-              noAplica: closure.total_no_aplica,
-              total: closure.total_amount
-            });
-          }
+          const c = closure as SalesClosure;
+          const dailyFromClosure = generateDiarioSheetFromClosure(c);
+          allDailyBreakdown.push(...dailyFromClosure);
         });
 
         const wsDiario = XLSX.utils.json_to_sheet(allDailyBreakdown.sort((a, b) => a.date.localeCompare(b.date)));
         XLSX.utils.book_append_sheet(wb, wsDiario, 'DIARIO');
 
         // Top 5 productos combinados
-        const combinedProducts = combineTopProducts(closures).slice(0, 5);
+        const combinedProducts = combineTopProducts(closures as SalesClosure[]).slice(0, 5);
         const wsProductos = XLSX.utils.json_to_sheet(combinedProducts);
         XLSX.utils.book_append_sheet(wb, wsProductos, 'TOP 5 PRODUCTOS');
       }
 
-      // HOJA 4: DETALLE COMPLETO (siempre en vivo)
+      // HOJA 4: DETALLE COMPLETO
       const filteredOrders = orders.filter(order => {
         const orderDate = new Date(order.createdAt);
         orderDate.setHours(0, 0, 0, 0);
@@ -323,7 +309,7 @@ export const exportOrdersByDateRange = async (
     console.error('Error al buscar cierres, usando datos en vivo:', error);
   }
 
-  // Si no hay cierres, usar el método tradicional (cálculo en vivo)
+  // Si no hay cierres, usar el método tradicional
   console.log('📊 No se encontraron cierres, usando cálculo en vivo');
   
   // Filtrar órdenes por rango de fechas
@@ -346,13 +332,13 @@ export const exportOrdersByDateRange = async (
   // Crear libro de Excel
   const wb = XLSX.utils.book_new();
 
-  // HOJA 1: RESUMEN GENERAL (SIN TICKET PROMEDIO, SIN TIPO PEDIDO)
+  // HOJA 1: RESUMEN GENERAL
   const resumenData = generateResumenSheet(filteredOrders, startDate, endDate);
   const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
   wsResumen['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
   XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
 
-  // HOJA 2: DESGLOSE DIARIO (SIN TIPO PEDIDO)
+  // HOJA 2: DESGLOSE DIARIO
   const diarioData = generateDiarioSheet(filteredOrders, startDate, endDate);
   const wsDiario = XLSX.utils.json_to_sheet(diarioData);
   
@@ -415,7 +401,7 @@ export const exportOrdersByDateRange = async (
 };
 
 /**
- * Genera los datos para la hoja de resumen (cálculo en vivo - SIN TICKET PROMEDIO, SIN TIPO PEDIDO)
+ * Genera los datos para la hoja de resumen (cálculo en vivo)
  */
 const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): any[][] => {
   const totalOrders = orders.length;
@@ -426,9 +412,9 @@ const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): 
   const tarjeta = orders.filter(o => o.paymentMethod === 'TARJETA').reduce((sum, o) => sum + o.total, 0);
   const noAplica = orders.filter(o => !o.paymentMethod).reduce((sum, o) => sum + o.total, 0);
 
-  const efectivoPct = (efectivo / totalVentas) * 100;
-  const yapePlinPct = (yapePlin / totalVentas) * 100;
-  const tarjetaPct = (tarjeta / totalVentas) * 100;
+  const efectivoPct = totalVentas > 0 ? (efectivo / totalVentas) * 100 : 0;
+  const yapePlinPct = totalVentas > 0 ? (yapePlin / totalVentas) * 100 : 0;
+  const tarjetaPct = totalVentas > 0 ? (tarjeta / totalVentas) * 100 : 0;
 
   const ventasPorDia = new Map<string, number>();
   orders.forEach(order => {
@@ -444,7 +430,7 @@ const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): 
   });
 
   return [
-    ['📊 REPORTE DE VENTAS (CÁLCULO EN VIVO)', ''],
+    ['📊 REPORTE DE VENTAS', ''],
     ['Período', `${formatDate(startDate)} al ${formatDate(endDate)}`],
     ['Fecha de generación', new Date().toLocaleString('es-PE')],
     ['', ''],
@@ -460,12 +446,12 @@ const generateResumenSheet = (orders: Order[], startDate: Date, endDate: Date): 
     ['', ''],
     ['🏆 ESTADÍSTICAS DESTACADAS', ''],
     ['Día con más ventas', mejorDia.fecha, `S/ ${mejorDia.total.toFixed(2)}`],
-    ['Promedio diario', `S/ ${(totalVentas / ventasPorDia.size).toFixed(2)}`, '']
+    ['Promedio diario', `S/ ${(totalVentas / (ventasPorDia.size || 1)).toFixed(2)}`, '']
   ];
 };
 
 /**
- * Genera los datos para la hoja de desglose diario (cálculo en vivo - SIN TIPO PEDIDO)
+ * Genera los datos para la hoja de desglose diario (cálculo en vivo)
  */
 const generateDiarioSheet = (orders: Order[], startDate: Date, endDate: Date): DailySummary[] => {
   const dailyMap = new Map<string, DailySummary>();
@@ -560,9 +546,9 @@ const generateCombinedResumen = (closures: SalesClosure[], startDate: Date, endD
   const totalTarjeta = closures.reduce((sum, c) => sum + c.total_tarjeta, 0);
   const totalNoAplica = closures.reduce((sum, c) => sum + c.total_no_aplica, 0);
 
-  const efectivoPct = (totalEfectivo / totalVentas) * 100;
-  const yapePlinPct = (totalYapePlin / totalVentas) * 100;
-  const tarjetaPct = (totalTarjeta / totalVentas) * 100;
+  const efectivoPct = totalVentas > 0 ? (totalEfectivo / totalVentas) * 100 : 0;
+  const yapePlinPct = totalVentas > 0 ? (totalYapePlin / totalVentas) * 100 : 0;
+  const tarjetaPct = totalVentas > 0 ? (totalTarjeta / totalVentas) * 100 : 0;
 
   return [
     ['📊 REPORTE DE VENTAS COMBINADO (MÚLTIPLES CIERRES)', ''],
@@ -586,7 +572,7 @@ const combineTopProducts = (closures: SalesClosure[]): any[] => {
   const productMap = new Map<string, { quantity: number; total: number; name: string; category: string }>();
 
   closures.forEach(closure => {
-    if (closure.top_products) {
+    if (closure.top_products && Array.isArray(closure.top_products)) {
       closure.top_products.forEach(product => {
         const existing = productMap.get(product.id);
         if (existing) {
@@ -615,7 +601,7 @@ const combineTopProducts = (closures: SalesClosure[]): any[] => {
 };
 
 /**
- * Exporta órdenes a Excel con formato profesional (mantener por compatibilidad)
+ * Exporta órdenes a Excel con formato profesional
  */
 export const exportOrdersToExcel = (orders: Order[], tipo: 'today' | 'all' = 'today') => {
   if (orders.length === 0) {
@@ -671,11 +657,7 @@ export const exportClosureToExcel = async (closureId: string) => {
   try {
     const { data: closure, error } = await supabase
       .from('sales_closures')
-      .select(`
-        *,
-        opened_by:opened_by (id, name, username),
-        closed_by:closed_by (id, name, username)
-      `)
+      .select('*')
       .eq('id', closureId)
       .single();
 
