@@ -1,12 +1,6 @@
 // ============================================
 // ARCHIVO: src/utils/dateUtils.ts
-// Utilidades para manejo consistente de fechas en Perú (UTC-5)
 // ============================================
-
-/**
- * Offset de Perú: UTC-5 (5 horas detrás de UTC)
- */
-const PERU_OFFSET = -5;
 
 /**
  * Convierte una fecha a string YYYY-MM-DD en zona horaria de Perú
@@ -24,8 +18,8 @@ export const toLocalDateString = (date: Date): string => {
  */
 export const fromLocalDateString = (dateStr: string): Date => {
   const [year, month, day] = dateStr.split('-').map(Number);
-  // Creamos la fecha en UTC pero ajustamos para que represente la hora de Perú
-  const date = new Date(Date.UTC(year, month - 1, day, 5, 0, 0)); // 5 = 0 UTC + 5 (para Perú)
+  // Creamos la fecha en hora local de Perú
+  const date = new Date(year, month - 1, day, 0, 0, 0, 0);
   return date;
 };
 
