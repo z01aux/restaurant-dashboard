@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/components/sales/SalesHistoryMinimal.tsx
+// ARCHIVO: src/components/sales/SalesHistoryMinimal.tsx (CORREGIDO)
 // Historial de cierres minimalista para FullDay y Órdenes
 // ============================================
 
@@ -28,7 +28,6 @@ export const SalesHistoryMinimal: React.FC<SalesHistoryMinimalProps> = ({
 
   // Calcular total del período
   const totalPeriodo = closures.reduce((sum, c) => sum + c.total_amount, 0);
-  const totalPedidos = closures.reduce((sum, c) => sum + c.total_orders, 0);
 
   const handleExport = (closure: any) => {
     if (onExport) {
@@ -120,15 +119,15 @@ export const SalesHistoryMinimal: React.FC<SalesHistoryMinimalProps> = ({
                 <div className="grid grid-cols-2 gap-1">
                   <div>
                     <span className="text-gray-500">N°:</span>
-                    <span className="ml-1 font-mono">{closure.closure_number.slice(-8)}</span>
+                    <span className="ml-1 font-mono">{closure.closure_number?.slice(-8) || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Apertura:</span>
-                    <span className="ml-1">S/ {closure.initial_cash.toFixed(2)}</span>
+                    <span className="ml-1">S/ {closure.initial_cash?.toFixed(2) || '0.00'}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Cierre:</span>
-                    <span className="ml-1">S/ {closure.final_cash.toFixed(2)}</span>
+                    <span className="ml-1">S/ {closure.final_cash?.toFixed(2) || '0.00'}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Hora:</span>
@@ -143,9 +142,9 @@ export const SalesHistoryMinimal: React.FC<SalesHistoryMinimalProps> = ({
                 
                 {/* Mini resumen de pagos */}
                 <div className="mt-2 pt-1 border-t border-gray-200 flex justify-between text-[9px]">
-                  <span>💵 {closure.total_efectivo.toFixed(2)}</span>
-                  <span>📱 {closure.total_yape_plin.toFixed(2)}</span>
-                  <span>💳 {closure.total_tarjeta.toFixed(2)}</span>
+                  <span>💵 {closure.total_efectivo?.toFixed(2) || '0.00'}</span>
+                  <span>📱 {closure.total_yape_plin?.toFixed(2) || '0.00'}</span>
+                  <span>💳 {closure.total_tarjeta?.toFixed(2) || '0.00'}</span>
                 </div>
               </div>
             )}

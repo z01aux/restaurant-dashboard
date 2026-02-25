@@ -1,16 +1,16 @@
 // ============================================
-// ARCHIVO: src/hooks/useFullDaySalesClosure.ts
+// ARCHIVO: src/hooks/useFullDaySalesClosure.ts (CORREGIDO)
 // Hook para gestión de caja de pedidos FullDay
 // ============================================
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { FullDayOrder } from './useFullDay';
-import { SalesClosure, CashRegisterStatus, DailySummary, TopProduct, DailyBreakdown } from '../types/sales';
+import { SalesClosure, CashRegisterStatus, DailySummary, TopProduct } from '../types/sales';
 
 // Extendemos la interfaz para FullDay
 export interface FullDaySalesClosure extends Omit<SalesClosure, 'total_phone' | 'total_walk_in' | 'total_delivery'> {
-  total_fullday: number; // Solo un tipo de pedido para FullDay
+  total_fullday: number;
 }
 
 export const useFullDaySalesClosure = () => {
@@ -34,7 +34,7 @@ export const useFullDaySalesClosure = () => {
   const loadCashRegisterStatus = async () => {
     try {
       const { data, error } = await supabase
-        .from('current_cash_register_fullday') // Nueva tabla para FullDay
+        .from('current_cash_register_fullday')
         .select(`
           *,
           opened_by:opened_by (id, name, username),
@@ -55,7 +55,7 @@ export const useFullDaySalesClosure = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('sales_closures_fullday') // Nueva tabla para FullDay
+        .from('sales_closures_fullday')
         .select(`
           *,
           opened_by:opened_by (id, name, username),
@@ -104,8 +104,7 @@ export const useFullDaySalesClosure = () => {
     const byOrderType = {
       phone: 0,
       walk_in: 0,
-      delivery: 0,
-      fullday: todayOrders.reduce((sum, o) => sum + o.total, 0) // Todo es FullDay
+      delivery: 0
     };
 
     // Contar por estado
@@ -251,7 +250,7 @@ export const useFullDaySalesClosure = () => {
           total_tarjeta: summary.by_payment_method.TARJETA,
           total_no_aplica: summary.by_payment_method.NO_APLICA,
           
-          total_fullday: summary.total_amount, // Solo FullDay
+          total_fullday: summary.total_amount,
           
           total_orders: summary.total_orders,
           total_amount: summary.total_amount,
