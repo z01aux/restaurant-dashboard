@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/components/students/StudentImport.tsx
+// ARCHIVO: src/components/students/StudentImport.tsx (CORREGIDO)
 // Componente para importar alumnos desde Excel
 // ============================================
 
@@ -70,14 +70,13 @@ export const StudentImport: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const [preview, setPreview] = useState<any[]>([]);
+  // preview eliminado porque no se usa
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Función para procesar el archivo Excel
   const processExcelFile = async (file: File) => {
     setLoading(true);
     setResult(null);
-    setPreview([]);
 
     try {
       const reader = new FileReader();
@@ -228,7 +227,6 @@ export const StudentImport: React.FC = () => {
   const handleClose = () => {
     setIsOpen(false);
     setResult(null);
-    setPreview([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
