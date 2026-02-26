@@ -5,7 +5,7 @@ interface FullDayCashRegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
   type: 'open' | 'close';
-  cashRegister: any; // Aunque no se usa, lo mantenemos por si acaso
+  cashRegister?: any; // Hacerlo opcional con ?
   onConfirm: (data: { initialCash?: number; finalCash?: number; notes?: string }) => Promise<void>;
   loading: boolean;
 }
