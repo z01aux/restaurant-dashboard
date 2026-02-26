@@ -1148,6 +1148,9 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [cart.length, showToast]);
 
+  // ============================================
+  // FUNCIÓN GENERATE TICKET CONTENT CORREGIDA
+  // ============================================
   const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
     const getCurrentUserName = () => {
       try {
@@ -1219,11 +1222,13 @@ const OrderReception: React.FC = React.memo(() => {
       const igv = order.total - subtotal;
       
       let customerInfo = '';
+      
+      // PARA PEDIDOS FULLDAY - CORREGIDO: nombres completos en una línea y con teléfono
       if (order.source.type === 'fullDay' && order.studentInfo) {
         customerInfo = `
-          <div class="info-row">
+          <div class="info-row" style="flex-wrap: wrap;">
             <span class="label">ALUMNO:</span>
-            <span class="customer-name-bold">${order.studentInfo.fullName.toUpperCase()}</span>
+            <span class="customer-name-bold" style="max-width: 70%; word-wrap: break-word; white-space: normal;">${order.studentInfo.fullName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">GRADO:</span>
@@ -1231,14 +1236,21 @@ const OrderReception: React.FC = React.memo(() => {
           </div>
           <div class="info-row">
             <span class="label">APODERADO:</span>
-            <span class="value">${order.studentInfo.guardianName.toUpperCase()}</span>
+            <span class="value" style="max-width: 70%; word-wrap: break-word; white-space: normal;">${order.studentInfo.guardianName.toUpperCase()}</span>
           </div>
+          ${order.phone ? `
+          <div class="info-row">
+            <span class="label">TELÉFONO:</span>
+            <span class="value">${order.phone}</span>
+          </div>
+          ` : ''}
         `;
       } else {
+        // PARA PEDIDOS REGULARES
         customerInfo = `
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
+            <span class="customer-name-bold" style="max-width: 70%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">TELÉFONO:</span>
@@ -1442,8 +1454,10 @@ const OrderReception: React.FC = React.memo(() => {
               }
               .customer-name-bold {
                 font-weight: bold !important;
-                max-width: 60%;
+                max-width: 70%;
                 word-wrap: break-word;
+                white-space: normal;
+                line-height: 1.3;
               }
               .header-title {
                 font-weight: bold !important;
@@ -1615,7 +1629,7 @@ const OrderReception: React.FC = React.memo(() => {
               phone: phone
             },
             orderType: 'fullday',
-            igvRate: 10 // NUEVO: Indicar que el IGV es 10%
+            igvRate: 10
           };
           
           printOrderImmediately(tempOrder);
@@ -1664,7 +1678,7 @@ const OrderReception: React.FC = React.memo(() => {
           notes: orderNotes,
           paymentMethod: orderData.paymentMethod,
           orderType: 'regular',
-          igvRate: 10 // NUEVO: Indicar que el IGV es 10%
+          igvRate: 10
         };
 
         printOrderImmediately(tempOrder);
@@ -1812,7 +1826,7 @@ const OrderReception: React.FC = React.memo(() => {
                           className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         >
                           {GRADES.map(grade => (
-                            <option key={grade} value={grade}>{grade} Grado</option>
+                            <option key={grade} value={grade}>{grade}</option>
                           ))}
                         </select>
                         <select
@@ -1821,7 +1835,7 @@ const OrderReception: React.FC = React.memo(() => {
                           className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         >
                           {SECTIONS.map(section => (
-                            <option key={section} value={section}>Sección "{section}"</option>
+                            <option key={section} value={section}>"{section}"</option>
                           ))}
                         </select>
                       </div>
