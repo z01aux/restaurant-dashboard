@@ -1,11 +1,10 @@
 // ============================================
-// ARCHIVO: src/components/students/StudentImport.tsx
+// ARCHIVO: src/components/students/StudentImport.tsx (VERSIÓN DE DIAGNÓSTICO CORREGIDA)
 // ============================================
 
 import React, { useState, useRef } from 'react';
-import { Upload, Download, X, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Upload, Download, X, Loader } from 'lucide-react'; // Solo los que realmente usamos
 import * as XLSX from 'xlsx';
-import { supabase } from '../../lib/supabase';
 
 interface ImportResult {
   success: number;
@@ -44,12 +43,12 @@ export const StudentImport: React.FC = () => {
             success: 0,
             errors: 0,
             duplicates: 0,
-            details: [`📑 Hojas: ${workbook.SheetNames.join(', ')}`]
+            details: [`📑 Hojas encontradas: ${workbook.SheetNames.join(', ')}`]
           };
 
           // Procesar CADA hoja para ver su contenido
           for (const sheetName of workbook.SheetNames) {
-            diagnosticResult.details.push(`\n--- HOJA: ${sheetName} ---`);
+            diagnosticResult.details.push(`\n========== HOJA: ${sheetName} ==========`);
             
             const worksheet = workbook.Sheets[sheetName];
             
@@ -60,24 +59,54 @@ export const StudentImport: React.FC = () => {
             }) as any[][];
             
             diagnosticResult.details.push(`Total filas: ${jsonData.length}`);
+            diagnosticResult.details.push(`Primeras 15 filas:`);
             
-            // Mostrar las primeras 10 filas
-            for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+            // Mostrar las primeras 15 filas
+            for (let i = 0; i < Math.min(15, jsonData.length); i++) {
               const row = jsonData[i];
               if (row && row.length > 0) {
-                const rowPreview = row.slice(0, 5).map(cell => 
-                  cell ? cell.toString().substring(0, 30) : 'vacío'
-                ).join(' | ');
+                // Mostrar hasta 7 columnas
+                const rowPreview = row.slice(0, 7).map(cell => {
+                  if (cell === null || cell === undefined) return 'null';
+                  if (typeof cell === 'string' && cell.trim() === '') return 'vacío';
+                  return cell.toString().substring(0, 25);
+                }).join(' | ');
                 diagnosticResult.details.push(`Fila ${i + 1}: ${rowPreview}`);
+              } else {
+                diagnosticResult.details.push(`Fila ${i + 1}: [vacía]`);
               }
             }
             
             // Buscar "Código de Salón:" en todas las filas
+            diagnosticResult.details.push(`\n🔍 Buscando "Código de Salón:"...`);
+            let encontrados = 0;
             for (let i = 0; i < jsonData.length; i++) {
               const row = jsonData[i];
               if (row && row[0] === 'Código de Salón:') {
-                diagnosticResult.details.push(`✅ Encontrado "Código de Salón:" en fila ${i + 1}`);
-                diagnosticResult.details.push(`  Fila completa: ${JSON.stringify(row)}`);
+                encontrados++;
+                diagnosticResult.details.push(`✅ Encontrado en fila ${i + 1}:`);
+                diagnosticResult.details.push(`  Columna 0: "${row[0]}"`);
+                diagnosticResult.details.push(`  Columna 2: "${row[2] || 'vacío'}"`);
+                diagnosticResult.details.push(`  Columna 4: "${row[4] || 'vacío'}"`);
+              }
+            }
+            
+            if (encontrados === 0) {
+              diagnosticResult.details.push(`❌ No se encontró "Código de Salón:" en esta hoja`);
+              
+              // Buscar palabras similares
+              diagnosticResult.details.push(`\n🔍 Buscando palabras similares...`);
+              for (let i = 0; i < Math.min(30, jsonData.length); i++) {
+                const row = jsonData[i];
+                if (row) {
+                  for (let j = 0; j < Math.min(5, row.length); j++) {
+                    const cell = row[j];
+                    if (cell && typeof cell === 'string' && 
+                        (cell.includes('Código') || cell.includes('Salón') || cell.includes('CODIGO'))) {
+                      diagnosticResult.details.push(`✅ Encontrado "${cell}" en fila ${i + 1}, columna ${j + 1}`);
+                    }
+                  }
+                }
               }
             }
           }
@@ -229,11 +258,21 @@ export const StudentImport: React.FC = () => {
                   {result.details.length > 0 && (
                     <div className="max-h-96 overflow-y-auto p-4 bg-gray-50">
                       <div className="space-y-1 font-mono text-xs">
-                        {result.details.map((detail, index) => (
-                          <div key={index} className="border-b border-gray-200 pb-1 last:border-0">
-                            {detail}
-                          </div>
-                        ))}
+                        {result.details.map((detail, index) => {
+                          // Determinar color según el contenido
+                          let color = 'text-gray-700';
+                          if (detail.includes('✅')) color = 'text-green-600';
+                          if (detail.includes('❌')) color = 'text-red-600';
+                          if (detail.includes('🔍')) color = 'text-blue-600';
+                          if (detail.includes('==========')) color = 'text-purple-600 font-bold';
+                          if (detail.includes('Fila')) color = 'text-gray-600';
+                          
+                          return (
+                            <div key={index} className={`${color} border-b border-gray-200 pb-1 last:border-0 whitespace-pre-wrap font-mono`}>
+                              {detail}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
