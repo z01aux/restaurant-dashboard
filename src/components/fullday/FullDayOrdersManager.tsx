@@ -1,23 +1,29 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx (COMPLETO)
-// Gestor de pedidos FullDay con filtros por fecha y reportes profesionales
+// Gestor de pedidos FullDay con filtros por fecha, reportes y vista cocina
 // ============================================
 
 import React, { useState, useMemo } from 'react';
+import { 
+  GraduationCap, Download, Search, Printer, FileSpreadsheet, 
+  ChefHat, CalendarRange 
+} from 'lucide-react';
 import { useFullDay } from '../../hooks/useFullDay';
-import { GraduationCap, Download, Search, Printer, FileSpreadsheet, ChefHat } from 'lucide-react';
 import { FullDayDateFilter } from './FullDayDateFilter';
+import { FullDayDateRangeModal } from './FullDayDateRangeModal';
 import { 
   exportKitchenReportToExcel, 
   printKitchenTicket 
 } from '../../utils/fulldayReports';
 import { exportAdminReportByGrade } from '../../utils/fulldayAdminReport';
+import { exportFullDayByDateRange } from '../../utils/fulldayDateRangeReport';
 
 export const FullDayOrdersManager: React.FC = () => {
   const { orders, loading } = useFullDay();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'normal' | 'kitchen'>('normal');
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
 
   // Filtrar pedidos por fecha seleccionada
   const ordersByDate = useMemo(() => {
@@ -106,6 +112,10 @@ export const FullDayOrdersManager: React.FC = () => {
       return;
     }
     exportAdminReportByGrade(filteredOrders, selectedDate);
+  };
+
+  const handleExportByDateRange = (startDate: Date, endDate: Date) => {
+    exportFullDayByDateRange(orders, startDate, endDate);
   };
 
   if (loading) {
@@ -199,17 +209,34 @@ export const FullDayOrdersManager: React.FC = () => {
                 <span>Excel Cocina</span>
               </button>
 
-              {/* Reporte administrativo */}
+              {/* Reporte administrativo del día */}
               <button
                 onClick={handleExportAdminExcel}
                 className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 hover:bg-purple-700 transition-colors"
-                title="Exportar reporte administrativo completo"
+                title="Exportar reporte administrativo del día"
               >
                 <Download size={16} />
-                <span>Excel Administrativo</span>
+                <span>Excel Día</span>
+              </button>
+
+              {/* Reporte por rango de fechas */}
+              <button
+                onClick={() => setShowDateRangeModal(true)}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 hover:bg-indigo-700 transition-colors"
+                title="Exportar reporte por rango de fechas"
+              >
+                <CalendarRange size={16} />
+                <span>Reporte por Fechas</span>
               </button>
             </div>
           </div>
+
+          {/* Modal de rango de fechas */}
+          <FullDayDateRangeModal
+            isOpen={showDateRangeModal}
+            onClose={() => setShowDateRangeModal(false)}
+            onConfirm={handleExportByDateRange}
+          />
 
           {/* Stats cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -238,7 +265,7 @@ export const FullDayOrdersManager: React.FC = () => {
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
                 <ChefHat className="mr-2 text-orange-500" size={24} />
-                Resumen para Cocina
+                Resumen para Cocina - {selectedDate.toLocaleDateString()}
               </h2>
               
               {kitchenSummary.length === 0 ? (
