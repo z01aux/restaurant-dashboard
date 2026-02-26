@@ -14,57 +14,6 @@ interface ImportResult {
   details: string[];
 }
 
-// Mapeo de nombres de salón a grado y sección
-const gradeMapping: Record<string, { grade: string; section: string }> = {
-  // Salas de 3 años (RED ROOM, YELLOW ROOM, GREEN ROOM)
-  'RED ROOM A': { grade: 'RED ROOM', section: 'A' },
-  'YELLOW ROOM A': { grade: 'YELLOW ROOM', section: 'A' },
-  'GREEN ROOM A': { grade: 'GREEN ROOM', section: 'A' },
-  
-  // Primero de Primaria
-  'Primero de Primaria A': { grade: 'PRIMERO DE PRIMARIA', section: 'A' },
-  'Primero de Primaria B': { grade: 'PRIMERO DE PRIMARIA', section: 'B' },
-  
-  // Segundo de Primaria
-  'Segundo de Primaria A': { grade: 'SEGUNDO DE PRIMARIA', section: 'A' },
-  
-  // Tercero de Primaria
-  'Tercero de Primaria A': { grade: 'TERCERO DE PRIMARIA', section: 'A' },
-  'Tercero de Primaria B': { grade: 'TERCERO DE PRIMARIA', section: 'B' },
-  
-  // Cuarto de Primaria
-  'Cuarto de Primaria A': { grade: 'CUARTO DE PRIMARIA', section: 'A' },
-  'Cuarto de Primaria B': { grade: 'CUARTO DE PRIMARIA', section: 'B' },
-  
-  // Quinto de Primaria
-  'Quinto de Primaria A': { grade: 'QUINTO DE PRIMARIA', section: 'A' },
-  'Quinto de Primaria B': { grade: 'QUINTO DE PRIMARIA', section: 'B' },
-  
-  // Sexto de Primaria
-  'Sexto de Primaria A': { grade: 'SEXTO DE PRIMARIA', section: 'A' },
-  'Sexto de Primaria B': { grade: 'SEXTO DE PRIMARIA', section: 'B' },
-  
-  // Primero de Secundaria
-  'Primero de Secundaria A': { grade: 'PRIMERO DE SECUNDARIA', section: 'A' },
-  'Primero de Secundaria B': { grade: 'PRIMERO DE SECUNDARIA', section: 'B' },
-  
-  // Segundo de Secundaria
-  'Segundo de Secundaria A': { grade: 'SEGUNDO DE SECUNDARIA', section: 'A' },
-  'Segundo de Secundaria B': { grade: 'SEGUNDO DE SECUNDARIA', section: 'B' },
-  
-  // Tercero de Secundaria
-  'Tercero de Secundaria A': { grade: 'TERCERO DE SECUNDARIA', section: 'A' },
-  'Tercero de Secundaria B': { grade: 'TERCERO DE SECUNDARIA', section: 'B' },
-  
-  // Cuarto de Secundaria
-  'Cuarto de Secundaria A': { grade: 'CUARTO DE SECUNDARIA', section: 'A' },
-  'Cuarto de Secundaria B': { grade: 'CUARTO DE SECUNDARIA', section: 'B' },
-  
-  // Quinto de Secundaria
-  'Quinto de Secundaria A': { grade: 'QUINTO DE SECUNDARIA', section: 'A' },
-  'Quinto de Secundaria B': { grade: 'QUINTO DE SECUNDARIA', section: 'B' }
-};
-
 export const StudentImport: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -85,33 +34,55 @@ export const StudentImport: React.FC = () => {
           console.log('📄 Archivo leído correctamente');
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           
-          // Leer el archivo con opciones para formato .xls
-          const workbook = XLSX.read(data, { 
-            type: 'array',
-            cellDates: true, // Para fechas
-            cellNF: false,
-            cellText: false
-          });
+          // Leer el archivo
+          const workbook = XLSX.read(data, { type: 'array' });
           
           console.log('📑 Hojas encontradas:', workbook.SheetNames);
           
-          // Usar la primera hoja
-          const sheetName = workbook.SheetNames[0];
-          console.log('📊 Usando hoja:', sheetName);
-          
-          const worksheet = workbook.Sheets[sheetName];
-          
-          // Convertir a JSON con encabezados
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-            header: 1,
-            defval: '' // Valor por defecto para celdas vacías
-          });
-          
-          console.log('📝 Total de filas:', jsonData.length);
-          console.log('📝 Primeras 5 filas:', jsonData.slice(0, 5));
-          
-          // Procesar los datos
-          await processStudents(jsonData as any[][]);
+          // Crear resultado temporal para diagnóstico
+          const diagnosticResult: ImportResult = {
+            success: 0,
+            errors: 0,
+            duplicates: 0,
+            details: [`📑 Hojas: ${workbook.SheetNames.join(', ')}`]
+          };
+
+          // Procesar CADA hoja para ver su contenido
+          for (const sheetName of workbook.SheetNames) {
+            diagnosticResult.details.push(`\n--- HOJA: ${sheetName} ---`);
+            
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // Convertir a JSON para ver las primeras filas
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+              header: 1,
+              defval: ''
+            }) as any[][];
+            
+            diagnosticResult.details.push(`Total filas: ${jsonData.length}`);
+            
+            // Mostrar las primeras 10 filas
+            for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+              const row = jsonData[i];
+              if (row && row.length > 0) {
+                const rowPreview = row.slice(0, 5).map(cell => 
+                  cell ? cell.toString().substring(0, 30) : 'vacío'
+                ).join(' | ');
+                diagnosticResult.details.push(`Fila ${i + 1}: ${rowPreview}`);
+              }
+            }
+            
+            // Buscar "Código de Salón:" en todas las filas
+            for (let i = 0; i < jsonData.length; i++) {
+              const row = jsonData[i];
+              if (row && row[0] === 'Código de Salón:') {
+                diagnosticResult.details.push(`✅ Encontrado "Código de Salón:" en fila ${i + 1}`);
+                diagnosticResult.details.push(`  Fila completa: ${JSON.stringify(row)}`);
+              }
+            }
+          }
+
+          setResult(diagnosticResult);
           
         } catch (error) {
           console.error('❌ Error procesando Excel:', error);
@@ -142,132 +113,6 @@ export const StudentImport: React.FC = () => {
       console.error('❌ Error leyendo archivo:', error);
       setLoading(false);
     }
-  };
-
-  // Función para procesar los alumnos
-  const processStudents = async (rows: any[][]) => {
-    console.log('🔄 Procesando alumnos...');
-    
-    const result: ImportResult = {
-      success: 0,
-      errors: 0,
-      duplicates: 0,
-      details: []
-    };
-
-    let currentClassroom = '';
-    let currentGrade = '';
-    let currentSection = '';
-
-    // Recorrer cada fila
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      
-      if (!row || !Array.isArray(row)) continue;
-      
-      // Limpiar valores undefined
-      const cleanRow = row.map(cell => cell || '');
-      
-      // Buscar líneas de "Código de Salón:"
-      if (cleanRow[0] === 'Código de Salón:' && cleanRow[2]) {
-        const classroomName = cleanRow[4]; // El nombre del salón está en la columna 4
-        console.log(`🏫 Encontrado salón en fila ${i + 1}:`, classroomName);
-        
-        if (classroomName && gradeMapping[classroomName]) {
-          currentClassroom = classroomName;
-          currentGrade = gradeMapping[classroomName].grade;
-          currentSection = gradeMapping[classroomName].section;
-          result.details.push(`📚 Procesando salón: ${currentClassroom} -> ${currentGrade} "${currentSection}"`);
-          console.log(`✅ Salón mapeado: ${currentClassroom} -> ${currentGrade} "${currentSection}"`);
-        } else {
-          console.warn(`⚠️ Salón no mapeado: ${classroomName}`);
-          result.details.push(`⚠️ Salón no mapeado: ${classroomName}`);
-        }
-        continue;
-      }
-
-      // Buscar filas de alumnos (deben tener un número en la primera columna)
-      const firstCol = cleanRow[0];
-      if (firstCol && !isNaN(Number(firstCol)) && currentGrade && currentSection) {
-        const studentName = cleanRow[1]; // Nombre del alumno
-        const fatherName = cleanRow[3];   // Nombre del padre
-        const fatherPhone = cleanRow[4];  // Celular del padre
-        const motherName = cleanRow[5];   // Nombre de la madre
-        const motherPhone = cleanRow[6];  // Celular de la madre
-
-        if (!studentName || studentName === '') continue;
-
-        console.log(`👤 Procesando alumno: ${studentName}`);
-
-        // Determinar apoderado (el que tenga teléfono)
-        let guardianName = '';
-        let phone = '';
-
-        if (fatherPhone && fatherPhone !== '' && fatherPhone !== 0) {
-          guardianName = fatherName || '';
-          phone = fatherPhone.toString().trim();
-          console.log(`  📞 Usando padre: ${guardianName} - ${phone}`);
-        } else if (motherPhone && motherPhone !== '' && motherPhone !== 0) {
-          guardianName = motherName || '';
-          phone = motherPhone.toString().trim();
-          console.log(`  📞 Usando madre: ${guardianName} - ${phone}`);
-        } else {
-          guardianName = fatherName || motherName || '';
-          phone = '';
-          console.log(`  ⚠️ Sin teléfono, apoderado: ${guardianName}`);
-          result.details.push(`⚠️ Alumno sin teléfono: ${studentName}`);
-        }
-
-        // Limpiar el nombre del apoderado
-        guardianName = guardianName.replace(/^(PADRE|MADRE):\s*/i, '').trim();
-
-        // Verificar si el alumno ya existe
-        const { data: existing, error: checkError } = await supabase
-          .from('students')
-          .select('id')
-          .eq('full_name', studentName.trim())
-          .eq('grade', currentGrade)
-          .eq('section', currentSection)
-          .maybeSingle();
-
-        if (checkError) {
-          console.error('❌ Error verificando duplicado:', checkError);
-        }
-
-        if (existing) {
-          result.duplicates++;
-          result.details.push(`🟡 Duplicado: ${studentName} ya existe en ${currentGrade} "${currentSection}"`);
-          console.log(`🟡 Alumno duplicado: ${studentName}`);
-          continue;
-        }
-
-        // Insertar nuevo alumno
-        console.log(`💾 Insertando alumno: ${studentName}`);
-        
-        const { error } = await supabase
-          .from('students')
-          .insert({
-            full_name: studentName.trim(),
-            grade: currentGrade,
-            section: currentSection,
-            guardian_name: guardianName,
-            phone: phone || null
-          });
-
-        if (error) {
-          console.error('❌ Error insertando alumno:', error);
-          result.errors++;
-          result.details.push(`❌ Error insertando ${studentName}: ${error.message}`);
-        } else {
-          result.success++;
-          result.details.push(`✅ Insertado: ${studentName} (${currentGrade} "${currentSection}") - Apoderado: ${guardianName}`);
-          console.log(`✅ Alumno insertado correctamente`);
-        }
-      }
-    }
-
-    console.log('📊 Resultado final:', result);
-    setResult(result);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,14 +177,11 @@ export const StudentImport: React.FC = () => {
               
               {/* Instrucciones */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="text-sm font-semibold text-blue-800 mb-2">📋 Instrucciones:</h3>
-                <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-                  <li>Sube el archivo DIRECTORIO.xls que me enviaste</li>
-                  <li>El script usará automáticamente la hoja "Hoja1"</li>
-                  <li>Los nombres de salón deben coincidir con: RED ROOM A, YELLOW ROOM A, GREEN ROOM A, Primero de Primaria A, etc.</li>
-                  <li>Se usará como apoderado la persona que tenga teléfono (prioridad al padre, luego madre)</li>
-                  <li>Los alumnos duplicados (mismo nombre, grado y sección) serán omitidos</li>
-                </ul>
+                <h3 className="text-sm font-semibold text-blue-800 mb-2">🔍 MODO DIAGNÓSTICO</h3>
+                <p className="text-xs text-blue-700">
+                  Esta versión solo muestra el contenido del archivo para ver qué estructura tiene.
+                  Selecciona tu archivo DIRECTORIO.xls y verás qué filas encuentra.
+                </p>
               </div>
 
               {/* Botón descargar plantilla */}
@@ -372,58 +214,26 @@ export const StudentImport: React.FC = () => {
               {loading && (
                 <div className="text-center py-8">
                   <Loader className="h-8 w-8 animate-spin text-purple-500 mx-auto mb-4" />
-                  <p className="text-gray-600">Procesando archivo y subiendo alumnos...</p>
-                  <p className="text-xs text-gray-400 mt-2">Revisa la consola del navegador para ver el progreso (F12)</p>
+                  <p className="text-gray-600">Procesando archivo...</p>
                 </div>
               )}
 
               {/* Resultados */}
               {result && !loading && (
                 <div className="border rounded-lg overflow-hidden">
-                  <div className={`p-4 ${result.errors > 0 ? 'bg-yellow-50' : 'bg-green-50'} border-b`}>
-                    <div className="flex items-center space-x-2 mb-2">
-                      {result.errors > 0 ? (
-                        <AlertCircle className="h-5 w-5 text-yellow-500" />
-                      ) : (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
-                      <h3 className="font-semibold text-gray-900">Resultado de la Importación</h3>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-2xl font-bold text-green-600">{result.success}</div>
-                        <div className="text-xs text-gray-600">Insertados</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-yellow-600">{result.duplicates}</div>
-                        <div className="text-xs text-gray-600">Duplicados</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-red-600">{result.errors}</div>
-                        <div className="text-xs text-gray-600">Errores</div>
-                      </div>
-                    </div>
+                  <div className="p-4 bg-blue-50 border-b">
+                    <h3 className="font-semibold text-gray-900 mb-2">📊 DIAGNÓSTICO DEL ARCHIVO</h3>
                   </div>
                   
                   {/* Detalles */}
                   {result.details.length > 0 && (
-                    <div className="max-h-60 overflow-y-auto p-4 bg-gray-50">
-                      <h4 className="text-xs font-semibold text-gray-700 mb-2">Detalles:</h4>
-                      <div className="space-y-1">
-                        {result.details.map((detail, index) => {
-                          let color = 'text-gray-600';
-                          if (detail.startsWith('✅')) color = 'text-green-600';
-                          if (detail.startsWith('🟡')) color = 'text-yellow-600';
-                          if (detail.startsWith('❌')) color = 'text-red-600';
-                          if (detail.startsWith('⚠️')) color = 'text-orange-600';
-                          if (detail.startsWith('📚')) color = 'text-purple-600';
-                          
-                          return (
-                            <div key={index} className={`text-xs ${color} border-b border-gray-200 pb-1 last:border-0`}>
-                              {detail}
-                            </div>
-                          );
-                        })}
+                    <div className="max-h-96 overflow-y-auto p-4 bg-gray-50">
+                      <div className="space-y-1 font-mono text-xs">
+                        {result.details.map((detail, index) => (
+                          <div key={index} className="border-b border-gray-200 pb-1 last:border-0">
+                            {detail}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
