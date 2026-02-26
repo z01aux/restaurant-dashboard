@@ -5,7 +5,6 @@ interface FullDayCashRegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
   type: 'open' | 'close';
-  cashRegister: any;
   onConfirm: (data: { initialCash?: number; finalCash?: number; notes?: string }) => Promise<void>;
   loading: boolean;
 }
@@ -14,7 +13,6 @@ export const FullDayCashRegisterModal: React.FC<FullDayCashRegisterModalProps> =
   isOpen,
   onClose,
   type,
-  cashRegister,
   onConfirm,
   loading,
 }) => {
