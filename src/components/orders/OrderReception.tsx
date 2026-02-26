@@ -1812,7 +1812,7 @@ const OrderReception: React.FC = React.memo(() => {
                           className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         >
                           {GRADES.map(grade => (
-                            <option key={grade} value={grade}>{grade}</option>
+                            <option key={grade} value={grade}>{grade} Grado</option>
                           ))}
                         </select>
                         <select
@@ -1821,7 +1821,7 @@ const OrderReception: React.FC = React.memo(() => {
                           className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         >
                           {SECTIONS.map(section => (
-                            <option key={section} value={section}>"{section}"</option>
+                            <option key={section} value={section}>Sección "{section}"</option>
                           ))}
                         </select>
                       </div>

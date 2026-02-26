@@ -1,11 +1,12 @@
 // ============================================
-// ARCHIVO: src/hooks/useSalesClosure.ts
+// ARCHIVO: src/hooks/useSalesClosure.ts (ACTUALIZADO)
+// Guarda desglose diario en el cierre
 // ============================================
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Order } from '../types';
-import { SalesClosure, CashRegisterStatus, DailySummary, TopProduct } from '../types/sales';
+import { SalesClosure, CashRegisterStatus, DailySummary, TopProduct, DailyBreakdown } from '../types/sales';
 
 export const useSalesClosure = () => {
   const [loading, setLoading] = useState(false);
@@ -66,6 +67,81 @@ export const useSalesClosure = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Generar desglose diario para el rango de fechas
+  const generateDailyBreakdown = (orders: Order[], startDate: Date, endDate: Date): DailyBreakdown[] => {
+    const dailyMap = new Map<string, DailyBreakdown>();
+
+    // Inicializar todos los días del rango
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toLocaleDateString('es-PE', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      dailyMap.set(dateStr, {
+        date: dateStr,
+        orders: 0,
+        efectivo: 0,
+        yapePlin: 0,
+        tarjeta: 0,
+        noAplica: 0,
+        total: 0,
+        phone: 0,
+        walkIn: 0,
+        delivery: 0
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Acumular órdenes
+    orders.forEach(order => {
+      const dateStr = order.createdAt.toLocaleDateString('es-PE', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const day = dailyMap.get(dateStr);
+      
+      if (day) {
+        day.orders++;
+        day.total += order.total;
+
+        // Por método de pago
+        switch (order.paymentMethod) {
+          case 'EFECTIVO':
+            day.efectivo += order.total;
+            break;
+          case 'YAPE/PLIN':
+            day.yapePlin += order.total;
+            break;
+          case 'TARJETA':
+            day.tarjeta += order.total;
+            break;
+          default:
+            day.noAplica += order.total;
+        }
+
+        // Por tipo de pedido
+        switch (order.source.type) {
+          case 'phone':
+            day.phone += order.total;
+            break;
+          case 'walk-in':
+            day.walkIn += order.total;
+            break;
+          case 'delivery':
+            day.delivery += order.total;
+            break;
+        }
+      }
+    });
+
+    return Array.from(dailyMap.values()).sort((a, b) => 
+      a.date.localeCompare(b.date)
+    );
   };
 
   // Generar resumen del día actual
@@ -142,6 +218,9 @@ export const useSalesClosure = () => {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
 
+    // Generar desglose diario (para hoy solo es un día)
+    const dailyBreakdown = generateDailyBreakdown(todayOrders, today, today);
+
     return {
       total_orders: todayOrders.length,
       total_amount: todayOrders.reduce((sum, o) => sum + o.total, 0),
@@ -149,6 +228,7 @@ export const useSalesClosure = () => {
       by_order_type: byOrderType,
       by_status: byStatus,
       top_products: topProducts,
+      daily_breakdown: dailyBreakdown
     };
   };
 
@@ -197,7 +277,7 @@ export const useSalesClosure = () => {
     }
   };
 
-  // Cerrar caja
+  // Cerrar caja (AHORA GUARDA DESGLOSE DIARIO)
   const closeCashRegister = async (
     orders: Order[],
     finalCash: number,
@@ -222,7 +302,7 @@ export const useSalesClosure = () => {
         return { success: false, error: 'La caja no está abierta' };
       }
 
-      // Obtener resumen del día
+      // Obtener resumen del día (incluye desglose diario)
       const summary = await getTodaySummary(orders);
 
       // Generar número de cierre (formato: CIERRE-YYYYMMDD-001)
@@ -238,7 +318,7 @@ export const useSalesClosure = () => {
 
       const closureNumber = `CIERRE-${dateStr}-${String((count || 0) + 1).padStart(3, '0')}`;
 
-      // Crear registro de cierre - SIN daily_breakdown
+      // Crear registro de cierre (AHORA GUARDA daily_breakdown)
       const { data: closure, error: insertError } = await supabase
         .from('sales_closures')
         .insert({
@@ -271,7 +351,7 @@ export const useSalesClosure = () => {
           
           notes: notes,
           top_products: summary.top_products,
-          // daily_breakdown ELIMINADO - no existe en la tabla
+          daily_breakdown: summary.daily_breakdown // NUEVO: Guardamos el desglose diario
         })
         .select()
         .single();
@@ -323,13 +403,17 @@ export const useSalesClosure = () => {
     }
   };
 
-  // Buscar cierre por fecha
+  // Buscar cierre por fecha exacta
   const getClosureByDate = async (date: Date) => {
     try {
       const dateStr = date.toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('sales_closures')
-        .select('*')
+        .select(`
+          *,
+          opened_by:opened_by (id, name, username),
+          closed_by:closed_by (id, name, username)
+        `)
         .eq('closure_date', dateStr)
         .order('closed_at', { ascending: false })
         .limit(1)
@@ -339,6 +423,31 @@ export const useSalesClosure = () => {
       return { success: true, data };
     } catch (error: any) {
       console.error('Error getting closure by date:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Buscar cierres en un rango de fechas
+  const getClosuresByDateRange = async (startDate: Date, endDate: Date) => {
+    try {
+      const startStr = startDate.toISOString().split('T')[0];
+      const endStr = endDate.toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('sales_closures')
+        .select(`
+          *,
+          opened_by:opened_by (id, name, username),
+          closed_by:closed_by (id, name, username)
+        `)
+        .gte('closure_date', startStr)
+        .lte('closure_date', endStr)
+        .order('closure_date', { ascending: true });
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Error getting closures by date range:', error);
       return { success: false, error: error.message };
     }
   };
@@ -359,6 +468,7 @@ export const useSalesClosure = () => {
     closeCashRegister,
     getClosureById,
     getClosureByDate,
+    getClosuresByDateRange,
     getTodaySummary,
   };
 };

@@ -1,12 +1,13 @@
 // ============================================
-// ARCHIVO: src/components/students/StudentManager.tsx (CORREGIDO)
+// ARCHIVO: src/components/students/StudentManager.tsx
 // ============================================
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, Save, X, GraduationCap, Users, Phone, User } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Save, X, GraduationCap, Users, Phone, User, RefreshCw } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 import { useAuth } from '../../hooks/useAuth';
+import { StudentImport } from './StudentImport'; // <-- NUEVO COMPONENTE
 
 const StudentManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -134,6 +135,9 @@ const StudentManager: React.FC = () => {
                 />
               </div>
               
+              {/* NUEVO: Botón de importación */}
+              <StudentImport />
+              
               <button 
                 onClick={handleNewStudent}
                 className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 hover:shadow-md transition-all duration-300 font-medium"
@@ -144,7 +148,7 @@ const StudentManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Formulario Modal */}
+          {/* Formulario Modal (se mantiene igual) */}
           {showForm && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl p-6 w-full max-w-md">
@@ -276,7 +280,7 @@ const StudentManager: React.FC = () => {
             </div>
           )}
 
-          {/* Lista de Alumnos */}
+          {/* Lista de Alumnos (se mantiene igual) */}
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-12">
