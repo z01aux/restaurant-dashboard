@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx (COMPLETO)
+// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx (CORREGIDO)
 // Gestor de pedidos FullDay con filtros por fecha, reportes y vista cocina
 // ============================================
 
@@ -115,7 +115,37 @@ export const FullDayOrdersManager: React.FC = () => {
   };
 
   const handleExportByDateRange = (startDate: Date, endDate: Date) => {
-    exportFullDayByDateRange(orders, startDate, endDate);
+    // Mostrar un mensaje mientras se procesa
+    const loadingToast = document.createElement('div');
+    loadingToast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+    loadingToast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Buscando pedidos...</span></div>';
+    document.body.appendChild(loadingToast);
+    
+    try {
+      // Usar TODOS los pedidos, no solo los filtrados por fecha
+      exportFullDayByDateRange(orders, startDate, endDate);
+    } catch (error: any) {
+      console.error('Error en exportación:', error);
+      
+      // Mostrar error
+      const errorToast = document.createElement('div');
+      errorToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      errorToast.innerHTML = `<div>❌ Error: ${error.message}</div>`;
+      document.body.appendChild(errorToast);
+      
+      setTimeout(() => {
+        if (document.body.contains(errorToast)) {
+          document.body.removeChild(errorToast);
+        }
+      }, 3000);
+    } finally {
+      // Eliminar el toast de carga
+      setTimeout(() => {
+        if (document.body.contains(loadingToast)) {
+          document.body.removeChild(loadingToast);
+        }
+      }, 500);
+    }
   };
 
   if (loading) {
