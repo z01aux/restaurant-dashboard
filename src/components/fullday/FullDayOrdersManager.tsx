@@ -1,11 +1,11 @@
 // ============================================
-// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
+// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx 
 // Gestor de pedidos FullDay con filtros por fecha y reportes
 // ============================================
 
 import React, { useState, useMemo } from 'react';
 import { useFullDay } from '../../hooks/useFullDay';
-import { GraduationCap, Download, Calendar, DollarSign, Users, Search, Printer, FileSpreadsheet, ChefHat } from 'lucide-react';
+import { GraduationCap, Download, Search, Printer, FileSpreadsheet, ChefHat } from 'lucide-react'; // Eliminados Calendar, DollarSign, Users
 import { FullDayDateFilter } from './FullDayDateFilter';
 import { 
   exportKitchenReportToExcel, 
