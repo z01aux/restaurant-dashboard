@@ -24,7 +24,6 @@ export const FullDayOrdersManager: React.FC = () => {
   const filteredOrders = useMemo(() => {
     let filtered = orders;
     
-    // Filtrar por fecha seleccionada
     const startOfDay = new Date(selectedDate);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(selectedDate);
@@ -35,7 +34,6 @@ export const FullDayOrdersManager: React.FC = () => {
       return orderDate >= startOfDay && orderDate <= endOfDay;
     });
     
-    // Filtrar por término de búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(order => 
@@ -48,7 +46,6 @@ export const FullDayOrdersManager: React.FC = () => {
     return filtered;
   }, [orders, searchTerm, selectedDate]);
 
-  // Handlers de exportación
   const handleExportTodayCSV = () => {
     const todayOrders = getTodayOrders();
     exportFullDayToCSV(todayOrders, 'fullday_hoy');
@@ -68,12 +65,6 @@ export const FullDayOrdersManager: React.FC = () => {
   };
 
   const handleExportSummary = async (startDate: Date, endDate: Date) => {
-    console.log('📅 Exportando resumen para fechas:', { 
-      start: startDate.toISOString(), 
-      end: endDate.toISOString() 
-    });
-    
-    // Ajustar fechas para que cubran todo el día
     const startOfDay = new Date(startDate);
     startOfDay.setHours(0, 0, 0, 0);
     
@@ -85,8 +76,6 @@ export const FullDayOrdersManager: React.FC = () => {
       return orderDate >= startOfDay && orderDate <= endOfDay;
     });
     
-    console.log('📊 Pedidos encontrados:', filtered.length);
-    
     if (filtered.length === 0) {
       alert('No hay pedidos en el rango seleccionado');
       return;
@@ -97,14 +86,9 @@ export const FullDayOrdersManager: React.FC = () => {
   };
 
   const handleExportByDateRange = (startDate: Date, endDate: Date) => {
-    console.log('📅 Exportando Excel para fechas:', { 
-      start: startDate.toISOString(), 
-      end: endDate.toISOString() 
-    });
     exportFullDayByDateRange(orders, startDate, endDate);
   };
 
-  // Handlers de caja
   const handleOpenCash = () => {
     setCashModalType('open');
     setShowCashModal(true);
@@ -156,25 +140,19 @@ export const FullDayOrdersManager: React.FC = () => {
               </div>
 
               {!cashRegister?.is_open ? (
-                <button 
-                  onClick={handleOpenCash} 
-                  className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors"
-                >
+                <button onClick={handleOpenCash} 
+                  className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700">
                   Abrir Caja
                 </button>
               ) : (
-                <button 
-                  onClick={handleCloseCash} 
-                  className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors"
-                >
+                <button onClick={handleCloseCash} 
+                  className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700">
                   Cerrar Caja
                 </button>
               )}
 
-              <button 
-                onClick={() => setShowHistory(!showHistory)} 
-                className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700 transition-colors"
-              >
+              <button onClick={() => setShowHistory(!showHistory)} 
+                className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700">
                 {showHistory ? 'Ocultar Historial' : 'Ver Historial'}
               </button>
             </div>
@@ -192,45 +170,22 @@ export const FullDayOrdersManager: React.FC = () => {
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-2 mb-6">
-            <button 
-              onClick={handleExportTodayCSV} 
-              className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center transition-colors"
-            >
+            <button onClick={handleExportTodayCSV} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center">
               <Download size={16} className="mr-1" /> CSV Hoy
             </button>
-            
-            <button 
-              onClick={handleExportAllCSV} 
-              className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center transition-colors"
-            >
+            <button onClick={handleExportAllCSV} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center">
               <Download size={16} className="mr-1" /> CSV Todo
             </button>
-
-            <button 
-              onClick={handleExportTodayExcel} 
-              className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center transition-colors"
-            >
+            <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center">
               <FileSpreadsheet size={16} className="mr-1" /> Excel Hoy
             </button>
-
-            <button 
-              onClick={handleExportAllExcel} 
-              className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center transition-colors"
-            >
+            <button onClick={handleExportAllExcel} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center">
               <FileSpreadsheet size={16} className="mr-1" /> Excel Todo
             </button>
-
-            <button 
-              onClick={() => setShowDateRangeModal(true)} 
-              className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center transition-colors"
-            >
+            <button onClick={() => setShowDateRangeModal(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center">
               <Calendar size={16} className="mr-1" /> Reporte por Fechas
             </button>
-
-            <button 
-              onClick={() => handleExportSummary(selectedDate, selectedDate)} 
-              className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center transition-colors"
-            >
+            <button onClick={() => handleExportSummary(selectedDate, selectedDate)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center">
               <Printer size={16} className="mr-1" /> Ticket Resumen
             </button>
           </div>
@@ -244,7 +199,7 @@ export const FullDayOrdersManager: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por alumno, apoderado o número de orden..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
               />
             </div>
           </div>
@@ -258,13 +213,11 @@ export const FullDayOrdersManager: React.FC = () => {
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="text-center py-12">
-                <div className="text-6xl text-gray-300 mb-4">📭</div>
-                <p className="text-gray-500 text-lg">No hay pedidos para esta fecha</p>
-                <p className="text-gray-400 text-sm mt-2">Selecciona otra fecha o crea un nuevo pedido en Recepción</p>
+                <p className="text-gray-500">No hay pedidos para esta fecha</p>
               </div>
             ) : (
               filteredOrders.map(order => (
-                <div key={order.id} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-purple-300 transition-all shadow-sm hover:shadow-md">
+                <div key={order.id} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-purple-300 transition-all">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
