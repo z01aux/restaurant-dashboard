@@ -195,7 +195,7 @@ export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: D
   XLSX.utils.book_append_sheet(wb, wsDetail, '📋 Detalle por Alumno');
 
   // ============================================
-  // HOJA 3: ESTADÍSTICAS DE PAGO (con gráficos)
+  // HOJA 3: ESTADÍSTICAS DE PAGO
   // ============================================
   const totalEfectivo = orders.filter(o => o.payment_method === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0);
   const totalYape = orders.filter(o => o.payment_method === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0);
@@ -217,28 +217,28 @@ export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: D
       `S/ ${totalEfectivo.toFixed(2)}`,
       `${totalGeneral > 0 ? ((totalEfectivo / totalGeneral) * 100).toFixed(1) : '0'}%`,
       countEfectivo,
-      `S/ ${countEfectivo > 0 ? (totalEfectivo / countEfectivo).toFixed(2) : '0.00'}`
+      countEfectivo > 0 ? `S/ ${(totalEfectivo / countEfectivo).toFixed(2)}` : 'S/ 0.00'
     ],
     [
       '📱 YAPE/PLIN',
       `S/ ${totalYape.toFixed(2)}`,
       `${totalGeneral > 0 ? ((totalYape / totalGeneral) * 100).toFixed(1) : '0'}%`,
       countYape,
-      `S/ ${countYape > 0 ? (totalYape / countYape).toFixed(2) : '0.00'}`
+      countYape > 0 ? `S/ ${(totalYape / countYape).toFixed(2)}` : 'S/ 0.00'
     ],
     [
       '💳 TARJETA',
       `S/ ${totalTarjeta.toFixed(2)}`,
       `${totalGeneral > 0 ? ((totalTarjeta / totalGeneral) * 100).toFixed(1) : '0'}%`,
       countTarjeta,
-      `S/ ${countTarjeta > 0 ? (totalTarjeta / countTarjeta).toFixed(2) : '0.00'}`
+      countTarjeta > 0 ? `S/ ${(totalTarjeta / countTarjeta).toFixed(2)}` : 'S/ 0.00'
     ],
     [
       '❓ NO APLICA',
       `S/ ${totalNoAplica.toFixed(2)}`,
       `${totalGeneral > 0 ? ((totalNoAplica / totalGeneral) * 100).toFixed(1) : '0'}%`,
       countNoAplica,
-      `S/ ${countNoAplica > 0 ? (totalNoAplica / countNoAplica).toFixed(2) : '0.00'}`
+      countNoAplica > 0 ? `S/ ${(totalNoAplica / countNoAplica).toFixed(2)}` : 'S/ 0.00'
     ],
     [],
     ['📊 TOTAL GENERAL', `S/ ${totalGeneral.toFixed(2)}`, '100%', orders.length, '-']
@@ -283,14 +283,20 @@ export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: D
       p.name,
       p.quantity,
       `S/ ${p.total.toFixed(2)}`,
-      `S/ ${p.quantity > 0 ? (p.total / p.quantity).toFixed(2) : '0.00'}`
+      p.quantity > 0 ? `S/ ${(p.total / p.quantity).toFixed(2)}` : 'S/ 0.00'
     ]);
 
-  const totalProductQuantity = topProducts.reduce((sum, p) => sum + p[2], 0);
-  const totalProductAmount = topProducts.reduce((sum, p) => {
-    const amount = parseFloat(p[3].toString().replace('S/ ', ''));
-    return sum + amount;
-  }, 0);
+  // Calcular totales de forma segura
+  let totalProductQuantity = 0;
+  let totalProductAmount = 0;
+  
+  topProducts.forEach(p => {
+    totalProductQuantity += p[2] as number;
+    // Extraer el monto del string "S/ X.XX"
+    const amountStr = p[3] as string;
+    const amount = parseFloat(amountStr.replace('S/ ', ''));
+    totalProductAmount += amount;
+  });
 
   const productsData: any[][] = [
     ['🏆 TOP PRODUCTOS MÁS VENDIDOS'],
