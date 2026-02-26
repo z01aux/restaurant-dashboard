@@ -1149,7 +1149,18 @@ const OrderReception: React.FC = React.memo(() => {
   }, [cart.length, showToast]);
 
   // ============================================
-  // FUNCIÓN GENERATE TICKET CONTENT CORREGIDA
+  // FUNCIÓN PARA DETERMINAR TAMAÑO DE FUENTE SEGÚN LONGITUD
+  // ============================================
+  const getFontSizeForName = (name: string): string => {
+    const length = name.length;
+    if (length > 45) return '8px';
+    if (length > 35) return '9px';
+    if (length > 25) return '10px';
+    return '12px';
+  };
+
+  // ============================================
+  // FUNCIÓN GENERATE TICKET CONTENT CORREGIDA CON OPCIÓN 1
   // ============================================
   const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
     const getCurrentUserName = () => {
@@ -1223,20 +1234,39 @@ const OrderReception: React.FC = React.memo(() => {
       
       let customerInfo = '';
       
-      // PARA PEDIDOS FULLDAY - CORREGIDO: nombres completos en una línea y con teléfono
+      // PARA PEDIDOS FULLDAY - CON TAMAÑO DE FUENTE DINÁMICO
       if (order.source.type === 'fullDay' && order.studentInfo) {
+        const studentNameSize = getFontSizeForName(order.studentInfo.fullName);
+        const guardianNameSize = getFontSizeForName(order.studentInfo.guardianName);
+        
         customerInfo = `
-          <div class="info-row" style="flex-wrap: wrap;">
-            <span class="label">ALUMNO:</span>
-            <span class="customer-name-bold" style="max-width: 70%; word-wrap: break-word; white-space: normal;">${order.studentInfo.fullName.toUpperCase()}</span>
+          <div class="info-row" style="flex-wrap: wrap; align-items: flex-start;">
+            <span class="label" style="align-self: flex-start;">ALUMNO:</span>
+            <div style="flex: 1; max-width: 70%;">
+              <span class="customer-name-bold" style="
+                word-wrap: break-word; 
+                white-space: normal;
+                font-size: ${studentNameSize};
+                line-height: 1.3;
+                display: block;
+              ">${order.studentInfo.fullName.toUpperCase()}</span>
+            </div>
           </div>
           <div class="info-row">
             <span class="label">GRADO:</span>
             <span class="value">${order.studentInfo.grade} "${order.studentInfo.section}"</span>
           </div>
-          <div class="info-row">
-            <span class="label">APODERADO:</span>
-            <span class="value" style="max-width: 70%; word-wrap: break-word; white-space: normal;">${order.studentInfo.guardianName.toUpperCase()}</span>
+          <div class="info-row" style="flex-wrap: wrap; align-items: flex-start;">
+            <span class="label" style="align-self: flex-start;">APODERADO:</span>
+            <div style="flex: 1; max-width: 70%;">
+              <span class="value" style="
+                word-wrap: break-word; 
+                white-space: normal;
+                font-size: ${guardianNameSize};
+                line-height: 1.3;
+                display: block;
+              ">${order.studentInfo.guardianName.toUpperCase()}</span>
+            </div>
           </div>
           ${order.phone ? `
           <div class="info-row">
