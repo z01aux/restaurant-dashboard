@@ -1,10 +1,9 @@
 // ============================================
-// ARCHIVO: src/utils/fulldayTicketUtils.ts (ACTUALIZADO)
-// Utilidades para tickets de resumen de FullDay
-// Con IGV 10% incluido en el precio
+// ARCHIVO: src/utils/fulldayTicketUtils.ts
+// Utilidades para tickets de FullDay
 // ============================================
 
-import { FullDayOrder } from '../hooks/useFullDay';
+import { FullDayOrder } from '../types/fullday';
 import { formatDateForDisplay, formatTimeForDisplay } from './dateUtils';
 
 interface FullDayTicketSummary {
@@ -21,39 +20,12 @@ interface FullDayTicketSummary {
     quantity: number;
     total: number;
   }>;
-  dailyBreakdown: Array<{
-    date: string;
-    orders: number;
-    total: number;
-  }>;
 }
 
-/**
- * Calcula el subtotal (sin IGV) a partir del total (con IGV incluido)
- */
-const calculateSubtotal = (total: number): number => {
-  return total / 1.10;
-};
-
-/**
- * Calcula el IGV a partir del total (con IGV incluido)
- */
-const calculateIGV = (total: number): number => {
-  return total - (total / 1.10);
-};
-
-/**
- * Genera un resumen para ticket a partir de los pedidos FullDay
- */
-export const generateFullDayTicketSummary = (
-  orders: FullDayOrder[], 
-  startDate: Date, 
-  endDate: Date
-): FullDayTicketSummary => {
+export const generateFullDayTicketSummary = (orders: FullDayOrder[]): FullDayTicketSummary => {
   const totalOrders = orders.length;
   const totalAmount = orders.reduce((sum, o) => sum + o.total, 0);
 
-  // Totales por método de pago
   const byPaymentMethod = {
     EFECTIVO: orders.filter(o => o.payment_method === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0),
     YAPE_PLIN: orders.filter(o => o.payment_method === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0),
@@ -61,7 +33,6 @@ export const generateFullDayTicketSummary = (
     NO_APLICA: orders.filter(o => !o.payment_method).reduce((sum, o) => sum + o.total, 0),
   };
 
-  // Top productos
   const productMap = new Map<string, { quantity: number; total: number; name: string }>();
   orders.forEach(order => {
     order.items.forEach(item => {
@@ -88,55 +59,20 @@ export const generateFullDayTicketSummary = (
       total: p.total
     }));
 
-  // Desglose diario
-  const dailyMap = new Map<string, { orders: number; total: number }>();
-  const currentDate = new Date(startDate);
-  while (currentDate <= endDate) {
-    const dateStr = formatDateForDisplay(currentDate);
-    dailyMap.set(dateStr, { orders: 0, total: 0 });
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  orders.forEach(order => {
-    const dateStr = formatDateForDisplay(new Date(order.created_at));
-    const day = dailyMap.get(dateStr);
-    if (day) {
-      day.orders++;
-      day.total += order.total;
-    }
-  });
-
-  const dailyBreakdown = Array.from(dailyMap.entries())
-    .map(([date, data]) => ({
-      date,
-      orders: data.orders,
-      total: data.total
-    }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
   return {
     totalOrders,
     totalAmount,
     byPaymentMethod,
-    topProducts,
-    dailyBreakdown
+    topProducts
   };
 };
 
-/**
- * Genera el contenido HTML para el ticket de resumen de FullDay
- * CON IGV 10% INCLUIDO
- */
-export const generateFullDayResumenTicketHTML = (
+export const generateFullDayTicketHTML = (
   summary: FullDayTicketSummary,
   startDate: Date,
   endDate: Date
 ): string => {
   const formatCurrency = (amount: number) => `S/ ${amount.toFixed(2)}`;
-
-  // Calcular subtotal e IGV del total general
-  const subtotal = calculateSubtotal(summary.totalAmount);
-  const igv = calculateIGV(summary.totalAmount);
 
   const getCurrentUserName = () => {
     try {
@@ -158,21 +94,17 @@ export const generateFullDayResumenTicketHTML = (
   return `
     <div class="ticket" style="font-family: 'Courier New', monospace; width: 80mm; padding: 8px; margin: 0 auto; background: white; color: black; font-size: 11px; line-height: 1.3;">
       
-      <!-- HEADER -->
       <div style="text-align: center; margin-bottom: 8px;">
         <div style="font-size: 14px; font-weight: bold;">MARY'S RESTAURANT</div>
         <div style="font-size: 10px;">FULLDAY - PEDIDOS DE ALUMNOS</div>
-        <div style="font-size: 10px;">INVERSIONES AROMO S.A.C.</div>
-        <div style="font-size: 10px;">RUC: 20505262086</div>
-        <div style="font-size: 9px;">${periodText}</div>
+        <div style="font-size: 10px;">${periodText}</div>
         <div style="font-size: 9px;">EMITIDO: ${formatDateForDisplay(new Date())} ${formatTimeForDisplay(new Date())}</div>
         <div style="font-size: 9px;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
         <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
       </div>
 
-      <!-- RESUMEN GENERAL -->
       <div style="margin-bottom: 8px;">
-        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">RESUMEN FULLDAY</div>
+        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">RESUMEN GENERAL</div>
         <div style="display: flex; justify-content: space-between;">
           <span>TOTAL PEDIDOS:</span>
           <span style="font-weight: bold;">${summary.totalOrders}</span>
@@ -185,7 +117,6 @@ export const generateFullDayResumenTicketHTML = (
 
       <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
 
-      <!-- METODO DE PAGO -->
       <div style="margin-bottom: 8px;">
         <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">METODO DE PAGO</div>
         <div style="display: flex; justify-content: space-between;">
@@ -208,26 +139,6 @@ export const generateFullDayResumenTicketHTML = (
 
       <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
 
-      <!-- DESGLOSE DE IGV -->
-      <div style="margin-bottom: 8px;">
-        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">DETALLE DE IGV (10%)</div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>Subtotal:</span>
-          <span>${formatCurrency(subtotal)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>IGV (10%):</span>
-          <span>${formatCurrency(igv)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px;">
-          <span>TOTAL:</span>
-          <span>${formatCurrency(summary.totalAmount)}</span>
-        </div>
-      </div>
-
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-
-      <!-- TOP 5 PRODUCTOS -->
       ${summary.topProducts.length > 0 ? `
         <div style="margin-bottom: 8px;">
           <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">TOP 5 PRODUCTOS</div>
@@ -241,39 +152,6 @@ export const generateFullDayResumenTicketHTML = (
         <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
       ` : ''}
 
-      <!-- DESGLOSE DIARIO -->
-      ${summary.dailyBreakdown.length > 1 ? `
-        <div style="margin-bottom: 8px;">
-          <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">DESGLOSE DIARIO</div>
-          ${summary.dailyBreakdown.map(day => {
-            const daySubtotal = calculateSubtotal(day.total);
-            const dayIgv = calculateIGV(day.total);
-            return `
-              <div style="font-size: 9px; margin-bottom: 4px;">
-                <div style="display: flex; justify-content: space-between;">
-                  <span>${day.date}:</span>
-                  <span>${day.orders} ped</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-left: 10px;">
-                  <span>Subtotal:</span>
-                  <span>${formatCurrency(daySubtotal)}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-left: 10px;">
-                  <span>IGV:</span>
-                  <span>${formatCurrency(dayIgv)}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                  <span>TOTAL DÍA:</span>
-                  <span>${formatCurrency(day.total)}</span>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-      ` : ''}
-
-      <!-- FOOTER -->
       <div style="text-align: center; font-size: 9px;">
         <div>GRACIAS POR SU TRABAJO</div>
         <div style="margin-top: 4px;">********************************</div>
@@ -282,14 +160,7 @@ export const generateFullDayResumenTicketHTML = (
   `;
 };
 
-/**
- * Imprime el ticket de resumen de FullDay
- */
-export const printFullDayResumenTicket = (
-  summary: FullDayTicketSummary, 
-  startDate: Date, 
-  endDate: Date
-) => {
+export const printFullDayResumenTicket = (summary: FullDayTicketSummary, startDate: Date, endDate: Date) => {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -300,7 +171,7 @@ export const printFullDayResumenTicket = (
   
   document.body.appendChild(iframe);
 
-  const ticketContent = generateFullDayResumenTicketHTML(summary, startDate, endDate);
+  const ticketContent = generateFullDayTicketHTML(summary, startDate, endDate);
   
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
   if (iframeDoc) {
@@ -309,7 +180,7 @@ export const printFullDayResumenTicket = (
       <!DOCTYPE html>
       <html>
         <head>
-          <title>FullDay ${formatDateForDisplay(startDate)} - ${formatDateForDisplay(endDate)}</title>
+          <title>FullDay ${formatDateForDisplay(startDate)}</title>
           <style>
             @media print {
               @page {
@@ -331,9 +202,6 @@ export const printFullDayResumenTicket = (
               background: white;
               font-family: 'Courier New', monospace;
             }
-            .ticket {
-              font-family: 'Courier New', monospace;
-            }
           </style>
         </head>
         <body>
@@ -346,9 +214,7 @@ export const printFullDayResumenTicket = (
     setTimeout(() => {
       iframe.contentWindow?.print();
       setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
+        document.body.removeChild(iframe);
       }, 1000);
     }, 500);
   }
