@@ -1,10 +1,10 @@
 // ============================================
 // ARCHIVO: src/utils/fulldayDateRangeReport.ts
-// Reporte de FullDay por rango de fechas (MISMA LÓGICA QUE ÓRDENES)
+// Reporte de FullDay por rango de fechas
 // ============================================
 
 import * as XLSX from 'xlsx';
-import { FullDayOrder } from '../hooks/useFullDay';
+import { FullDayOrder } from '../types/fullday';
 import { formatDateForDisplay } from './dateUtils';
 
 interface DailySummary {
@@ -29,7 +29,7 @@ export const exportFullDayByDateRange = (
     endLocal: formatDateForDisplay(endDate)
   });
 
-  // Obtener inicio y fin del día en hora LOCAL
+  // Ajustar fechas para que cubran todo el día
   const startOfDay = new Date(startDate);
   startOfDay.setHours(0, 0, 0, 0);
   
@@ -37,10 +37,8 @@ export const exportFullDayByDateRange = (
   endOfDay.setHours(23, 59, 59, 999);
 
   console.log('📅 RANGO AJUSTADO:', {
-    startOfDay: startOfDay.toString(),
-    endOfDay: endOfDay.toString(),
-    startLocal: formatDateForDisplay(startOfDay),
-    endLocal: formatDateForDisplay(endOfDay)
+    startOfDay: startOfDay.toISOString(),
+    endOfDay: endOfDay.toISOString()
   });
 
   // Filtrar órdenes por rango de fechas
@@ -122,102 +120,53 @@ export const exportFullDayByDateRange = (
   const totalTarjeta = filteredOrders.filter(o => o.payment_method === 'TARJETA').reduce((sum, o) => sum + o.total, 0);
   const totalNoAplica = filteredOrders.filter(o => !o.payment_method).reduce((sum, o) => sum + o.total, 0);
 
-  const efectivoPct = totalVentas > 0 ? (totalEfectivo / totalVentas) * 100 : 0;
-  const yapePct = totalVentas > 0 ? (totalYape / totalVentas) * 100 : 0;
-  const tarjetaPct = totalVentas > 0 ? (totalTarjeta / totalVentas) * 100 : 0;
-
-  // Encontrar día con más ventas
-  const ventasPorDia = new Map<string, number>();
-  filteredOrders.forEach(order => {
-    const date = formatDateForDisplay(new Date(order.created_at));
-    ventasPorDia.set(date, (ventasPorDia.get(date) || 0) + order.total);
-  });
-
-  let mejorDia = { fecha: '', total: 0 };
-  ventasPorDia.forEach((total, fecha) => {
-    if (total > mejorDia.total) {
-      mejorDia = { fecha, total };
-    }
-  });
-
   const summaryData: any[][] = [
-    ['REPORTE DE PEDIDOS FULLDAY', ''],
-    ['Período', `${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
-    ['Fecha de generación', new Date().toLocaleString('es-PE')],
-    ['', ''],
-    ['📈 ESTADÍSTICAS GENERALES', ''],
+    ['REPORTE DE PEDIDOS FULLDAY'],
+    ['Colegio San José y El Redentor'],
+    [],
+    [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
+    [`Fecha de generación: ${new Date().toLocaleString('es-PE')}`],
+    [],
+    ['📊 RESUMEN GENERAL'],
     ['Total de Pedidos', totalOrders],
     ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
-    ['', ''],
-    ['💰 VENTAS POR MÉTODO DE PAGO', ''],
-    ['EFECTIVO', `S/ ${totalEfectivo.toFixed(2)}`, `${efectivoPct.toFixed(1)}%`],
-    ['YAPE/PLIN', `S/ ${totalYape.toFixed(2)}`, `${yapePct.toFixed(1)}%`],
-    ['TARJETA', `S/ ${totalTarjeta.toFixed(2)}`, `${tarjetaPct.toFixed(1)}%`],
-    ['NO APLICA', `S/ ${totalNoAplica.toFixed(2)}`],
-    ['', ''],
-    ['🏆 ESTADÍSTICAS DESTACADAS', ''],
-    ['Día con más ventas', mejorDia.fecha, `S/ ${mejorDia.total.toFixed(2)}`],
-    ['Promedio diario', `S/ ${(totalVentas / (ventasPorDia.size || 1)).toFixed(2)}`]
+    [],
+    ['💰 VENTAS POR MÉTODO DE PAGO'],
+    ['EFECTIVO', `S/ ${totalEfectivo.toFixed(2)}`, totalVentas > 0 ? `${((totalEfectivo / totalVentas) * 100).toFixed(1)}%` : '0%'],
+    ['YAPE/PLIN', `S/ ${totalYape.toFixed(2)}`, totalVentas > 0 ? `${((totalYape / totalVentas) * 100).toFixed(1)}%` : '0%'],
+    ['TARJETA', `S/ ${totalTarjeta.toFixed(2)}`, totalVentas > 0 ? `${((totalTarjeta / totalVentas) * 100).toFixed(1)}%` : '0%'],
+    ['NO APLICA', `S/ ${totalNoAplica.toFixed(2)}`]
   ];
 
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-  wsSummary['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
+  wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, '📊 RESUMEN');
 
   // ============================================
-  // HOJA 2: DESGLOSE DIARIO
-  // ============================================
-  const dailyData: any[][] = [
-    ['DESGLOSE DIARIO'],
-    [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
-    [],
-    ['FECHA', 'PEDIDOS', 'EFECTIVO', 'YAPE/PLIN', 'TARJETA', 'NO APLICA', 'TOTAL DÍA']
-  ];
-
-  const sortedDays = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
-  
-  sortedDays.forEach(day => {
-    dailyData.push([
-      day.date,
-      day.orders,
-      `S/ ${day.efectivo.toFixed(2)}`,
-      `S/ ${day.yapePlin.toFixed(2)}`,
-      `S/ ${day.tarjeta.toFixed(2)}`,
-      `S/ ${day.noAplica.toFixed(2)}`,
-      `S/ ${day.total.toFixed(2)}`
-    ]);
-  });
-
-  const wsDaily = XLSX.utils.aoa_to_sheet(dailyData);
-  wsDaily['!cols'] = [
-    { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, 
-    { wch: 12 }, { wch: 12 }, { wch: 12 }
-  ];
-  XLSX.utils.book_append_sheet(wb, wsDaily, '📅 DIARIO');
-
-  // ============================================
-  // HOJA 3: DETALLE POR ALUMNO
+  // HOJA 2: DETALLE POR ALUMNO
   // ============================================
   const detailData: any[][] = [
-    ['DETALLE DE PEDIDOS POR ALUMNO'],
+    ['DETALLE DE PEDIDOS'],
     [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
     [],
-    ['FECHA', 'GRADO', 'SECCIÓN', 'ALUMNO', 'APODERADO', 'TELÉFONO', 'PAGO', 'PRODUCTOS', 'TOTAL']
+    ['FECHA', 'HORA', 'GRADO', 'SECCIÓN', 'ALUMNO', 'APODERADO', 'TELÉFONO', 'PAGO', 'PRODUCTOS', 'TOTAL']
   ];
 
   // Ordenar por fecha (más reciente primero)
   const sortedOrders = [...filteredOrders].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
-  
+
   sortedOrders.forEach(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
+    const hora = new Date(order.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
     const productos = order.items.map(item => 
       `${item.quantity}x ${item.name}${item.notes ? ` (${item.notes})` : ''}`
     ).join('\n');
 
     detailData.push([
       fecha,
+      hora,
       order.grade,
       order.section,
       order.student_name,
@@ -231,13 +180,14 @@ export const exportFullDayByDateRange = (
 
   const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
   wsDetail['!cols'] = [
-    { wch: 12 }, { wch: 25 }, { wch: 8 }, { wch: 30 }, 
-    { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 50 }, { wch: 12 }
+    { wch: 12 }, { wch: 8 }, { wch: 20 }, { wch: 8 }, 
+    { wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, 
+    { wch: 50 }, { wch: 12 }
   ];
   XLSX.utils.book_append_sheet(wb, wsDetail, '📋 DETALLE');
 
   // ============================================
-  // HOJA 4: TOP PRODUCTOS
+  // HOJA 3: TOP PRODUCTOS
   // ============================================
   const productMap = new Map<string, { name: string; quantity: number; total: number }>();
   
