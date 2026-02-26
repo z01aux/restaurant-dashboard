@@ -1,14 +1,15 @@
 // ============================================
-// ARCHIVO: src/components/students/StudentManager.tsx (CORREGIDO)
-// Eliminado RefreshCw que no se usaba
+// ARCHIVO: src/components/students/StudentManager.tsx
+// Con botones para importar Excel y JSON
 // ============================================
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, Save, X, GraduationCap, Users, Phone, User } from 'lucide-react'; // Eliminado RefreshCw
+import { Plus, Edit, Trash2, Search, Save, X, GraduationCap, Users, Phone, User } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 import { useAuth } from '../../hooks/useAuth';
 import { StudentImport } from './StudentImport';
+import { StudentJSONImport } from './StudentJSONImport';
 
 const StudentManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,6 +126,7 @@ const StudentManager: React.FC = () => {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
+              {/* Buscador */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <input
@@ -136,9 +138,11 @@ const StudentManager: React.FC = () => {
                 />
               </div>
               
-              {/* Botón de importación */}
-              <StudentImport />
+              {/* Botones de importación */}
+              <StudentImport /> {/* Botón para importar Excel */}
+              <StudentJSONImport /> {/* Botón para importar JSON */}
               
+              {/* Botón nuevo alumno */}
               <button 
                 onClick={handleNewStudent}
                 className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 hover:shadow-md transition-all duration-300 font-medium"
