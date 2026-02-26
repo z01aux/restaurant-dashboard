@@ -552,7 +552,7 @@ const CategoryManagerModal: React.FC<{
       </div>
     </div>
   );
-});
+};
 
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
@@ -941,7 +941,7 @@ const QuickMenuManager: React.FC<{
 };
 
 // ============================================
-// FUNCIÓN PARA LIMITAR NOMBRES LARGOS
+// FUNCIÓN PARA LIMITAR NOMBRES LARGOS (CORREGIDA)
 // ============================================
 const limitNameLength = (fullName: string): string => {
   // Si el nombre tiene más de 35 caracteres, recortar
