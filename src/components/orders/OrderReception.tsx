@@ -552,7 +552,7 @@ const CategoryManagerModal: React.FC<{
       </div>
     </div>
   );
-};
+});
 
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
@@ -940,6 +940,31 @@ const QuickMenuManager: React.FC<{
   );
 };
 
+// ============================================
+// FUNCIÓN PARA LIMITAR NOMBRES LARGOS
+// ============================================
+const limitNameLength = (fullName: string): string => {
+  // Si el nombre tiene más de 35 caracteres, recortar
+  if (fullName.length > 35) {
+    // Dividir por comas primero (apellido, nombre)
+    const parts = fullName.split(',');
+    
+    if (parts.length >= 2) {
+      const lastName = parts[0].trim();
+      const firstNames = parts[1].trim().split(' ');
+      
+      // Tomar solo el primer nombre si hay varios
+      if (firstNames.length >= 2) {
+        return `${lastName}, ${firstNames[0]}`;
+      }
+    }
+    
+    // Si no se puede dividir por coma, tomar primeros 35 caracteres
+    return fullName.substring(0, 35) + '...';
+  }
+  return fullName;
+};
+
 const OrderReception: React.FC = React.memo(() => {
   const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay'>('phone');
   const [customerName, setCustomerName] = useState('');
@@ -1149,18 +1174,7 @@ const OrderReception: React.FC = React.memo(() => {
   }, [cart.length, showToast]);
 
   // ============================================
-  // FUNCIÓN PARA DETERMINAR TAMAÑO DE FUENTE SEGÚN LONGITUD
-  // ============================================
-  const getFontSizeForName = (name: string): string => {
-    const length = name.length;
-    if (length > 45) return '8px';
-    if (length > 35) return '9px';
-    if (length > 25) return '10px';
-    return '12px';
-  };
-
-  // ============================================
-  // FUNCIÓN GENERATE TICKET CONTENT CORREGIDA CON OPCIÓN 1
+  // FUNCIÓN GENERATE TICKET CONTENT CORREGIDA
   // ============================================
   const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
     const getCurrentUserName = () => {
@@ -1234,39 +1248,23 @@ const OrderReception: React.FC = React.memo(() => {
       
       let customerInfo = '';
       
-      // PARA PEDIDOS FULLDAY - CON TAMAÑO DE FUENTE DINÁMICO
+      // PARA PEDIDOS FULLDAY - CON NOMBRES LIMITADOS
       if (order.source.type === 'fullDay' && order.studentInfo) {
-        const studentNameSize = getFontSizeForName(order.studentInfo.fullName);
-        const guardianNameSize = getFontSizeForName(order.studentInfo.guardianName);
+        const limitedStudentName = limitNameLength(order.studentInfo.fullName);
+        const limitedGuardianName = limitNameLength(order.studentInfo.guardianName);
         
         customerInfo = `
-          <div class="info-row" style="flex-wrap: wrap; align-items: flex-start;">
-            <span class="label" style="align-self: flex-start;">ALUMNO:</span>
-            <div style="flex: 1; max-width: 70%;">
-              <span class="customer-name-bold" style="
-                word-wrap: break-word; 
-                white-space: normal;
-                font-size: ${studentNameSize};
-                line-height: 1.3;
-                display: block;
-              ">${order.studentInfo.fullName.toUpperCase()}</span>
-            </div>
+          <div class="info-row">
+            <span class="label">ALUMNO:</span>
+            <span class="customer-name-bold">${limitedStudentName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">GRADO:</span>
             <span class="value">${order.studentInfo.grade} "${order.studentInfo.section}"</span>
           </div>
-          <div class="info-row" style="flex-wrap: wrap; align-items: flex-start;">
-            <span class="label" style="align-self: flex-start;">APODERADO:</span>
-            <div style="flex: 1; max-width: 70%;">
-              <span class="value" style="
-                word-wrap: break-word; 
-                white-space: normal;
-                font-size: ${guardianNameSize};
-                line-height: 1.3;
-                display: block;
-              ">${order.studentInfo.guardianName.toUpperCase()}</span>
-            </div>
+          <div class="info-row">
+            <span class="label">APODERADO:</span>
+            <span class="value">${limitedGuardianName.toUpperCase()}</span>
           </div>
           ${order.phone ? `
           <div class="info-row">
@@ -1280,7 +1278,7 @@ const OrderReception: React.FC = React.memo(() => {
         customerInfo = `
           <div class="info-row">
             <span class="label">CLIENTE:</span>
-            <span class="customer-name-bold" style="max-width: 70%; word-wrap: break-word;">${order.customerName.toUpperCase()}</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
           </div>
           <div class="info-row">
             <span class="label">TELÉFONO:</span>
@@ -1486,8 +1484,6 @@ const OrderReception: React.FC = React.memo(() => {
                 font-weight: bold !important;
                 max-width: 70%;
                 word-wrap: break-word;
-                white-space: normal;
-                line-height: 1.3;
               }
               .header-title {
                 font-weight: bold !important;
