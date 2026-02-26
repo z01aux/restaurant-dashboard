@@ -5,7 +5,7 @@
 
 import * as XLSX from 'xlsx';
 import { FullDayOrder } from '../types/fullday';
-import { formatDateForDisplay, formatTimeForDisplay } from './dateUtils';
+import { formatDateForDisplay, formatTimeForDisplay, getStartOfDay, getEndOfDay } from './dateUtils';
 
 export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => {
   if (orders.length === 0) {
@@ -113,36 +113,49 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
   XLSX.writeFile(wb, fileName);
 };
 
-export const exportFullDayByDateRange = async (
+export const exportFullDayByDateRange = (
   orders: FullDayOrder[],
   startDate: Date,
   endDate: Date
 ) => {
-  console.log('🔍 FECHAS RECIBIDAS:', {
+  console.log('🔍 EXPORTACIÓN POR RANGO DE FECHAS - INICIANDO');
+  console.log('📅 Fechas recibidas:', {
     startDate: startDate.toString(),
     endDate: endDate.toString(),
-    startLocal: formatDateForDisplay(startDate),
-    endLocal: formatDateForDisplay(endDate)
+    startISO: startDate.toISOString(),
+    endISO: endDate.toISOString()
   });
 
-  const startOfDay = new Date(startDate);
-  startOfDay.setHours(0, 0, 0, 0);
-  
-  const endOfDay = new Date(endDate);
-  endOfDay.setHours(23, 59, 59, 999);
+  // Ajustar fechas para que cubran todo el día en hora local
+  const startOfDay = getStartOfDay(startDate);
+  const endOfDay = getEndOfDay(endDate);
 
+  console.log('📅 Rango ajustado:', {
+    startOfDay: startOfDay.toISOString(),
+    endOfDay: endOfDay.toISOString()
+  });
+
+  console.log('📦 Total de pedidos en el sistema:', orders.length);
+
+  // Filtrar órdenes por rango de fechas
   const filteredOrders = orders.filter(order => {
     const orderDate = new Date(order.created_at);
     return orderDate >= startOfDay && orderDate <= endOfDay;
   });
+
+  console.log('📊 Pedidos encontrados en el rango:', filteredOrders.length);
 
   if (filteredOrders.length === 0) {
     alert('No hay pedidos en el rango de fechas seleccionado');
     return;
   }
 
+  // Crear libro de Excel
   const wb = XLSX.utils.book_new();
-
+  
+  const startStr = startDate.toISOString().split('T')[0].replace(/-/g, '');
+  const endStr = endDate.toISOString().split('T')[0].replace(/-/g, '');
+  
   // HOJA 1: RESUMEN GENERAL
   const totalOrders = filteredOrders.length;
   const totalVentas = filteredOrders.reduce((sum, o) => sum + o.total, 0);
@@ -154,10 +167,12 @@ export const exportFullDayByDateRange = async (
 
   const summaryData: any[][] = [
     ['REPORTE DE PEDIDOS FULLDAY'],
-    [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
-    ['Fecha de generación', new Date().toLocaleString('es-PE')],
+    ['Colegio San José y El Redentor'],
     [],
-    ['📈 ESTADÍSTICAS GENERALES'],
+    [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
+    [`Fecha de generación: ${new Date().toLocaleString('es-PE')}`],
+    [],
+    ['📊 RESUMEN GENERAL'],
     ['Total de Pedidos', totalOrders],
     ['Total Ventas', `S/ ${totalVentas.toFixed(2)}`],
     [],
@@ -169,6 +184,7 @@ export const exportFullDayByDateRange = async (
   ];
 
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, '📊 RESUMEN');
 
   // HOJA 2: DETALLE POR ALUMNO
@@ -176,19 +192,23 @@ export const exportFullDayByDateRange = async (
     ['DETALLE DE PEDIDOS'],
     [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
     [],
-    ['FECHA', 'GRADO', 'SECCIÓN', 'ALUMNO', 'APODERADO', 'TELÉFONO', 'PAGO', 'PRODUCTOS', 'TOTAL']
+    ['FECHA', 'HORA', 'GRADO', 'SECCIÓN', 'ALUMNO', 'APODERADO', 'TELÉFONO', 'PAGO', 'PRODUCTOS', 'TOTAL']
   ];
 
-  filteredOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const sortedOrders = [...filteredOrders].sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
-  filteredOrders.forEach(order => {
+  sortedOrders.forEach(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
+    const hora = formatTimeForDisplay(new Date(order.created_at));
     const productos = order.items.map(item => 
       `${item.quantity}x ${item.name}${item.notes ? ` (${item.notes})` : ''}`
     ).join('\n');
 
     detailData.push([
       fecha,
+      hora,
       order.grade,
       order.section,
       order.student_name,
@@ -201,11 +221,57 @@ export const exportFullDayByDateRange = async (
   });
 
   const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
+  wsDetail['!cols'] = [
+    { wch: 12 }, { wch: 8 }, { wch: 20 }, { wch: 8 }, 
+    { wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, 
+    { wch: 50 }, { wch: 12 }
+  ];
   XLSX.utils.book_append_sheet(wb, wsDetail, '📋 DETALLE');
 
-  const startStr = startDate.toISOString().split('T')[0].replace(/-/g, '');
-  const endStr = endDate.toISOString().split('T')[0].replace(/-/g, '');
-  const fileName = `FULLDAY_${startStr}_al_${endStr}.xlsx`;
+  // HOJA 3: TOP PRODUCTOS
+  const productMap = new Map<string, { name: string; quantity: number; total: number }>();
+  
+  filteredOrders.forEach(order => {
+    order.items.forEach(item => {
+      const existing = productMap.get(item.id);
+      if (existing) {
+        existing.quantity += item.quantity;
+        existing.total += item.price * item.quantity;
+      } else {
+        productMap.set(item.id, {
+          name: item.name,
+          quantity: item.quantity,
+          total: item.price * item.quantity
+        });
+      }
+    });
+  });
 
+  const topProducts = Array.from(productMap.values())
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 10)
+    .map((p, index) => [
+      index + 1,
+      p.name,
+      p.quantity,
+      `S/ ${p.total.toFixed(2)}`
+    ]);
+
+  const productsData: any[][] = [
+    ['🏆 TOP 10 PRODUCTOS'],
+    [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
+    [],
+    ['#', 'PRODUCTO', 'CANTIDAD', 'TOTAL VENDIDO'],
+    ...topProducts
+  ];
+
+  const wsProducts = XLSX.utils.aoa_to_sheet(productsData);
+  wsProducts['!cols'] = [
+    { wch: 5 }, { wch: 40 }, { wch: 10 }, { wch: 15 }
+  ];
+  XLSX.utils.book_append_sheet(wb, wsProducts, '🏆 TOP 10');
+
+  const fileName = `FULLDAY_${startStr}_al_${endStr}.xlsx`;
   XLSX.writeFile(wb, fileName);
+  console.log('✅ Reporte generado:', fileName);
 };
