@@ -30,6 +30,8 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
   const csvData = orders.map(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
+    
+    // CORREGIDO: Ahora lista TODOS los productos correctamente
     const productos = order.items.map(item => 
       `${item.quantity}x ${item.name}`
     ).join(' | ');
@@ -75,6 +77,8 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
   const data = orders.map(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
+    
+    // CORREGIDO: Ahora lista TODOS los productos correctamente con saltos de línea
     const productos = order.items.map(item => 
       `${item.quantity}x ${item.name}`
     ).join('\n');
@@ -187,12 +191,12 @@ export const exportFullDayByDateRange = (
   wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, '📊 RESUMEN');
 
-  // HOJA 2: DETALLE POR ALUMNO
+  // HOJA 2: DETALLE POR ALUMNO (CORREGIDO)
   const detailData: any[][] = [
     ['DETALLE DE PEDIDOS'],
     [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
     [],
-    ['FECHA', 'HORA', 'GRADO', 'SECCIÓN', 'ALUMNO', 'APODERADO', 'TELÉFONO', 'PAGO', 'PRODUCTOS', 'TOTAL']
+    ['FECHA', 'HORA', 'N° ORDEN', 'GRADO', 'SECCIÓN', 'ALUMNO', 'APODERADO', 'TELÉFONO', 'PAGO', 'PRODUCTOS', 'TOTAL']
   ];
 
   const sortedOrders = [...filteredOrders].sort((a, b) => 
@@ -202,6 +206,8 @@ export const exportFullDayByDateRange = (
   sortedOrders.forEach(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
+    
+    // CORREGIDO: Ahora lista TODOS los productos correctamente con saltos de línea
     const productos = order.items.map(item => 
       `${item.quantity}x ${item.name}${item.notes ? ` (${item.notes})` : ''}`
     ).join('\n');
@@ -209,6 +215,7 @@ export const exportFullDayByDateRange = (
     detailData.push([
       fecha,
       hora,
+      order.order_number,
       order.grade,
       order.section,
       order.student_name,
@@ -222,7 +229,7 @@ export const exportFullDayByDateRange = (
 
   const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
   wsDetail['!cols'] = [
-    { wch: 12 }, { wch: 8 }, { wch: 20 }, { wch: 8 }, 
+    { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 20 }, { wch: 8 }, 
     { wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, 
     { wch: 50 }, { wch: 12 }
   ];
