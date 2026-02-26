@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { FullDayOrder } from '../types/fullday';
+import { FullDayOrder, FullDayDatabaseOrder, FullDayOrderStatus } from '../types/fullday';
 
 export const useFullDayOrders = () => {
   const [orders, setOrders] = useState<FullDayOrder[]>([]);
@@ -23,8 +23,10 @@ export const useFullDayOrders = () => {
 
       if (error) throw error;
       
-      const convertedOrders = (data || []).map(order => ({
+      const convertedOrders: FullDayOrder[] = (data || []).map((order: FullDayDatabaseOrder) => ({
         ...order,
+        status: order.status as FullDayOrderStatus,
+        payment_method: order.payment_method as FullDayOrder['payment_method'],
         created_at: new Date(order.created_at),
         updated_at: new Date(order.updated_at)
       }));
@@ -39,7 +41,7 @@ export const useFullDayOrders = () => {
     }
   }, []);
 
-  const updateOrderStatus = async (orderId: string, status: string) => {
+  const updateOrderStatus = async (orderId: string, status: FullDayOrderStatus) => {
     try {
       const { error } = await supabase
         .from('fullday')

@@ -3,7 +3,7 @@
 // Tipos para pedidos FullDay
 // ============================================
 
-import { Student } from './student';
+// Eliminada importación no usada de Student
 
 export interface FullDayMenuItem {
   id: string;
@@ -20,6 +20,9 @@ export interface FullDayOrderItem {
   notes?: string;
 }
 
+export type FullDayOrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+export type FullDayPaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null;
+
 export interface FullDayOrder {
   id: string;
   order_number: string;
@@ -30,9 +33,9 @@ export interface FullDayOrder {
   guardian_name: string;
   phone: string | null;
   items: FullDayOrderItem[];
-  status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: FullDayOrderStatus;
   total: number;
-  payment_method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null;
+  payment_method: FullDayPaymentMethod;
   notes: string | null;
   created_at: Date;
   updated_at: Date;
