@@ -1,72 +1,50 @@
 // ============================================
-// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx (CORREGIDO)
-// Con sistema de caja y reportes
+// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
+// Gestor de pedidos FullDay con filtros por fecha y reportes
 // ============================================
 
 import React, { useState, useMemo } from 'react';
 import { useFullDay } from '../../hooks/useFullDay';
-import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
-import { GraduationCap, Calendar, Search } from 'lucide-react'; // Solo los que se usan
-import { CashRegisterModal } from '../sales/CashRegisterModal';
-import { DateRangeModal } from '../orders/DateRangeModal';
-import { exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
-import { SalesHistoryMinimal } from '../sales/SalesHistoryMinimal';
-import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
+import { GraduationCap, Download, Calendar, DollarSign, Users, Search, Printer, FileSpreadsheet, ChefHat } from 'lucide-react';
+import { FullDayDateFilter } from './FullDayDateFilter';
+import { 
+  exportKitchenReportToExcel, 
+  exportAdminReportToExcel,
+  printKitchenTicket 
+} from '../../utils/fulldayReports';
 
 export const FullDayOrdersManager: React.FC = () => {
   const { orders, loading } = useFullDay();
-  const { 
-    cashRegister, 
-    loading: salesLoading, 
-    openCashRegister, 
-    closeCashRegister,
-    closures
-  } = useFullDaySalesClosure();
-  
-  const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCashModal, setShowCashModal] = useState(false);
-  const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
-  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<'normal' | 'kitchen'>('normal');
 
-  // Filtrar por fecha
-  const filteredByDate = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.setHours(0, 0, 0, 0));
-    const weekAgo = new Date(now.setDate(now.getDate() - 7));
-    const monthAgo = new Date(now.setMonth(now.getMonth() - 1));
+  // Filtrar pedidos por fecha seleccionada
+  const ordersByDate = useMemo(() => {
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
     return orders.filter(order => {
       const orderDate = new Date(order.created_at);
-      orderDate.setHours(0, 0, 0, 0);
-
-      switch (dateFilter) {
-        case 'today':
-          return orderDate.getTime() === today.getTime();
-        case 'week':
-          return orderDate >= weekAgo;
-        case 'month':
-          return orderDate >= monthAgo;
-        default:
-          return true;
-      }
+      return orderDate >= startOfDay && orderDate <= endOfDay;
     });
-  }, [orders, dateFilter]);
+  }, [orders, selectedDate]);
 
   // Filtrar por búsqueda
   const filteredOrders = useMemo(() => {
-    if (!searchTerm.trim()) return filteredByDate;
+    if (!searchTerm.trim()) return ordersByDate;
     
     const term = searchTerm.toLowerCase();
-    return filteredByDate.filter(order => 
+    return ordersByDate.filter(order => 
       order.student_name.toLowerCase().includes(term) ||
       order.guardian_name.toLowerCase().includes(term) ||
       order.phone?.toLowerCase().includes(term) ||
       order.order_number?.toLowerCase().includes(term)
     );
-  }, [filteredByDate, searchTerm]);
+  }, [ordersByDate, searchTerm]);
 
   // Estadísticas
   const stats = useMemo(() => {
@@ -84,62 +62,45 @@ export const FullDayOrdersManager: React.FC = () => {
     return { total, count, average, byPayment };
   }, [filteredOrders]);
 
-  // Handlers de caja
-  const handleOpenCash = () => {
-    setCashModalType('open');
-    setShowCashModal(true);
-  };
+  // Resumen de productos para vista cocina
+  const kitchenSummary = useMemo(() => {
+    const productMap = new Map<string, { name: string; quantity: number }>();
+    
+    filteredOrders.forEach(order => {
+      order.items.forEach(item => {
+        const existing = productMap.get(item.id);
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          productMap.set(item.id, {
+            name: item.name,
+            quantity: item.quantity
+          });
+        }
+      });
+    });
 
-  const handleCloseCash = () => {
-    setCashModalType('close');
-    setShowCashModal(true);
-  };
-
-  const handleCashConfirm = async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
-    if (cashModalType === 'open') {
-      const result = await openCashRegister(data.initialCash!);
-      if (result.success) {
-        alert('✅ Caja FullDay abierta correctamente');
-        setShowCashModal(false);
-      } else {
-        alert('❌ Error: ' + result.error);
-      }
-    } else {
-      const result = await closeCashRegister(filteredOrders, data.finalCash!, data.notes || '');
-      if (result.success) {
-        alert('✅ Caja FullDay cerrada correctamente');
-        setShowCashModal(false);
-      } else {
-        alert('❌ Error: ' + result.error);
-      }
-    }
-  };
+    return Array.from(productMap.values()).sort((a, b) => b.quantity - a.quantity);
+  }, [filteredOrders]);
 
   // Handlers de reportes
-  const handleExportExcel = async (startDate: Date, endDate: Date) => {
-    if (exporting) return;
-    setExporting(true);
-    
-    try {
-      await exportFullDayByDateRange(filteredOrders, startDate, endDate);
-    } catch (error) {
-      console.error('Error exportando FullDay:', error);
-      alert('Error al generar reporte');
-    } finally {
-      setExporting(false);
-    }
+  const handlePrintKitchenTicket = () => {
+    printKitchenTicket(filteredOrders, selectedDate);
   };
 
-  const handlePrintTicket = async (startDate: Date, endDate: Date) => {
-    const summary = generateFullDayTicketSummary(filteredOrders, startDate, endDate);
-    printFullDayResumenTicket(summary, startDate, endDate);
+  const handleExportKitchenExcel = () => {
+    exportKitchenReportToExcel(filteredOrders, selectedDate);
+  };
+
+  const handleExportAdminExcel = () => {
+    exportAdminReportToExcel(filteredOrders, selectedDate);
   };
 
   if (loading) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-        <p className="text-gray-600 mt-2">Cargando pedidos FullDay...</p>
+        <p className="text-gray-600 mt-2">Cargando pedidos...</p>
       </div>
     );
   }
@@ -149,7 +110,7 @@ export const FullDayOrdersManager: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
           
-          {/* Header con controles de caja */}
+          {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center">
@@ -157,88 +118,89 @@ export const FullDayOrdersManager: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Pedidos FullDay</h1>
-                <p className="text-gray-600 text-sm">Gestión exclusiva de pedidos de alumnos</p>
+                <p className="text-gray-600 text-sm">Gestión de pedidos de alumnos</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
-              {/* Estado de caja */}
-              <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 shadow-sm border">
-                <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                <span className="text-sm font-medium">
-                  Caja FullDay: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
-                </span>
-              </div>
-
-              {/* Botones de caja */}
-              {!cashRegister?.is_open ? (
-                <button 
-                  onClick={handleOpenCash} 
-                  className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700"
-                >
-                  Abrir Caja
-                </button>
-              ) : (
-                <button 
-                  onClick={handleCloseCash} 
-                  className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700"
-                >
-                  Cerrar Caja
-                </button>
-              )}
-
-              <button 
-                onClick={() => setShowHistory(!showHistory)} 
-                className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700"
+            {/* Toggle de vista */}
+            <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('normal')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  viewMode === 'normal' 
+                    ? 'bg-white text-purple-700 shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
               >
-                {showHistory ? 'Ocultar Historial' : 'Ver Historial'}
+                📋 Vista Normal
+              </button>
+              <button
+                onClick={() => setViewMode('kitchen')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  viewMode === 'kitchen' 
+                    ? 'bg-white text-orange-700 shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                👨‍🍳 Vista Cocina
               </button>
             </div>
           </div>
 
-          {/* Historial minimalista */}
-          {showHistory && <SalesHistoryMinimal closures={closures} type="fullday" />}
+          {/* Filtro de fecha */}
+          <FullDayDateFilter
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            totalOrders={filteredOrders.length}
+          />
 
-          {/* Filtros y acciones */}
+          {/* Barra de búsqueda y botones de reporte */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar alumno..."
-                  className="pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 w-full sm:w-64"
-                />
-              </div>
-
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value as any)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="today">Hoy</option>
-                <option value="week">Última semana</option>
-                <option value="month">Último mes</option>
-                <option value="all">Todos</option>
-              </select>
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar alumno o apoderado..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {/* Reportes de cocina */}
               <button
-                onClick={() => setShowDateRangeModal(true)}
-                disabled={exporting}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 hover:bg-purple-700 disabled:opacity-50"
+                onClick={handlePrintKitchenTicket}
+                className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 hover:bg-orange-600 transition-colors"
+                title="Imprimir ticket para cocina"
               >
-                <Calendar size={16} />
-                <span>Reportes</span>
+                <Printer size={16} />
+                <span>Ticket Cocina</span>
+              </button>
+
+              <button
+                onClick={handleExportKitchenExcel}
+                className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 hover:bg-orange-700 transition-colors"
+                title="Exportar reporte de cocina a Excel"
+              >
+                <FileSpreadsheet size={16} />
+                <span>Excel Cocina</span>
+              </button>
+
+              {/* Reporte administrativo */}
+              <button
+                onClick={handleExportAdminExcel}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 hover:bg-purple-700 transition-colors"
+                title="Exportar reporte administrativo completo"
+              >
+                <Download size={16} />
+                <span>Excel Administrativo</span>
               </button>
             </div>
           </div>
 
           {/* Stats cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
               <div className="text-sm text-purple-600 font-medium">Total Pedidos</div>
               <div className="text-2xl font-bold text-purple-800">{stats.count}</div>
@@ -251,143 +213,146 @@ export const FullDayOrdersManager: React.FC = () => {
               <div className="text-sm text-blue-600 font-medium">Ticket Promedio</div>
               <div className="text-2xl font-bold text-blue-800">S/ {stats.average.toFixed(2)}</div>
             </div>
+            <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+              <div className="text-sm text-yellow-600 font-medium">Productos</div>
+              <div className="text-2xl font-bold text-yellow-800">
+                {kitchenSummary.reduce((sum, p) => sum + p.quantity, 0)}
+              </div>
+            </div>
           </div>
 
-          {/* Modal de caja */}
-          <CashRegisterModal
-            isOpen={showCashModal}
-            onClose={() => setShowCashModal(false)}
-            type={cashModalType}
-            cashRegister={cashRegister}
-            todaySummary={undefined}
-            onConfirm={handleCashConfirm}
-            loading={salesLoading}
-          />
-
-          {/* Modal de fechas */}
-          <DateRangeModal
-            isOpen={showDateRangeModal}
-            onClose={() => setShowDateRangeModal(false)}
-            onConfirmExcel={handleExportExcel}
-            onConfirmTicket={handlePrintTicket}
-          />
-
-          {/* Lista de pedidos */}
-          <div className="space-y-4">
-            {filteredOrders.length === 0 ? (
-              <div className="text-center py-12">
-                <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No hay pedidos FullDay
-                </h3>
-                <p className="text-gray-500 text-sm">
-                  {searchTerm || dateFilter !== 'all' 
-                    ? 'No se encontraron pedidos con los filtros seleccionados'
-                    : 'Los pedidos aparecerán aquí cuando se registren'}
-                </p>
-              </div>
-            ) : (
-              filteredOrders.map(order => (
-                <div
-                  key={order.id}
-                  className="bg-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all duration-200"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
-                          #{order.order_number}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {new Date(order.created_at).toLocaleString()}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Alumno</div>
-                          <div className="font-medium text-gray-900">{order.student_name}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Grado y Sección</div>
-                          <div className="font-medium text-gray-900">{order.grade} "{order.section}"</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Apoderado</div>
-                          <div className="font-medium text-gray-900">{order.guardian_name}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Teléfono</div>
-                          <div className="font-medium text-gray-900">{order.phone || 'No registrado'}</div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-xs text-gray-500 mb-2">Productos</div>
-                        <div className="flex flex-wrap gap-2">
-                          {order.items.map((item, idx) => (
-                            <div
-                              key={idx}
-                              className="bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                            >
-                              <span className="font-semibold text-purple-600">{item.quantity}x</span>
-                              <span className="ml-2 text-gray-700">{item.name}</span>
-                              {item.notes && (
-                                <span className="ml-2 text-xs text-gray-500 italic">
-                                  (Nota: {item.notes})
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="lg:text-right flex lg:block items-center justify-between lg:min-w-[200px]">
-                      <div>
-                        <div className="text-sm text-gray-500 mb-1">Total</div>
-                        <div className="text-2xl font-bold text-purple-600">
-                          S/ {order.total.toFixed(2)}
-                        </div>
-                      </div>
-                      <div className="mt-2">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                          order.payment_method === 'EFECTIVO' ? 'bg-green-100 text-green-800' :
-                          order.payment_method === 'YAPE/PLIN' ? 'bg-purple-100 text-purple-800' :
-                          order.payment_method === 'TARJETA' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {order.payment_method || 'NO APLICA'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {order.notes && (
-                    <div className="mt-4 pt-3 border-t border-gray-100">
-                      <div className="text-xs text-gray-500 mb-1">Notas adicionales</div>
-                      <div className="text-sm text-gray-700 bg-yellow-50 p-2 rounded-lg">
-                        {order.notes}
-                      </div>
-                    </div>
-                  )}
+          {/* VISTA COCINA */}
+          {viewMode === 'kitchen' && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <ChefHat className="mr-2 text-orange-500" size={24} />
+                Resumen para Cocina
+              </h2>
+              
+              {kitchenSummary.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                  <p className="text-gray-500">No hay productos para mostrar</p>
                 </div>
-              ))
-            )}
-          </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {kitchenSummary.map(product => (
+                    <div key={product.name} className="bg-white rounded-lg p-6 border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
+                      <h3 className="font-bold text-gray-900 text-lg mb-2">{product.name}</h3>
+                      <div className="flex items-end justify-between">
+                        <span className="text-4xl font-bold text-orange-600">{product.quantity}</span>
+                        <span className="text-sm text-gray-500">unidades</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Total del filtro */}
-          {filteredOrders.length > 0 && (
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">
-                  Mostrando {filteredOrders.length} de {orders.length} pedidos FullDay
-                </span>
-                <span className="font-semibold text-purple-600">
-                  Total: S/ {stats.total.toFixed(2)}
-                </span>
-              </div>
+          {/* VISTA NORMAL - Lista de pedidos */}
+          {viewMode === 'normal' && (
+            <div className="space-y-4">
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No hay pedidos para esta fecha
+                  </h3>
+                  <p className="text-gray-500 text-sm">
+                    {searchTerm 
+                      ? 'Intenta con otros términos de búsqueda' 
+                      : 'Los pedidos aparecerán aquí cuando se registren'}
+                  </p>
+                </div>
+              ) : (
+                filteredOrders.map(order => (
+                  <div
+                    key={order.id}
+                    className="bg-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all duration-200"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                            #{order.order_number}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {new Date(order.created_at).toLocaleTimeString()}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">Alumno</div>
+                            <div className="font-medium text-gray-900">{order.student_name}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">Grado y Sección</div>
+                            <div className="font-medium text-gray-900">{order.grade} "{order.section}"</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">Apoderado</div>
+                            <div className="font-medium text-gray-900">{order.guardian_name}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">Teléfono</div>
+                            <div className="font-medium text-gray-900">{order.phone || 'No registrado'}</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs text-gray-500 mb-2">Productos</div>
+                          <div className="flex flex-wrap gap-2">
+                            {order.items.map((item, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                              >
+                                <span className="font-semibold text-purple-600">{item.quantity}x</span>
+                                <span className="ml-2 text-gray-700">{item.name}</span>
+                                {item.notes && (
+                                  <span className="ml-2 text-xs text-gray-500 italic">
+                                    (Nota: {item.notes})
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="lg:text-right flex lg:block items-center justify-between lg:min-w-[200px]">
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">Total</div>
+                          <div className="text-2xl font-bold text-purple-600">
+                            S/ {order.total.toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                            order.payment_method === 'EFECTIVO' ? 'bg-green-100 text-green-800' :
+                            order.payment_method === 'YAPE/PLIN' ? 'bg-purple-100 text-purple-800' :
+                            order.payment_method === 'TARJETA' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {order.payment_method || 'NO APLICA'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {order.notes && (
+                      <div className="mt-4 pt-3 border-t border-gray-100">
+                        <div className="text-xs text-gray-500 mb-1">Notas adicionales</div>
+                        <div className="text-sm text-gray-700 bg-yellow-50 p-2 rounded-lg">
+                          {order.notes}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
