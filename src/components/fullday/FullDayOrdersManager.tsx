@@ -207,7 +207,7 @@ export const FullDayOrdersManager: React.FC = () => {
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500">No hay pedidos para mostrar</p>
+                <p className="text-gray-500">No hay pedidos para esta fecha</p>
               </div>
             ) : (
               filteredOrders.map(order => (
@@ -256,7 +256,6 @@ export const FullDayOrdersManager: React.FC = () => {
             isOpen={showCashModal}
             onClose={() => setShowCashModal(false)}
             type={cashModalType}
-            //cashRegister={cashRegister}
             onConfirm={handleCashConfirm}
             loading={salesLoading}
           />
@@ -270,5 +269,4 @@ export const FullDayOrdersManager: React.FC = () => {
       </div>
     </div>
   );
-
 };
