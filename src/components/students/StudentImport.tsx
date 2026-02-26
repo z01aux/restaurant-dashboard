@@ -1,6 +1,5 @@
 // ============================================
-// ARCHIVO: src/components/students/StudentImport.tsx (CORREGIDO)
-// Componente para importar alumnos desde Excel
+// ARCHIVO: src/components/students/StudentImport.tsx
 // ============================================
 
 import React, { useState, useRef } from 'react';
@@ -70,11 +69,11 @@ export const StudentImport: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
-  // preview eliminado porque no se usa
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Función para procesar el archivo Excel
   const processExcelFile = async (file: File) => {
+    console.log('📂 Archivo seleccionado:', file.name, 'tamaño:', file.size);
     setLoading(true);
     setResult(null);
 
@@ -83,21 +82,39 @@ export const StudentImport: React.FC = () => {
       
       reader.onload = async (e) => {
         try {
+          console.log('📄 Archivo leído correctamente');
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
           
-          // Usar la primera hoja (Hoja1)
+          // Leer el archivo con opciones para formato .xls
+          const workbook = XLSX.read(data, { 
+            type: 'array',
+            cellDates: true, // Para fechas
+            cellNF: false,
+            cellText: false
+          });
+          
+          console.log('📑 Hojas encontradas:', workbook.SheetNames);
+          
+          // Usar la primera hoja
           const sheetName = workbook.SheetNames[0];
+          console.log('📊 Usando hoja:', sheetName);
+          
           const worksheet = workbook.Sheets[sheetName];
           
-          // Convertir a JSON
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          // Convertir a JSON con encabezados
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+            header: 1,
+            defval: '' // Valor por defecto para celdas vacías
+          });
+          
+          console.log('📝 Total de filas:', jsonData.length);
+          console.log('📝 Primeras 5 filas:', jsonData.slice(0, 5));
           
           // Procesar los datos
           await processStudents(jsonData as any[][]);
           
         } catch (error) {
-          console.error('Error procesando Excel:', error);
+          console.error('❌ Error procesando Excel:', error);
           setResult({
             success: 0,
             errors: 1,
@@ -109,15 +126,28 @@ export const StudentImport: React.FC = () => {
         }
       };
 
+      reader.onerror = (error) => {
+        console.error('❌ Error leyendo archivo:', error);
+        setResult({
+          success: 0,
+          errors: 1,
+          duplicates: 0,
+          details: ['Error al leer el archivo']
+        });
+        setLoading(false);
+      };
+
       reader.readAsArrayBuffer(file);
     } catch (error) {
-      console.error('Error leyendo archivo:', error);
+      console.error('❌ Error leyendo archivo:', error);
       setLoading(false);
     }
   };
 
   // Función para procesar los alumnos
   const processStudents = async (rows: any[][]) => {
+    console.log('🔄 Procesando alumnos...');
+    
     const result: ImportResult = {
       success: 0,
       errors: 0,
@@ -133,29 +163,41 @@ export const StudentImport: React.FC = () => {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       
+      if (!row || !Array.isArray(row)) continue;
+      
+      // Limpiar valores undefined
+      const cleanRow = row.map(cell => cell || '');
+      
       // Buscar líneas de "Código de Salón:"
-      if (row[0] === 'Código de Salón:' && row[2]) {
-        const classroomName = row[4]; // El nombre del salón está en la columna 4
+      if (cleanRow[0] === 'Código de Salón:' && cleanRow[2]) {
+        const classroomName = cleanRow[4]; // El nombre del salón está en la columna 4
+        console.log(`🏫 Encontrado salón en fila ${i + 1}:`, classroomName);
+        
         if (classroomName && gradeMapping[classroomName]) {
           currentClassroom = classroomName;
           currentGrade = gradeMapping[classroomName].grade;
           currentSection = gradeMapping[classroomName].section;
-          console.log(`📚 Procesando salón: ${currentClassroom} -> ${currentGrade} "${currentSection}"`);
+          result.details.push(`📚 Procesando salón: ${currentClassroom} -> ${currentGrade} "${currentSection}"`);
+          console.log(`✅ Salón mapeado: ${currentClassroom} -> ${currentGrade} "${currentSection}"`);
         } else {
           console.warn(`⚠️ Salón no mapeado: ${classroomName}`);
+          result.details.push(`⚠️ Salón no mapeado: ${classroomName}`);
         }
         continue;
       }
 
       // Buscar filas de alumnos (deben tener un número en la primera columna)
-      if (row[0] && typeof row[0] === 'number' && currentGrade && currentSection) {
-        const studentName = row[1]; // Nombre del alumno
-        const fatherName = row[3];   // Nombre del padre
-        const fatherPhone = row[4];  // Celular del padre
-        const motherName = row[5];   // Nombre de la madre
-        const motherPhone = row[6];  // Celular de la madre
+      const firstCol = cleanRow[0];
+      if (firstCol && !isNaN(Number(firstCol)) && currentGrade && currentSection) {
+        const studentName = cleanRow[1]; // Nombre del alumno
+        const fatherName = cleanRow[3];   // Nombre del padre
+        const fatherPhone = cleanRow[4];  // Celular del padre
+        const motherName = cleanRow[5];   // Nombre de la madre
+        const motherPhone = cleanRow[6];  // Celular de la madre
 
-        if (!studentName) continue;
+        if (!studentName || studentName === '') continue;
+
+        console.log(`👤 Procesando alumno: ${studentName}`);
 
         // Determinar apoderado (el que tenga teléfono)
         let guardianName = '';
@@ -164,21 +206,23 @@ export const StudentImport: React.FC = () => {
         if (fatherPhone && fatherPhone !== '' && fatherPhone !== 0) {
           guardianName = fatherName || '';
           phone = fatherPhone.toString().trim();
+          console.log(`  📞 Usando padre: ${guardianName} - ${phone}`);
         } else if (motherPhone && motherPhone !== '' && motherPhone !== 0) {
           guardianName = motherName || '';
           phone = motherPhone.toString().trim();
+          console.log(`  📞 Usando madre: ${guardianName} - ${phone}`);
         } else {
-          // Si no hay teléfono, usar el padre o madre que tenga nombre
           guardianName = fatherName || motherName || '';
           phone = '';
+          console.log(`  ⚠️ Sin teléfono, apoderado: ${guardianName}`);
           result.details.push(`⚠️ Alumno sin teléfono: ${studentName}`);
         }
 
-        // Limpiar el nombre del apoderado (quitar "PADRE:" o "MADRE:" si existe)
+        // Limpiar el nombre del apoderado
         guardianName = guardianName.replace(/^(PADRE|MADRE):\s*/i, '').trim();
 
-        // Verificar si el alumno ya existe (por nombre y grado)
-        const { data: existing } = await supabase
+        // Verificar si el alumno ya existe
+        const { data: existing, error: checkError } = await supabase
           .from('students')
           .select('id')
           .eq('full_name', studentName.trim())
@@ -186,13 +230,20 @@ export const StudentImport: React.FC = () => {
           .eq('section', currentSection)
           .maybeSingle();
 
+        if (checkError) {
+          console.error('❌ Error verificando duplicado:', checkError);
+        }
+
         if (existing) {
           result.duplicates++;
           result.details.push(`🟡 Duplicado: ${studentName} ya existe en ${currentGrade} "${currentSection}"`);
+          console.log(`🟡 Alumno duplicado: ${studentName}`);
           continue;
         }
 
         // Insertar nuevo alumno
+        console.log(`💾 Insertando alumno: ${studentName}`);
+        
         const { error } = await supabase
           .from('students')
           .insert({
@@ -204,16 +255,18 @@ export const StudentImport: React.FC = () => {
           });
 
         if (error) {
-          console.error('Error insertando alumno:', error);
+          console.error('❌ Error insertando alumno:', error);
           result.errors++;
           result.details.push(`❌ Error insertando ${studentName}: ${error.message}`);
         } else {
           result.success++;
           result.details.push(`✅ Insertado: ${studentName} (${currentGrade} "${currentSection}") - Apoderado: ${guardianName}`);
+          console.log(`✅ Alumno insertado correctamente`);
         }
       }
     }
 
+    console.log('📊 Resultado final:', result);
     setResult(result);
   };
 
@@ -281,10 +334,10 @@ export const StudentImport: React.FC = () => {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <h3 className="text-sm font-semibold text-blue-800 mb-2">📋 Instrucciones:</h3>
                 <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-                  <li>El archivo debe tener el formato de la plantilla (Hoja1 del Excel proporcionado)</li>
+                  <li>Sube el archivo DIRECTORIO.xls que me enviaste</li>
+                  <li>El script usará automáticamente la hoja "Hoja1"</li>
                   <li>Los nombres de salón deben coincidir con: RED ROOM A, YELLOW ROOM A, GREEN ROOM A, Primero de Primaria A, etc.</li>
                   <li>Se usará como apoderado la persona que tenga teléfono (prioridad al padre, luego madre)</li>
-                  <li>No se importarán DNI ni códigos de salón</li>
                   <li>Los alumnos duplicados (mismo nombre, grado y sección) serán omitidos</li>
                 </ul>
               </div>
@@ -303,12 +356,12 @@ export const StudentImport: React.FC = () => {
               {/* Selector de archivo */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Seleccionar archivo Excel:
+                  Seleccionar archivo Excel (.xls o .xlsx):
                 </label>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".xlsx,.xls"
+                  accept=".xls,.xlsx"
                   onChange={handleFileChange}
                   disabled={loading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
@@ -320,6 +373,7 @@ export const StudentImport: React.FC = () => {
                 <div className="text-center py-8">
                   <Loader className="h-8 w-8 animate-spin text-purple-500 mx-auto mb-4" />
                   <p className="text-gray-600">Procesando archivo y subiendo alumnos...</p>
+                  <p className="text-xs text-gray-400 mt-2">Revisa la consola del navegador para ver el progreso (F12)</p>
                 </div>
               )}
 
@@ -362,6 +416,7 @@ export const StudentImport: React.FC = () => {
                           if (detail.startsWith('🟡')) color = 'text-yellow-600';
                           if (detail.startsWith('❌')) color = 'text-red-600';
                           if (detail.startsWith('⚠️')) color = 'text-orange-600';
+                          if (detail.startsWith('📚')) color = 'text-purple-600';
                           
                           return (
                             <div key={index} className={`text-xs ${color} border-b border-gray-200 pb-1 last:border-0`}>
