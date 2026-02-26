@@ -15,12 +15,6 @@ interface GradeSectionGroup {
   totalOrders: number;
 }
 
-// Función para aplicar estilos profesionales a las celdas
-const applyProfessionalStyles = (ws: XLSX.WorkSheet, range: string, style: any) => {
-  // XLSX no soporta estilos directamente en el navegador,
-  // pero podemos crear un formato más limpio y profesional
-};
-
 export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: Date) => {
   console.log('📊 Generando reporte administrativo profesional...');
   
@@ -98,7 +92,7 @@ export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: D
   ];
 
   sortedGroups.forEach(group => {
-    const porcentaje = ((group.totalAmount / totalGeneral) * 100).toFixed(1);
+    const porcentaje = totalGeneral > 0 ? ((group.totalAmount / totalGeneral) * 100).toFixed(1) : '0';
     summaryData.push([
       group.grade,
       group.section,
@@ -208,6 +202,11 @@ export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: D
   const totalTarjeta = orders.filter(o => o.payment_method === 'TARJETA').reduce((sum, o) => sum + o.total, 0);
   const totalNoAplica = orders.filter(o => !o.payment_method).reduce((sum, o) => sum + o.total, 0);
 
+  const countEfectivo = orders.filter(o => o.payment_method === 'EFECTIVO').length;
+  const countYape = orders.filter(o => o.payment_method === 'YAPE/PLIN').length;
+  const countTarjeta = orders.filter(o => o.payment_method === 'TARJETA').length;
+  const countNoAplica = orders.filter(o => !o.payment_method).length;
+
   const paymentData: any[][] = [
     ['ESTADÍSTICAS DE PAGO'],
     [`Fecha: ${formatDateForDisplay(selectedDate)}`],
@@ -217,29 +216,29 @@ export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: D
       '💵 EFECTIVO',
       `S/ ${totalEfectivo.toFixed(2)}`,
       `${totalGeneral > 0 ? ((totalEfectivo / totalGeneral) * 100).toFixed(1) : '0'}%`,
-      orders.filter(o => o.payment_method === 'EFECTIVO').length,
-      `S/ ${(totalEfectivo / (orders.filter(o => o.payment_method === 'EFECTIVO').length || 1)).toFixed(2)}`
+      countEfectivo,
+      `S/ ${countEfectivo > 0 ? (totalEfectivo / countEfectivo).toFixed(2) : '0.00'}`
     ],
     [
       '📱 YAPE/PLIN',
       `S/ ${totalYape.toFixed(2)}`,
       `${totalGeneral > 0 ? ((totalYape / totalGeneral) * 100).toFixed(1) : '0'}%`,
-      orders.filter(o => o.payment_method === 'YAPE/PLIN').length,
-      `S/ ${(totalYape / (orders.filter(o => o.payment_method === 'YAPE/PLIN').length || 1)).toFixed(2)}`
+      countYape,
+      `S/ ${countYape > 0 ? (totalYape / countYape).toFixed(2) : '0.00'}`
     ],
     [
       '💳 TARJETA',
       `S/ ${totalTarjeta.toFixed(2)}`,
       `${totalGeneral > 0 ? ((totalTarjeta / totalGeneral) * 100).toFixed(1) : '0'}%`,
-      orders.filter(o => o.payment_method === 'TARJETA').length,
-      `S/ ${(totalTarjeta / (orders.filter(o => o.payment_method === 'TARJETA').length || 1)).toFixed(2)}`
+      countTarjeta,
+      `S/ ${countTarjeta > 0 ? (totalTarjeta / countTarjeta).toFixed(2) : '0.00'}`
     ],
     [
       '❓ NO APLICA',
       `S/ ${totalNoAplica.toFixed(2)}`,
       `${totalGeneral > 0 ? ((totalNoAplica / totalGeneral) * 100).toFixed(1) : '0'}%`,
-      orders.filter(o => !o.payment_method).length,
-      `S/ ${(totalNoAplica / (orders.filter(o => !o.payment_method).length || 1)).toFixed(2)}`
+      countNoAplica,
+      `S/ ${countNoAplica > 0 ? (totalNoAplica / countNoAplica).toFixed(2) : '0.00'}`
     ],
     [],
     ['📊 TOTAL GENERAL', `S/ ${totalGeneral.toFixed(2)}`, '100%', orders.length, '-']
@@ -284,8 +283,14 @@ export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: D
       p.name,
       p.quantity,
       `S/ ${p.total.toFixed(2)}`,
-      `S/ ${(p.total / p.quantity).toFixed(2)}`
+      `S/ ${p.quantity > 0 ? (p.total / p.quantity).toFixed(2) : '0.00'}`
     ]);
+
+  const totalProductQuantity = topProducts.reduce((sum, p) => sum + p[2], 0);
+  const totalProductAmount = topProducts.reduce((sum, p) => {
+    const amount = parseFloat(p[3].toString().replace('S/ ', ''));
+    return sum + amount;
+  }, 0);
 
   const productsData: any[][] = [
     ['🏆 TOP PRODUCTOS MÁS VENDIDOS'],
@@ -294,7 +299,7 @@ export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: D
     ['#', 'PRODUCTO', 'CANTIDAD VENDIDA', 'TOTAL VENDIDO', 'PRECIO PROMEDIO'],
     ...topProducts,
     [],
-    ['📈 TOTAL DE PRODUCTOS', '', topProducts.reduce((sum, p) => sum + p[2], 0), `S/ ${topProducts.reduce((sum, p) => sum + parseFloat(p[3].replace('S/ ', '')), 0).toFixed(2)}`, '']
+    ['📈 TOTAL DE PRODUCTOS', '', totalProductQuantity, `S/ ${totalProductAmount.toFixed(2)}`, '']
   ];
 
   const wsProducts = XLSX.utils.aoa_to_sheet(productsData);
@@ -307,11 +312,6 @@ export const exportAdminReportByGrade = (orders: FullDayOrder[], selectedDate: D
   ];
   
   XLSX.utils.book_append_sheet(wb, wsProducts, '🏆 Top Productos');
-
-  // ============================================
-  // HOJA 5: RESUMEN POR MESA (opcional - si usan mesas)
-  // ============================================
-  // Esta hoja es opcional, la mantengo para referencia futura
 
   // ============================================
   // Guardar archivo con nombre profesional
