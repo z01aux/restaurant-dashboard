@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO: src/utils/fulldayReports.ts
-// Utilidades para generar reportes de FullDay
+// Utilidades para generar reportes de FullDay (Cocina)
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -74,9 +74,11 @@ export const generateKitchenTicketHTML = (
 };
 
 // ============================================
-// REPORTE DE COCINA (EXCEL)
+// REPORTE DE COCINA (EXCEL PROFESIONAL)
 // ============================================
 export const exportKitchenReportToExcel = (orders: FullDayOrder[], selectedDate: Date) => {
+  console.log('👨‍🍳 Generando reporte de cocina...');
+  
   // Agrupar productos
   const productMap = new Map<string, { name: string; quantity: number; byGrade: Map<string, number> }>();
   
@@ -108,26 +110,38 @@ export const exportKitchenReportToExcel = (orders: FullDayOrder[], selectedDate:
 
   // Crear libro de Excel
   const wb = XLSX.utils.book_new();
+  const dateStr = formatDateForDisplay(selectedDate).replace(/\//g, '-');
 
-  // HOJA 1: RESUMEN GENERAL
+  // HOJA 1: RESUMEN GENERAL COCINA
   const summaryData: any[][] = [
-    ['REPORTE DE COCINA - FULLDAY'],
-    [`Fecha: ${formatDateForDisplay(selectedDate)}`],
+    ['👨‍🍳 REPORTE DE COCINA - FULLDAY'],
+    ['Colegio San José y El Redentor'],
     [],
-    ['PRODUCTO', 'CANTIDAD TOTAL']
+    [`Fecha: ${formatDateForDisplay(selectedDate)}`],
+    [`Total de pedidos: ${orders.length}`],
+    [`Total de productos: ${totalItems}`],
+    [],
+    ['PRODUCTO', 'CANTIDAD TOTAL', '% DEL TOTAL']
   ];
 
   products.forEach(p => {
-    summaryData.push([p.name, p.quantity]);
+    const porcentaje = ((p.quantity / totalItems) * 100).toFixed(1);
+    summaryData.push([p.name, p.quantity, `${porcentaje}%`]);
   });
 
   summaryData.push([]);
-  summaryData.push(['TOTAL PLATOS', totalItems]);
+  summaryData.push(['TOTAL GENERAL', totalItems, '100%']);
 
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen Cocina');
+  wsSummary['!cols'] = [
+    { wch: 40 },
+    { wch: 15 },
+    { wch: 10 }
+  ];
+  
+  XLSX.utils.book_append_sheet(wb, wsSummary, '👨‍🍳 Resumen Cocina');
 
-  // HOJA 2: DESGLOSE POR GRADO
+  // HOJA 2: DESGLOSE POR GRADO (para que cocina sepa a dónde va cada cosa)
   const allGrades = new Set<string>();
   products.forEach(p => {
     p.byGrade.forEach((_, grade) => allGrades.add(grade));
@@ -136,6 +150,9 @@ export const exportKitchenReportToExcel = (orders: FullDayOrder[], selectedDate:
   const gradesArray = Array.from(allGrades).sort();
 
   const detailData: any[][] = [
+    ['DESGLOSE DE PRODUCTOS POR GRADO Y SECCIÓN'],
+    [`Fecha: ${formatDateForDisplay(selectedDate)}`],
+    [],
     ['PRODUCTO', ...gradesArray, 'TOTAL']
   ];
 
@@ -153,115 +170,35 @@ export const exportKitchenReportToExcel = (orders: FullDayOrder[], selectedDate:
     detailData.push(row);
   });
 
-  const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
-  XLSX.utils.book_append_sheet(wb, wsDetail, 'Por Grado');
-
-  // Guardar archivo
-  const dateStr = selectedDate.toISOString().split('T')[0];
-  XLSX.writeFile(wb, `cocina_fullday_${dateStr}.xlsx`);
-};
-
-// ============================================
-// REPORTE ADMINISTRATIVO (EXCEL COMPLETO)
-// ============================================
-export const exportAdminReportToExcel = (orders: FullDayOrder[], selectedDate: Date) => {
-  // Agrupar por grado y sección
-  const groupedByGrade: Record<string, FullDayOrder[]> = {};
-  
-  orders.forEach(order => {
-    const key = `${order.grade} - Sección ${order.section}`;
-    if (!groupedByGrade[key]) groupedByGrade[key] = [];
-    groupedByGrade[key].push(order);
-  });
-
-  // Calcular totales
-  const totalVentas = orders.reduce((sum, o) => sum + o.total, 0);
-  const totalEfectivo = orders.filter(o => o.payment_method === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0);
-  const totalYape = orders.filter(o => o.payment_method === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0);
-  const totalTarjeta = orders.filter(o => o.payment_method === 'TARJETA').reduce((sum, o) => sum + o.total, 0);
-  const totalNoAplica = orders.filter(o => !o.payment_method).reduce((sum, o) => sum + o.total, 0);
-
-  // Crear libro
-  const wb = XLSX.utils.book_new();
-
-  // HOJA 1: RESUMEN GENERAL
-  const summaryData: any[][] = [
-    ['REPORTE ADMINISTRATIVO - FULLDAY'],
-    [`Fecha: ${formatDateForDisplay(selectedDate)}`],
-    [`Total Pedidos: ${orders.length}`],
-    [`Total Ventas: S/ ${totalVentas.toFixed(2)}`],
-    [],
-    ['RESUMEN POR MÉTODO DE PAGO'],
-    ['EFECTIVO', `S/ ${totalEfectivo.toFixed(2)}`, `${((totalEfectivo / totalVentas) * 100).toFixed(1)}%`],
-    ['YAPE/PLIN', `S/ ${totalYape.toFixed(2)}`, `${((totalYape / totalVentas) * 100).toFixed(1)}%`],
-    ['TARJETA', `S/ ${totalTarjeta.toFixed(2)}`, `${((totalTarjeta / totalVentas) * 100).toFixed(1)}%`],
-    ['NO APLICA', `S/ ${totalNoAplica.toFixed(2)}`, `${((totalNoAplica / totalVentas) * 100).toFixed(1)}%`]
-  ];
-
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen');
-
-  // HOJA 2: DETALLE POR GRADO
-  const detailData: any[][] = [
-    ['GRADO', 'SECCIÓN', 'ALUMNO', 'APODERADO', 'TELÉFONO', 'PAGO', 'PRODUCTOS', 'TOTAL']
-  ];
-
-  Object.keys(groupedByGrade).sort().forEach(gradeKey => {
-    groupedByGrade[gradeKey].forEach(order => {
-      const productos = order.items.map(item => 
-        `${item.quantity}x ${item.name}`
-      ).join(', ');
-      
-      detailData.push([
-        order.grade,
-        order.section,
-        order.student_name,
-        order.guardian_name,
-        order.phone || '---',
-        order.payment_method || 'NO APLICA',
-        productos,
-        `S/ ${order.total.toFixed(2)}`
-      ]);
+  // Agregar totales por grado
+  const totalRow: any[] = ['TOTAL POR GRADO'];
+  gradesArray.forEach(grade => {
+    let gradeTotal = 0;
+    products.forEach(p => {
+      gradeTotal += p.byGrade.get(grade) || 0;
     });
+    totalRow.push(gradeTotal);
   });
+  totalRow.push(totalItems);
+  
+  detailData.push([]);
+  detailData.push(totalRow);
 
   const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
-  XLSX.utils.book_append_sheet(wb, wsDetail, 'Detalle');
-
-  // HOJA 3: TOP PRODUCTOS
-  const productMap = new Map<string, { name: string; quantity: number; total: number }>();
-  
-  orders.forEach(order => {
-    order.items.forEach(item => {
-      const existing = productMap.get(item.id);
-      if (existing) {
-        existing.quantity += item.quantity;
-        existing.total += item.price * item.quantity;
-      } else {
-        productMap.set(item.id, {
-          name: item.name,
-          quantity: item.quantity,
-          total: item.price * item.quantity
-        });
-      }
-    });
-  });
-
-  const topProducts = Array.from(productMap.values())
-    .sort((a, b) => b.quantity - a.quantity)
-    .map(p => [p.name, p.quantity, `S/ ${p.total.toFixed(2)}`]);
-
-  const productsData: any[][] = [
-    ['PRODUCTO', 'CANTIDAD', 'TOTAL VENDIDO'],
-    ...topProducts
+  wsDetail['!cols'] = [
+    { wch: 40 },
+    ...gradesArray.map(() => ({ wch: 12 })),
+    { wch: 12 }
   ];
-
-  const wsProducts = XLSX.utils.aoa_to_sheet(productsData);
-  XLSX.utils.book_append_sheet(wb, wsProducts, 'Top Productos');
+  
+  XLSX.utils.book_append_sheet(wb, wsDetail, '📋 Por Grado');
 
   // Guardar archivo
-  const dateStr = selectedDate.toISOString().split('T')[0];
-  XLSX.writeFile(wb, `administrativo_fullday_${dateStr}.xlsx`);
+  const hora = new Date().toLocaleTimeString('es-PE').replace(/:/g, '-');
+  const fileName = `COCINA_${dateStr}_${hora}.xlsx`;
+  
+  XLSX.writeFile(wb, fileName);
+  console.log('✅ Reporte de cocina generado:', fileName);
 };
 
 // ============================================

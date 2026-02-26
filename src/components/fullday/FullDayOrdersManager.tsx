@@ -1,17 +1,17 @@
 // ============================================
-// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx 
-// Gestor de pedidos FullDay con filtros por fecha y reportes
+// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx (COMPLETO)
+// Gestor de pedidos FullDay con filtros por fecha y reportes profesionales
 // ============================================
 
 import React, { useState, useMemo } from 'react';
 import { useFullDay } from '../../hooks/useFullDay';
-import { GraduationCap, Download, Search, Printer, FileSpreadsheet, ChefHat } from 'lucide-react'; // Eliminados Calendar, DollarSign, Users
+import { GraduationCap, Download, Search, Printer, FileSpreadsheet, ChefHat } from 'lucide-react';
 import { FullDayDateFilter } from './FullDayDateFilter';
 import { 
   exportKitchenReportToExcel, 
-  exportAdminReportToExcel,
   printKitchenTicket 
 } from '../../utils/fulldayReports';
+import { exportAdminReportByGrade } from '../../utils/fulldayAdminReport';
 
 export const FullDayOrdersManager: React.FC = () => {
   const { orders, loading } = useFullDay();
@@ -85,15 +85,27 @@ export const FullDayOrdersManager: React.FC = () => {
 
   // Handlers de reportes
   const handlePrintKitchenTicket = () => {
+    if (filteredOrders.length === 0) {
+      alert('No hay pedidos para generar ticket de cocina');
+      return;
+    }
     printKitchenTicket(filteredOrders, selectedDate);
   };
 
   const handleExportKitchenExcel = () => {
+    if (filteredOrders.length === 0) {
+      alert('No hay pedidos para exportar');
+      return;
+    }
     exportKitchenReportToExcel(filteredOrders, selectedDate);
   };
 
   const handleExportAdminExcel = () => {
-    exportAdminReportToExcel(filteredOrders, selectedDate);
+    if (filteredOrders.length === 0) {
+      alert('No hay pedidos para exportar');
+      return;
+    }
+    exportAdminReportByGrade(filteredOrders, selectedDate);
   };
 
   if (loading) {
