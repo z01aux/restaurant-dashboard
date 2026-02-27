@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { FullDayOrder, FullDayDatabaseOrder, FullDayOrderStatus } from '../types/fullday';
+import { FullDayOrder, FullDayDatabaseOrder, FullDayOrderStatus, FullDayPaymentMethod } from '../types/fullday';
 
 export const useFullDayOrders = () => {
   const [orders, setOrders] = useState<FullDayOrder[]>([]);
@@ -60,6 +60,26 @@ export const useFullDayOrders = () => {
     }
   };
 
+  // ← NUEVO: actualizar método de pago (igual que updateOrderPayment en useOrders)
+  const updateOrderPayment = async (orderId: string, paymentMethod: FullDayPaymentMethod) => {
+    try {
+      const { error } = await supabase
+        .from('fullday')
+        .update({ payment_method: paymentMethod, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, payment_method: paymentMethod } : order
+      ));
+      
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
   const deleteOrder = async (orderId: string) => {
     try {
       const { error } = await supabase
@@ -97,6 +117,7 @@ export const useFullDayOrders = () => {
     totalCount,
     fetchOrders,
     updateOrderStatus,
+    updateOrderPayment, // ← NUEVO
     deleteOrder,
     getTodayOrders
   };
