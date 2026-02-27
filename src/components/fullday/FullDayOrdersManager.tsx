@@ -269,8 +269,8 @@ export const FullDayOrdersManager: React.FC = () => {
                         <span className={`text-xs px-2 py-1 rounded-full inline-block ${getPaymentColor(order.payment_method)}`}>
                           {order.payment_method || 'NO APLICA'}
                         </span>
-                        {/* Botón editar pago — solo admin y manager */}
-                        {(user?.role === 'admin' || user?.role === 'manager') && (
+                        {/* Botón editar pago — admin, manager y employee */}
+                        {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'employee') && (
                           <button
                             onClick={() => handleEditPayment(order)}
                             className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
