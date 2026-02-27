@@ -300,6 +300,8 @@ export const FullDayOrdersManager: React.FC = () => {
             isOpen={showCashModal}
             onClose={() => setShowCashModal(false)}
             type={cashModalType}
+            cashRegister={cashRegister}
+            orders={orders}
             onConfirm={handleCashConfirm}
             loading={salesLoading}
           />
