@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Download, Calendar, Printer, FileSpreadsheet } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
@@ -19,6 +19,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  const [exporting, setExporting] = useState(false); // ← NUEVO: estado para controlar exportación
 
   // Filtrar pedidos por fecha seleccionada y búsqueda
   const filteredOrders = useMemo(() => {
@@ -46,14 +47,28 @@ export const FullDayOrdersManager: React.FC = () => {
     return filtered;
   }, [orders, searchTerm, selectedDate]);
 
-  const handleExportTodayCSV = () => {
-    const todayOrders = getTodayOrders();
-    exportFullDayToCSV(todayOrders, 'fullday_hoy');
-  };
+  // ← ACTUALIZADO: CSV Hoy con control de exporting (igual que en Órdenes)
+  const handleExportTodayCSV = useCallback(() => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const todayOrders = getTodayOrders();
+      exportFullDayToCSV(todayOrders, 'fullday_hoy');
+    } finally {
+      setExporting(false);
+    }
+  }, [getTodayOrders, exporting]);
 
-  const handleExportAllCSV = () => {
-    exportFullDayToCSV(orders, 'fullday_todos');
-  };
+  // ← ACTUALIZADO: CSV Todo con control de exporting (igual que en Órdenes)
+  const handleExportAllCSV = useCallback(() => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      exportFullDayToCSV(orders, 'fullday_todos');
+    } finally {
+      setExporting(false);
+    }
+  }, [orders, exporting]);
 
   const handleExportTodayExcel = () => {
     const todayOrders = getTodayOrders();
@@ -170,12 +185,24 @@ export const FullDayOrdersManager: React.FC = () => {
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-2 mb-6">
-            <button onClick={handleExportTodayCSV} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center">
+            {/* ← CSV Hoy: ahora con disabled={exporting} igual que en Órdenes */}
+            <button
+              onClick={handleExportTodayCSV}
+              className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={exporting}
+            >
               <Download size={16} className="mr-1" /> CSV Hoy
             </button>
-            <button onClick={handleExportAllCSV} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center">
+
+            {/* ← CSV Todo: ahora con disabled={exporting} igual que en Órdenes */}
+            <button
+              onClick={handleExportAllCSV}
+              className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={exporting}
+            >
               <Download size={16} className="mr-1" /> CSV Todo
             </button>
+
             <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center">
               <FileSpreadsheet size={16} className="mr-1" /> Excel Hoy
             </button>
