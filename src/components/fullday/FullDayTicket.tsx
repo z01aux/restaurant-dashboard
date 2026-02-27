@@ -1,7 +1,7 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayTicket.tsx
 // Ticket FullDay — mismo diseño que OrderTicket (sin emoticonos)
-// Nombres truncados: apellidos + primer nombre
+// Nombres: primer nombre + 2 apellidos (se omite el segundo nombre)
 // ============================================
 
 import React from 'react';
@@ -14,17 +14,17 @@ interface FullDayTicketProps {
 
 const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
 
-  // ── Truncar nombre: apellidos + primer nombre ────────────────
-  // Asume formato "Nombre(s) Apellido1 Apellido2"
-  // Devuelve "Apellido1 Apellido2, PrimerNombre"
+  // ── Eliminar solo el segundo nombre ─────────────────────────
+  // Formato: "Nombre1 Nombre2 Apellido1 Apellido2"
+  // Resultado: "Nombre1 Apellido1 Apellido2"  (se omite Nombre2)
+  // Con 3 palabras (Nombre1 Apellido1 Apellido2): se devuelve igual
+  // Con 2 palabras o menos: se devuelve igual
   const truncateName = (fullName: string): string => {
     if (!fullName) return '';
     const parts = fullName.trim().split(/\s+/);
-    if (parts.length <= 2) return fullName; // Solo 2 palabras, mostrar tal cual
-    // Tomar último y penúltimo como apellidos, el primero como nombre
-    const firstName = parts[0];
-    const lastNames = parts.slice(1).join(' ');
-    return `${lastNames}, ${firstName}`;
+    if (parts.length <= 3) return fullName; // Sin segundo nombre, sin cambios
+    // parts[0]=Nombre1  parts[1]=Nombre2(omitir)  parts[2..]=Apellidos
+    return `${parts[0]} ${parts.slice(2).join(' ')}`;
   };
 
   const studentDisplay  = truncateName(order.student_name);
@@ -36,18 +36,9 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
 
   const FONT_SIZE_SMALL   = 8;
   const FONT_SIZE_NORMAL  = 9;
-  const FONT_SIZE_LARGE   = 10;
   const FONT_SIZE_XLARGE  = 11;
   const FONT_SIZE_PRODUCT = 10;
   const PADDING = 8;
-
-  const getCurrentUserName = (): string => {
-    try {
-      const saved = localStorage.getItem('restaurant-user');
-      if (saved) return JSON.parse(saved).name || 'Sistema';
-    } catch { /* noop */ }
-    return 'Sistema';
-  };
 
   const getPaymentText = (): string => {
     const map: Record<string, string> = {
@@ -315,6 +306,7 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
               hour: '2-digit', minute: '2-digit'
             })}
           </Text>
+
         </View>
 
       </Page>
