@@ -1,6 +1,5 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayDateRangeModal.tsx
-// Modal para seleccionar rango de fechas en FullDay
 // ============================================
 
 import React, { useState } from 'react';
@@ -12,28 +11,42 @@ interface FullDayDateRangeModalProps {
   onConfirm: (startDate: Date, endDate: Date) => void;
 }
 
+/**
+ * Obtiene la fecha de hoy en formato YYYY-MM-DD usando hora local de Perú (UTC-5)
+ * CORREGIDO: antes usaba toISOString() que devuelve UTC y causaba que mostrara el día siguiente
+ */
+const getTodayString = (): string => {
+  const now = new Date();
+  const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+  const year = peruDate.getFullYear();
+  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+  const day = String(peruDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Convierte una fecha local (YYYY-MM-DD) a un objeto Date en hora local de Perú
+ * CORREGIDO: antes usaba new Date(dateStr) que interpretaba la fecha como UTC
+ */
+const createPeruDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+};
+
 export const FullDayDateRangeModal: React.FC<FullDayDateRangeModalProps> = ({
   isOpen,
   onClose,
   onConfirm
 }) => {
-  const [startDate, setStartDate] = useState<string>(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
-
-  const [endDate, setEndDate] = useState<string>(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
-
+  const [startDate, setStartDate] = useState<string>(getTodayString);
+  const [endDate, setEndDate] = useState<string>(getTodayString);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const validateDates = (): boolean => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = createPeruDate(startDate);
+    const end = createPeruDate(endDate);
 
     if (start > end) {
       setError('La fecha de inicio no puede ser mayor que la fecha de fin');
@@ -54,44 +67,69 @@ export const FullDayDateRangeModal: React.FC<FullDayDateRangeModalProps> = ({
 
   const handleConfirm = () => {
     if (validateDates()) {
-      onConfirm(new Date(startDate), new Date(endDate));
+      onConfirm(createPeruDate(startDate), createPeruDate(endDate));
       onClose();
     }
   };
 
-  // Opciones rápidas
+  // Opciones rápidas — todas usan hora local de Perú
   const setToday = () => {
-    const today = new Date();
-    setStartDate(today.toISOString().split('T')[0]);
-    setEndDate(today.toISOString().split('T')[0]);
+    const today = getTodayString();
+    setStartDate(today);
+    setEndDate(today);
   };
 
   const setYesterday = () => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    setStartDate(yesterday.toISOString().split('T')[0]);
-    setEndDate(yesterday.toISOString().split('T')[0]);
+    const now = new Date();
+    const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    peruDate.setDate(peruDate.getDate() - 1);
+    const year = peruDate.getFullYear();
+    const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+    const day = String(peruDate.getDate()).padStart(2, '0');
+    const yesterdayStr = `${year}-${month}-${day}`;
+    setStartDate(yesterdayStr);
+    setEndDate(yesterdayStr);
   };
 
   const setThisWeek = () => {
-    const today = new Date();
-    const firstDay = new Date(today);
-    firstDay.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
-    
-    const lastDay = new Date(firstDay);
-    lastDay.setDate(firstDay.getDate() + 6);
-    
-    setStartDate(firstDay.toISOString().split('T')[0]);
-    setEndDate(lastDay.toISOString().split('T')[0]);
+    const now = new Date();
+    const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+
+    const monday = new Date(peruDate);
+    const dayOfWeek = peruDate.getDay();
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    monday.setDate(peruDate.getDate() - diff);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const formatDate = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    setStartDate(formatDate(monday));
+    setEndDate(formatDate(sunday));
   };
 
   const setThisMonth = () => {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    
-    setStartDate(firstDay.toISOString().split('T')[0]);
-    setEndDate(lastDay.toISOString().split('T')[0]);
+    const now = new Date();
+    const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+
+    const firstDay = new Date(peruDate.getFullYear(), peruDate.getMonth(), 1);
+    const lastDay = new Date(peruDate.getFullYear(), peruDate.getMonth() + 1, 0);
+
+    const formatDate = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    setStartDate(formatDate(firstDay));
+    setEndDate(formatDate(lastDay));
   };
 
   return (
