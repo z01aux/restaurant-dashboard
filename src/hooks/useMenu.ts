@@ -1,12 +1,20 @@
+// ============================================
+// ARCHIVO: src/hooks/useMenu.ts (ACTUALIZADO)
+// AHORA USA EL HOOK DE CATEGORÍAS UNIFICADO
+// ============================================
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { MenuItem } from '../types';
+import { useCategories } from './useCategories';
 
 export const useMenu = () => {
   const [menuItems, setMenuItems] = useState<{ [key: string]: MenuItem[] }>({});
   const [dailySpecialItems, setDailySpecialItems] = useState<{ [key: string]: MenuItem[] }>({});
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<string[]>([]);
+  
+  // Usar el hook unificado de categorías
+  const { categories, fetchCategories } = useCategories();
 
   // Cargar menú desde Supabase
   const loadMenuData = async () => {
@@ -36,7 +44,7 @@ export const useMenu = () => {
             category: item.category,
             type: item.type,
             available: item.available,
-            isDailySpecial: item.is_daily_special // Usando el campo correcto de la base de datos
+            isDailySpecial: item.is_daily_special
           };
           
           // Todos los productos
@@ -55,9 +63,6 @@ export const useMenu = () => {
         });
       }
 
-      // Obtener categorías únicas
-      const uniqueCategories = [...new Set(menuItemsData?.map(item => item.category) || [])];
-      setCategories(uniqueCategories);
       setMenuItems(organizedMenu);
       setDailySpecialItems(organizedDailySpecials);
       
@@ -95,37 +100,12 @@ export const useMenu = () => {
 
       if (error) throw error;
 
-      // Actualizar estado local
-      const newItem: MenuItem = {
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        price: parseFloat(data.price),
-        category: data.category,
-        type: data.type,
-        available: data.available,
-        isDailySpecial: data.is_daily_special
-      };
+      await loadMenuData();
+      
+      // Actualizar categorías por si acaso
+      await fetchCategories();
 
-      setMenuItems(prev => ({
-        ...prev,
-        [itemData.category]: [...(prev[itemData.category] || []), newItem]
-      }));
-
-      // Si es del día, agregar también a dailySpecialItems
-      if (data.is_daily_special) {
-        setDailySpecialItems(prev => ({
-          ...prev,
-          [itemData.category]: [...(prev[itemData.category] || []), newItem]
-        }));
-      }
-
-      // Actualizar categorías si es nueva
-      if (!categories.includes(itemData.category)) {
-        setCategories(prev => [...prev, itemData.category]);
-      }
-
-      return { success: true, data: newItem };
+      return { success: true, data };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
@@ -147,7 +127,6 @@ export const useMenu = () => {
         updated_at: new Date().toISOString()
       };
 
-      // Convertir isDailySpecial a is_daily_special para la base de datos
       if (updates.isDailySpecial !== undefined) {
         updateData.is_daily_special = updates.isDailySpecial;
         delete updateData.isDailySpecial;
@@ -162,8 +141,10 @@ export const useMenu = () => {
 
       if (error) throw error;
 
-      // Recargar el menú completo para reflejar cambios
       await loadMenuData();
+      
+      // Actualizar categorías por si acaso
+      await fetchCategories();
 
       return { success: true, data };
     } catch (error: any) {
@@ -184,7 +165,6 @@ export const useMenu = () => {
 
       if (error) throw error;
 
-      // Recargar el menú
       await loadMenuData();
       return { success: true };
     } catch (error: any) {
@@ -202,7 +182,6 @@ export const useMenu = () => {
 
       if (error) throw error;
 
-      // Recargar el menú
       await loadMenuData();
       return { success: true };
     } catch (error: any) {
@@ -230,7 +209,7 @@ export const useMenu = () => {
     return Object.values(dailySpecialItems).flat();
   };
 
-  // Obtener todas las categorías
+  // Obtener todas las categorías (AHORA USA EL HOOK UNIFICADO)
   const getCategories = () => {
     return categories;
   };
