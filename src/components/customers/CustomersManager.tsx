@@ -3,18 +3,14 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, XCircle, RefreshCw, Mail, RotateCcw } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, XCircle, Mail } from 'lucide-react';
 import { useCustomers } from '../../hooks/useCustomers';
-import { useOrders } from '../../hooks/useOrders';
-import { supabase } from '../../lib/supabase';
 
 const CustomersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [formLoading, setFormLoading] = useState(false);
-  const [refreshingId, setRefreshingId] = useState<string | null>(null);
-  const [resetting, setResetting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -28,91 +24,8 @@ const CustomersManager: React.FC = () => {
     createCustomer, 
     updateCustomer,
     deleteCustomer,
-    refreshCustomerStats,
     fetchCustomers 
   } = useCustomers();
-
-  const { orders } = useOrders();
-
-  // Función para resetear TODAS las estadísticas de clientes a CERO
-  const resetAllCustomerStats = async () => {
-    if (!window.confirm('⚠️ ¿ESTÁS SEGURO?\n\nEsto pondrá a CERO todos los contadores de pedidos, total gastado y última orden de TODOS los clientes.\n\nLos pedidos anteriores NO se recuperarán. ¿Continuar?')) {
-      return;
-    }
-
-    setResetting(true);
-    let successCount = 0;
-    let errorCount = 0;
-
-    try {
-      for (const customer of customers) {
-        // Resetear a cero
-        const { error } = await supabase
-          .from('customers')
-          .update({
-            orders_count: 0,
-            total_spent: 0,
-            last_order: null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', customer.id);
-
-        if (error) {
-          console.error(`Error reseteando cliente ${customer.name}:`, error);
-          errorCount++;
-        } else {
-          successCount++;
-        }
-      }
-
-      if (successCount > 0) {
-        alert(`✅ Estadísticas reseteadas correctamente para ${successCount} clientes.\n${errorCount > 0 ? `❌ Errores: ${errorCount}` : ''}\n\nAhora los contadores empezarán desde CERO con los nuevos pedidos.`);
-        await fetchCustomers(); // Recargar la lista
-      } else {
-        alert('❌ No se pudo resetear ningún cliente');
-      }
-    } catch (error: any) {
-      alert('❌ Error al resetear estadísticas: ' + error.message);
-    } finally {
-      setResetting(false);
-    }
-  };
-
-  // Función para calcular estadísticas en tiempo real
-  const calculateCustomerStats = (customer: any) => {
-    // Filtrar órdenes del cliente por teléfono
-    const customerOrders = orders.filter(order => 
-      order.phone === customer.phone && order.orderType !== 'fullday'
-    );
-
-    const ordersCount = customerOrders.length;
-    const totalSpent = customerOrders.reduce((sum, order) => sum + order.total, 0);
-    
-    // Obtener la última orden
-    let lastOrder = null;
-    if (customerOrders.length > 0) {
-      const sortedOrders = [...customerOrders].sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      lastOrder = sortedOrders[0].createdAt;
-    }
-
-    return {
-      ordersCount,
-      totalSpent,
-      lastOrder,
-      averageTicket: ordersCount > 0 ? totalSpent / ordersCount : 0
-    };
-  };
-
-  // Función para refrescar TODOS los clientes
-  const refreshAllCustomers = async () => {
-    for (const customer of customers) {
-      await refreshCustomerStats(customer.id);
-    }
-    await fetchCustomers();
-    alert('✅ Todas las estadísticas actualizadas correctamente');
-  };
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -152,6 +65,7 @@ const CustomersManager: React.FC = () => {
     setFormLoading(true);
 
     try {
+      // Validaciones básicas
       if (!formData.name.trim() || !formData.phone.trim()) {
         alert('Por favor completa al menos el nombre y teléfono del cliente');
         return;
@@ -160,6 +74,7 @@ const CustomersManager: React.FC = () => {
       let result;
 
       if (editingCustomer) {
+        // Actualizar cliente existente
         result = await updateCustomer(editingCustomer.id, {
           name: formData.name,
           phone: formData.phone,
@@ -167,6 +82,7 @@ const CustomersManager: React.FC = () => {
           email: formData.email || undefined
         });
       } else {
+        // Crear nuevo cliente
         result = await createCustomer({
           name: formData.name,
           phone: formData.phone,
@@ -205,23 +121,6 @@ const CustomersManager: React.FC = () => {
     }
   };
 
-  // Función para refrescar estadísticas de un cliente
-  const handleRefreshStats = async (customerId: string, customerName: string) => {
-    setRefreshingId(customerId);
-    try {
-      const result = await refreshCustomerStats(customerId);
-      if (result.success) {
-        alert(`✅ Estadísticas de ${customerName} actualizadas correctamente`);
-      } else {
-        alert('❌ Error al actualizar estadísticas: ' + result.error);
-      }
-    } catch (error: any) {
-      alert('❌ Error: ' + error.message);
-    } finally {
-      setRefreshingId(null);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -231,7 +130,7 @@ const CustomersManager: React.FC = () => {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Gestión de Clientes</h1>
-              <p className="text-gray-600 mt-1">Administra la información de tus clientes</p>
+              <p className="text-gray-600 mt-1">Solo información de contacto - Sin estadísticas de pedidos</p>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
@@ -246,26 +145,6 @@ const CustomersManager: React.FC = () => {
                   placeholder="Buscar clientes..."
                 />
               </div>
-              
-              {/* BOTÓN DE RESETEO - COLOR ROJO INTENSO */}
-              <button 
-                onClick={resetAllCustomerStats}
-                disabled={resetting || customers.length === 0}
-                className="bg-red-700 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 hover:bg-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="RESETEAR TODAS LAS ESTADÍSTICAS A CERO"
-              >
-                <RotateCcw size={18} className={resetting ? 'animate-spin' : ''} />
-                <span className="hidden sm:inline">Resetear Estadísticas</span>
-              </button>
-
-              <button 
-                onClick={refreshAllCustomers}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 hover:bg-blue-600 transition-colors"
-                title="Actualizar todos los clientes"
-              >
-                <RefreshCw size={18} />
-                <span className="hidden sm:inline">Actualizar Todos</span>
-              </button>
 
               <button 
                 onClick={handleNewCustomer}
@@ -276,21 +155,6 @@ const CustomersManager: React.FC = () => {
               </button>
             </div>
           </div>
-
-          {/* ADVERTENCIA DE RESETEO */}
-          {customers.some(c => c.orders_count > 0 || c.total_spent > 0) && (
-            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-start space-x-3">
-                <div className="text-yellow-600 text-xl">⚠️</div>
-                <div>
-                  <h3 className="font-semibold text-yellow-800">Hay estadísticas antiguas</h3>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    Algunos clientes tienen pedidos anteriores. Usa el botón <strong>"Resetear Estadísticas"</strong> para empezar desde cero con los nuevos pedidos.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* FORMULARIO FIJO EN LA PARTE SUPERIOR */}
           {showForm && (
@@ -406,7 +270,7 @@ const CustomersManager: React.FC = () => {
             </div>
           )}
 
-          {/* Lista de Clientes */}
+          {/* Lista de Clientes - SOLO INFORMACIÓN DE CONTACTO */}
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-12">
@@ -422,153 +286,110 @@ const CustomersManager: React.FC = () => {
                 <p className="text-gray-500 text-sm">
                   {searchTerm 
                     ? 'Intenta con otros términos de búsqueda' 
-                    : 'Los clientes aparecerán aquí cuando se registren pedidos'}
+                    : 'Los clientes aparecerán aquí cuando los registres'}
                 </p>
               </div>
             ) : (
-              filteredCustomers.map((customer) => {
-                // Calcular estadísticas en tiempo real
-                const stats = calculateCustomerStats(customer);
-                
-                return (
-                  <div 
-                    key={customer.id} 
-                    className="bg-white rounded-xl p-6 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200 relative group"
-                  >
-                    {/* Botones de acción */}
-                    <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <button 
-                        onClick={() => handleRefreshStats(customer.id, customer.name)}
-                        disabled={refreshingId === customer.id}
-                        className={`text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200 ${
-                          refreshingId === customer.id ? 'animate-spin' : ''
-                        }`}
-                        title="Actualizar estadísticas"
-                      >
-                        <RefreshCw size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleEditCustomer(customer)}
-                        className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200"
-                        title="Editar cliente"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteCustomer(customer.id, customer.name)}
-                        className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200"
-                        title="Eliminar cliente"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+              filteredCustomers.map((customer) => (
+                <div 
+                  key={customer.id} 
+                  className="bg-white rounded-xl p-6 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200 relative group"
+                >
+                  {/* Botones de acción */}
+                  <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button 
+                      onClick={() => handleEditCustomer(customer)}
+                      className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200"
+                      title="Editar cliente"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteCustomer(customer.id, customer.name)}
+                      className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200"
+                      title="Eliminar cliente"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
 
-                    {/* Información del Cliente */}
-                    <div className="pr-16">
-                      <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{customer.name}</h3>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 space-y-2 sm:space-y-0 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <Phone size={14} />
-                            <span>{customer.phone}</span>
+                  {/* Información de Contacto SOLAMENTE */}
+                  <div className="pr-16">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">{customer.name}</h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Teléfono */}
+                        <div className="flex items-start space-x-3">
+                          <div className="bg-green-100 p-2 rounded-lg">
+                            <Phone size={18} className="text-green-600" />
                           </div>
-                          {customer.address && (
-                            <div className="flex items-center space-x-1">
-                              <MapPin size={14} />
-                              <span className="max-w-xs truncate">{customer.address}</span>
-                            </div>
-                          )}
-                          {customer.email && (
-                            <div className="flex items-center space-x-1">
-                              <Mail size={14} />
-                              <span className="max-w-xs truncate">{customer.email}</span>
-                            </div>
-                          )}
+                          <div>
+                            <div className="text-xs text-gray-500">Teléfono</div>
+                            <div className="font-medium text-gray-900">{customer.phone}</div>
+                          </div>
                         </div>
+
+                        {/* Email (si existe) */}
+                        {customer.email && (
+                          <div className="flex items-start space-x-3">
+                            <div className="bg-blue-100 p-2 rounded-lg">
+                              <Mail size={18} className="text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500">Email</div>
+                              <div className="font-medium text-gray-900 break-all">{customer.email}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Dirección (si existe) */}
+                        {customer.address && (
+                          <div className="flex items-start space-x-3 md:col-span-2">
+                            <div className="bg-purple-100 p-2 rounded-lg">
+                              <MapPin size={18} className="text-purple-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-xs text-gray-500">Dirección</div>
+                              <div className="font-medium text-gray-900">{customer.address}</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Estadísticas del Cliente - EN TIEMPO REAL */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-red-600">{stats.ordersCount}</div>
-                          <div className="text-xs text-gray-500">Pedidos</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-green-600">S/ {stats.totalSpent.toFixed(2)}</div>
-                          <div className="text-xs text-gray-500">Total Gastado</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-blue-600">
-                            S/ {stats.averageTicket.toFixed(2)}
-                          </div>
-                          <div className="text-xs text-gray-500">Ticket Promedio</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-semibold text-gray-700">
-                            {stats.lastOrder 
-                              ? new Date(stats.lastOrder).toLocaleDateString('es-PE', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric'
-                                })
-                              : 'Nunca'
-                            }
-                          </div>
-                          <div className="text-xs text-gray-500">Último Pedido</div>
-                        </div>
-                      </div>
-
-                      {/* Indicador de datos */}
-                      <div className="mt-2 text-right">
-                        <span className="text-[10px] text-gray-400 italic">
-                          {stats.ordersCount > 0 
-                            ? `📊 Basado en ${stats.ordersCount} pedido(s) reales` 
-                            : '⏳ Sin pedidos aún'}
-                        </span>
+                      {/* Fecha de registro (opcional) */}
+                      <div className="mt-4 text-xs text-gray-400">
+                        Registrado: {new Date(customer.created_at).toLocaleDateString('es-PE', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })}
                       </div>
                     </div>
                   </div>
-                );
-              })
+                </div>
+              ))
             )}
           </div>
 
-          {/* Estadísticas generales */}
+          {/* Estadísticas simples - solo conteo de clientes */}
           <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-red-50 rounded-lg p-4 text-center border border-red-200">
-                <div className="text-2xl font-bold text-red-600">{filteredCustomers.length}</div>
-                <div className="text-sm text-gray-600">Clientes Mostrados</div>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
-                <div className="text-2xl font-bold text-green-600">
-                  {filteredCustomers.reduce((total, customer) => {
-                    const stats = calculateCustomerStats(customer);
-                    return total + stats.ordersCount;
-                  }, 0)}
-                </div>
-                <div className="text-sm text-gray-600">Pedidos Totales</div>
+                <div className="text-2xl font-bold text-red-600">{customers.length}</div>
+                <div className="text-sm text-gray-600">Total Clientes</div>
               </div>
               <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-200">
                 <div className="text-2xl font-bold text-blue-600">
-                  S/ {filteredCustomers.reduce((total, customer) => {
-                    const stats = calculateCustomerStats(customer);
-                    return total + stats.totalSpent;
-                  }, 0).toFixed(2)}
+                  {customers.filter(c => c.email).length}
                 </div>
-                <div className="text-sm text-gray-600">Ingresos Totales</div>
+                <div className="text-sm text-gray-600">Con Email</div>
               </div>
-              <div className="bg-purple-50 rounded-lg p-4 text-center border border-purple-200">
-                <div className="text-2xl font-bold text-purple-600">
-                  {filteredCustomers.length > 0 
-                    ? (filteredCustomers.reduce((total, customer) => {
-                        const stats = calculateCustomerStats(customer);
-                        return total + stats.averageTicket;
-                      }, 0) / filteredCustomers.length).toFixed(2)
-                    : '0.00'
-                  }
+              <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
+                <div className="text-2xl font-bold text-green-600">
+                  {customers.filter(c => c.address).length}
                 </div>
-                <div className="text-sm text-gray-600">Promedio General</div>
+                <div className="text-sm text-gray-600">Con Dirección</div>
               </div>
             </div>
           </div>
