@@ -20,7 +20,6 @@ import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
 import { PaymentMethodModal } from './PaymentMethodModal';
 import { DateRangeModal } from './DateRangeModal';
-import { formatDateForDisplay } from '../../utils/dateUtils';
 
 // ============================================
 // COMPONENTE DE SELECCIÓN DE FECHA (ESTILO FULLDAY)
