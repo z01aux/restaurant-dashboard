@@ -1,7 +1,5 @@
 // ============================================
-// ARCHIVO: src/App.tsx (ACTUALIZADO)
-// NUEVO ORDEN: Recepción, Órdenes, FullDay, Menú, Cocina, Dashboard, Clientes, Alumnos, Usuarios
-// BARRA DE NAVEGACIÓN MEJORADA - SE ADAPTA AUTOMÁTICAMENTE
+// ARCHIVO: src/App.tsx 
 // ============================================
 
 import React from 'react';
@@ -36,20 +34,20 @@ function App() {
 
   // Pestañas base para todos los usuarios - NUEVO ORDEN
   const baseTabs = [
-    { id: 'reception', name: '🎯 Recepción', shortName: '🎯' },
-    { id: 'orders', name: '📋 Órdenes', shortName: '📋' },
-    { id: 'fullday', name: '🎒 FullDay', shortName: '🎒' },
-    { id: 'menu', name: '🍽️ Menú', shortName: '🍽️' },
-    { id: 'kitchen', name: '👨‍🍳 Cocina', shortName: '👨‍🍳' },
-    { id: 'dashboard', name: '📊 Dashboard', shortName: '📊' },
-    { id: 'customers', name: '👥 Clientes', shortName: '👥' },
+    { id: 'reception', name: '🎯 Recepción' },
+    { id: 'orders', name: '📋 Órdenes' },
+    { id: 'fullday', name: '🎒 FullDay' },
+    { id: 'menu', name: '🍽️ Menú' },
+    { id: 'kitchen', name: '👨‍🍳 Cocina' },
+    { id: 'dashboard', name: '📊 Dashboard' },
+    { id: 'customers', name: '👥 Clientes' },
   ];
 
   // Solo administradores ven Alumnos y Usuarios - NUEVO ORDEN
   const adminTabs = user?.role === 'admin' 
     ? [
-        { id: 'students', name: '🎒 Alumnos', shortName: '🎒' },
-        { id: 'users', name: '🔧 Usuarios', shortName: '🔧' },
+        { id: 'students', name: '🎒 Alumnos' },
+        { id: 'users', name: '🔧 Usuarios' },
       ]
     : [];
 
@@ -59,54 +57,39 @@ function App() {
     <ProtectedRoute>
       <OrderProvider refreshOrders={refreshOrders} addNewOrder={addNewOrder}>
         <DashboardLayout>
-          {/* Navigation Tabs MEJORADA - SE ADAPTA AUTOMÁTICAMENTE */}
+          {/* Navigation Tabs - VERSIÓN COMPLETA EN TODOS LOS DISPOSITIVOS */}
           <div className="mb-4 sm:mb-6 lg:mb-8">
-            <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-1 sm:p-2 w-full mx-auto">
-              {/* Contenedor con scroll horizontal suave en móvil */}
+            <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-2 w-full mx-auto">
+              {/* Contenedor con scroll horizontal suave SOLO cuando sea necesario */}
               <div className="overflow-x-auto pb-1 hide-scrollbar">
-                <nav className="flex space-x-1 min-w-max sm:min-w-0 sm:justify-center">
+                <nav className="flex space-x-2 min-w-max sm:min-w-0 sm:flex-wrap sm:justify-center sm:gap-2">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       className={`
-                        flex-none px-3 sm:px-4 py-2 sm:py-3 
-                        rounded-lg sm:rounded-xl font-semibold 
-                        text-xs sm:text-sm 
+                        flex-none px-4 py-2.5 sm:px-4 sm:py-2.5 
+                        rounded-xl font-semibold 
+                        text-sm sm:text-sm 
                         transition-all duration-300 whitespace-nowrap
                         ${activeTab === tab.id
-                          ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md scale-105 sm:scale-100'
+                          ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
                           : 'text-gray-600 hover:text-red-600 hover:bg-white/50'
                         }
                       `}
-                      title={tab.name} // Tooltip en móvil
                     >
-                      {/* En móvil: emoji + texto corto para algunas pestañas */}
-                      <span className="sm:hidden">
-                        {tab.shortName}
-                        {tab.id === 'reception' && ' Recep'}
-                        {tab.id === 'orders' && ' Ord'}
-                        {tab.id === 'fullday' && ' Full'}
-                        {tab.id === 'menu' && ' Menú'}
-                        {tab.id === 'kitchen' && ' Cocina'}
-                        {tab.id === 'dashboard' && ' Dash'}
-                        {tab.id === 'customers' && ' Client'}
-                        {tab.id === 'students' && ' Alum'}
-                        {tab.id === 'users' && ' User'}
-                      </span>
-                      {/* En desktop: nombre completo */}
-                      <span className="hidden sm:inline">{tab.name}</span>
+                      {tab.name}
                     </button>
                   ))}
                 </nav>
               </div>
               
-              {/* Indicador de scroll en móvil (solo si hay scroll) */}
-              <div className="sm:hidden flex justify-center mt-1">
+              {/* Indicador de scroll en móvil (solo visible cuando hay scroll) */}
+              <div className="sm:hidden flex justify-center mt-1 opacity-50">
                 <div className="flex space-x-1">
-                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-pulse"></div>
+                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                 </div>
                 <span className="text-[8px] text-gray-400 ml-1">desliza para ver más</span>
               </div>
