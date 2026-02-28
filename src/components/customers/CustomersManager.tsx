@@ -2,7 +2,7 @@
 // ARCHIVO: src/components/customers/CustomersManager.tsx
 // ======================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, XCircle, RefreshCw, Mail } from 'lucide-react';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useOrders } from '../../hooks/useOrders';
