@@ -1,5 +1,7 @@
 // ============================================
 // ARCHIVO: src/App.tsx (ACTUALIZADO)
+// NUEVO ORDEN: Recepción, Órdenes, FullDay, Menú, Cocina, Dashboard, Clientes, Alumnos, Usuarios
+// BARRA DE NAVEGACIÓN MEJORADA - SE ADAPTA AUTOMÁTICAMENTE
 // ============================================
 
 import React from 'react';
@@ -12,7 +14,7 @@ import CustomersManager from './components/customers/CustomersManager';
 import KitchenManager from './components/kitchen/KitchenManager';
 import UserManager from './components/users/UserManager';
 import StudentManager from './components/students/StudentManager';
-import { FullDayOrdersManager } from './components/fullday/FullDayOrdersManager'; // NUEVO
+import { FullDayOrdersManager } from './components/fullday/FullDayOrdersManager';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 import { OrderProvider } from './contexts/OrderContext';
@@ -32,22 +34,22 @@ function App() {
     window.dispatchEvent(event);
   };
 
-  // Pestañas base para todos los usuarios (AHORA INCLUYE FULLDAY)
+  // Pestañas base para todos los usuarios - NUEVO ORDEN
   const baseTabs = [
     { id: 'reception', name: '🎯 Recepción', shortName: '🎯' },
     { id: 'orders', name: '📋 Órdenes', shortName: '📋' },
-    { id: 'fullday', name: '🎒 FullDay', shortName: '🎒' }, // NUEVA PESTAÑA
+    { id: 'fullday', name: '🎒 FullDay', shortName: '🎒' },
     { id: 'menu', name: '🍽️ Menú', shortName: '🍽️' },
     { id: 'kitchen', name: '👨‍🍳 Cocina', shortName: '👨‍🍳' },
-    { id: 'customers', name: '👥 Clientes', shortName: '👥' },
     { id: 'dashboard', name: '📊 Dashboard', shortName: '📊' },
+    { id: 'customers', name: '👥 Clientes', shortName: '👥' },
   ];
 
-  // Solo administradores ven la pestaña de Usuarios y Alumnos
+  // Solo administradores ven Alumnos y Usuarios - NUEVO ORDEN
   const adminTabs = user?.role === 'admin' 
     ? [
+        { id: 'students', name: '🎒 Alumnos', shortName: '🎒' },
         { id: 'users', name: '🔧 Usuarios', shortName: '🔧' },
-        { id: 'students', name: '🎒 Alumnos', shortName: '🎒' }
       ]
     : [];
 
@@ -57,25 +59,57 @@ function App() {
     <ProtectedRoute>
       <OrderProvider refreshOrders={refreshOrders} addNewOrder={addNewOrder}>
         <DashboardLayout>
-          {/* Navigation Tabs Responsive */}
+          {/* Navigation Tabs MEJORADA - SE ADAPTA AUTOMÁTICAMENTE */}
           <div className="mb-4 sm:mb-6 lg:mb-8">
-            <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-1 sm:p-2 w-full max-w-4xl mx-auto">
-              <nav className="flex space-x-1 overflow-x-auto hide-scrollbar">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex-1 sm:flex-none px-2 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
-                        : 'text-gray-600 hover:text-red-600 hover:bg-white/50'
-                    }`}
-                  >
-                    <span className="hidden sm:inline">{tab.name}</span>
-                    <span className="sm:hidden text-base">{tab.shortName}</span>
-                  </button>
-                ))}
-              </nav>
+            <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-1 sm:p-2 w-full mx-auto">
+              {/* Contenedor con scroll horizontal suave en móvil */}
+              <div className="overflow-x-auto pb-1 hide-scrollbar">
+                <nav className="flex space-x-1 min-w-max sm:min-w-0 sm:justify-center">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`
+                        flex-none px-3 sm:px-4 py-2 sm:py-3 
+                        rounded-lg sm:rounded-xl font-semibold 
+                        text-xs sm:text-sm 
+                        transition-all duration-300 whitespace-nowrap
+                        ${activeTab === tab.id
+                          ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md scale-105 sm:scale-100'
+                          : 'text-gray-600 hover:text-red-600 hover:bg-white/50'
+                        }
+                      `}
+                      title={tab.name} // Tooltip en móvil
+                    >
+                      {/* En móvil: emoji + texto corto para algunas pestañas */}
+                      <span className="sm:hidden">
+                        {tab.shortName}
+                        {tab.id === 'reception' && ' Recep'}
+                        {tab.id === 'orders' && ' Ord'}
+                        {tab.id === 'fullday' && ' Full'}
+                        {tab.id === 'menu' && ' Menú'}
+                        {tab.id === 'kitchen' && ' Cocina'}
+                        {tab.id === 'dashboard' && ' Dash'}
+                        {tab.id === 'customers' && ' Client'}
+                        {tab.id === 'students' && ' Alum'}
+                        {tab.id === 'users' && ' User'}
+                      </span>
+                      {/* En desktop: nombre completo */}
+                      <span className="hidden sm:inline">{tab.name}</span>
+                    </button>
+                  ))}
+                </nav>
+              </div>
+              
+              {/* Indicador de scroll en móvil (solo si hay scroll) */}
+              <div className="sm:hidden flex justify-center mt-1">
+                <div className="flex space-x-1">
+                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                </div>
+                <span className="text-[8px] text-gray-400 ml-1">desliza para ver más</span>
+              </div>
             </div>
           </div>
 
@@ -109,12 +143,12 @@ function App() {
           )}
 
           {activeTab === 'orders' && <OrdersManager />}
-          {activeTab === 'fullday' && <FullDayOrdersManager />} {/* NUEVA PESTAÑA */}
+          {activeTab === 'fullday' && <FullDayOrdersManager />}
           {activeTab === 'menu' && <MenuManager />}
-          {activeTab === 'customers' && <CustomersManager />}
           {activeTab === 'kitchen' && <KitchenManager />}
-          {activeTab === 'users' && <UserManager />}
+          {activeTab === 'customers' && <CustomersManager />}
           {activeTab === 'students' && <StudentManager />}
+          {activeTab === 'users' && <UserManager />}
         </DashboardLayout>
       </OrderProvider>
     </ProtectedRoute>
