@@ -107,6 +107,11 @@ export const useCategories = () => {
     }
   }, [fetchCategories]);
 
+  // Función para refrescar categorías (alias de fetchCategories)
+  const refreshCategories = useCallback(async () => {
+    await fetchCategories();
+  }, [fetchCategories]);
+
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
@@ -115,6 +120,7 @@ export const useCategories = () => {
     categories,
     loading,
     fetchCategories,
+    refreshCategories, // <-- AGREGADO
     createCategory,
     updateCategory,
     deleteCategory

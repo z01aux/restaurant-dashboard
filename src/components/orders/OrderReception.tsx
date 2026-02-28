@@ -16,7 +16,7 @@ import { useStudents } from '../../hooks/useStudents';
 import { useFullDay } from '../../hooks/useFullDay';
 import { useCategories } from '../../hooks/useCategories'; // <-- NUEVO HOOK UNIFICADO
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
-import { supabase } from '../../lib/supabase';
+//import { supabase } from '../../lib/supabase';
 
 const styles = `
   .hide-scrollbar::-webkit-scrollbar {
