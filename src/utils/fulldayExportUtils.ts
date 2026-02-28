@@ -1,7 +1,7 @@
 // ============================================
 // ARCHIVO: src/utils/fulldayExportUtils.ts (MODIFICADO)
 // Utilidades de exportación para FullDay
-// Ahora 'exportFullDayToExcel' agrupa productos por categoría
+// Ahora 'exportFullDayToExcel' lista productos por categoría
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -68,50 +68,60 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
   URL.revokeObjectURL(url);
 };
 
-// --- FUNCIÓN AUXILIAR PARA AGRUPAR POR CATEGORÍA PRINCIPAL EN FULLDAY ---
+// --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA PRINCIPAL EN FULLDAY ---
 /**
- * Agrupa los productos de un pedido FullDay por las categorías "Entradas", "Platos de fondo" y "Bebidas".
- * Suma la cantidad y el total de cada grupo.
- * NOTA: Esta función asume que el nombre del producto o una propiedad 'category' puede contener estas palabras.
- * Si los productos de FullDay no tienen categoría, puedes modificar esta lógica.
+ * Toma un pedido FullDay y devuelve un string con la lista de productos
+ * para cada categoría ("Entradas", "Platos de fondo", "Bebidas").
+ * Cada producto se muestra con su cantidad (ej. "2x Lomo Saltado").
+ * Los productos que no coinciden con ninguna categoría van a "Platos de fondo".
  */
-const groupFullDayItemsByMainCategory = (order: FullDayOrder): { 
-  entradas: { quantity: number; total: number }; 
-  fondos: { quantity: number; total: number }; 
-  bebidas: { quantity: number; total: number } 
+const listFullDayItemsByMainCategory = (order: FullDayOrder): { 
+  entradas: string; 
+  fondos: string; 
+  bebidas: string;
+  montoEntradas: number;
+  montoFondos: number;
+  montoBebidas: number;
 } => {
   const result = {
-      entradas: { quantity: 0, total: 0 },
-      fondos: { quantity: 0, total: 0 },
-      bebidas: { quantity: 0, total: 0 }
+      entradas: [] as string[],
+      fondos: [] as string[],
+      bebidas: [] as string[],
+      montoEntradas: 0,
+      montoFondos: 0,
+      montoBebidas: 0,
   };
 
   order.items.forEach(item => {
-      // Para FullDay, podrías no tener una categoría definida. 
-      // Como alternativa, puedes buscar palabras clave en el nombre del producto.
-      // O, si tienes un campo category, puedes usar item.category.
       const itemName = item.name.toLowerCase();
+      const itemDisplay = `${item.quantity}x ${item.name}`;
       const itemTotal = item.price * item.quantity;
-      const itemQuantity = item.quantity;
 
-      // Lógica de ejemplo basada en el nombre del producto.
-      // AJUSTA ESTAS CONDICIONES SEGÚN TUS PRODUCTOS DE FULLDAY.
+      // --- AJUSTA ESTAS CONDICIONES SEGÚN TUS PRODUCTOS DE FULLDAY ---
       if (itemName.includes('entrada') || itemName.includes('ensalada') || itemName.includes('sopa')) {
-          result.entradas.quantity += itemQuantity;
-          result.entradas.total += itemTotal;
-      } else if (itemName.includes('fondo') || itemName.includes('pollo') || itemName.includes('carne') || itemName.includes('pescado') || itemName.includes('lomo')) {
-          result.fondos.quantity += itemQuantity;
-          result.fondos.total += itemTotal;
-      } else if (itemName.includes('bebida') || itemName.includes('gaseosa') || itemName.includes('jugo') || itemName.includes('agua') || itemName.includes('refresco')) {
-          result.bebidas.quantity += itemQuantity;
-          result.bebidas.total += itemTotal;
+          result.entradas.push(itemDisplay);
+          result.montoEntradas += itemTotal;
+      } else if (itemName.includes('fondo') || itemName.includes('pollo') || itemName.includes('carne') || itemName.includes('pescado') || itemName.includes('lomo') || itemName.includes('saltado')) {
+          result.fondos.push(itemDisplay);
+          result.montoFondos += itemTotal;
+      } else if (itemName.includes('bebida') || itemName.includes('gaseosa') || itemName.includes('jugo') || itemName.includes('agua') || itemName.includes('refresco') || itemName.includes('chicha')) {
+          result.bebidas.push(itemDisplay);
+          result.montoBebidas += itemTotal;
       } else {
-          // Si no coincide con ninguna, por defecto lo ponemos en "fondos" para no perderlo.
-          result.fondos.quantity += itemQuantity;
-          result.fondos.total += itemTotal;
+          // Por defecto, a "Platos de fondo"
+          result.fondos.push(itemDisplay);
+          result.montoFondos += itemTotal;
       }
   });
-  return result;
+
+  return {
+      entradas: result.entradas.join('\n'),
+      fondos: result.fondos.join('\n'),
+      bebidas: result.bebidas.join('\n'),
+      montoEntradas: result.montoEntradas,
+      montoFondos: result.montoFondos,
+      montoBebidas: result.montoBebidas,
+  };
 };
 
 export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'all' = 'today') => {
@@ -122,11 +132,11 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
 
   // --- ESTRUCTURA DE DATOS MODIFICADA PARA LA HOJA PRINCIPAL ---
   // Se ha eliminado 'APODERADO' y 'PRODUCTOS'.
-  // Se han añadido las columnas de cantidades y montos por categoría.
+  // Se han añadido las columnas con la lista de productos por categoría.
   const data = orders.map(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
-    const groupedItems = groupFullDayItemsByMainCategory(order);
+    const categorizedItems = listFullDayItemsByMainCategory(order);
 
     return {
       'FECHA': fecha,
@@ -137,15 +147,15 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
       'SECCIÓN': order.section,
       // 'APODERADO' ELIMINADO
       'TELÉFONO': order.phone || '',
-      'MONTO': `S/ ${order.total.toFixed(2)}`,
+      'MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
       'MÉTODO PAGO': order.payment_method || 'NO APLICA',
-      // --- NUEVAS COLUMNAS ---
-      'Entradas': groupedItems.entradas.quantity,
-      'Platos de fondo': groupedItems.fondos.quantity,
-      'Bebidas': groupedItems.bebidas.quantity,
-      'Monto Entradas': `S/ ${groupedItems.entradas.total.toFixed(2)}`,
-      'Monto Fondo': `S/ ${groupedItems.fondos.total.toFixed(2)}`,
-      'Monto Bebidas': `S/ ${groupedItems.bebidas.total.toFixed(2)}`,
+      // --- NUEVAS COLUMNAS (LISTAS DE PRODUCTOS) ---
+      'Entradas': categorizedItems.entradas,
+      'Platos de fondo': categorizedItems.fondos,
+      'Bebidas': categorizedItems.bebidas,
+      'Monto Entradas': `S/ ${categorizedItems.montoEntradas.toFixed(2)}`,
+      'Monto Fondo': `S/ ${categorizedItems.montoFondos.toFixed(2)}`,
+      'Monto Bebidas': `S/ ${categorizedItems.montoBebidas.toFixed(2)}`,
       // -----------------------
     };
   });
@@ -153,7 +163,7 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
   
-  // Ajustar el ancho de las columnas para las nuevas columnas
+  // Ajustar el ancho de las columnas. Las columnas de texto llevan más ancho.
   ws['!cols'] = [
     { wch: 12 }, // FECHA
     { wch: 8 },  // HORA
@@ -161,14 +171,13 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
     { wch: 30 }, // ALUMNO
     { wch: 20 }, // GRADO
     { wch: 8 },  // SECCIÓN
-    // Columna de APODERADO ELIMINADA
     { wch: 15 }, // TELÉFONO
-    { wch: 12 }, // MONTO
+    { wch: 12 }, // MONTO TOTAL
     { wch: 12 }, // MÉTODO PAGO
     // --- NUEVAS COLUMNAS ---
-    { wch: 10 }, // Entradas (cantidad)
-    { wch: 15 }, // Platos de fondo (cantidad)
-    { wch: 10 }, // Bebidas (cantidad)
+    { wch: 40 }, // Entradas (lista de productos)
+    { wch: 40 }, // Platos de fondo (lista de productos)
+    { wch: 40 }, // Bebidas (lista de productos)
     { wch: 15 }, // Monto Entradas
     { wch: 15 }, // Monto Fondo
     { wch: 15 }, // Monto Bebidas
