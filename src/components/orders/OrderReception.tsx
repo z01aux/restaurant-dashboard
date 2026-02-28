@@ -1,16 +1,20 @@
+// =================================================
+// ARCHIVO: src/components/orders/OrderReception.tsx
+// =================================================
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, 
   Settings, RotateCcw, Search, Tag, FolderPlus, Edit
 } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
-//import OrderTicket from './OrderTicket';
 import { useMenu } from '../../hooks/useMenu';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudents } from '../../hooks/useStudents';
 import { useFullDay } from '../../hooks/useFullDay';
+import { useCategories } from '../../hooks/useCategories'; // <-- NUEVO HOOK UNIFICADO
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 import { supabase } from '../../lib/supabase';
 
@@ -278,37 +282,9 @@ const MenuProduct: React.FC<{
   );
 });
 
-const useCategories = () => {
-  const [categories, setCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      setLoading(true);
-      const { error, data } = await supabase
-        .from('categories')
-        .select('name')
-        .order('sort_order', { ascending: true })
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      
-      const categoryNames = data?.map(item => item.name) || [];
-      setCategories(categoryNames);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
-  return { categories, loading, refreshCategories: fetchCategories };
-};
-
+// ============================================
+// MODAL DE GESTIÓN DE CATEGORÍAS - AHORA USA EL HOOK UNIFICADO
+// ============================================
 const CategoryManagerModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -321,6 +297,9 @@ const CategoryManagerModal: React.FC<{
   const [success, setSuccess] = useState<string | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
+
+  // Usar el hook unificado de categorías
+  const { createCategory, updateCategory, deleteCategory } = useCategories();
 
   useEffect(() => {
     if (error || success) {
@@ -347,27 +326,15 @@ const CategoryManagerModal: React.FC<{
     setError(null);
     
     try {
-      const { error } = await supabase
-        .from('categories')
-        .insert([{ 
-          name: newCategory.trim(),
-          sort_order: categories.length + 1
-        }]);
-
-      if (error) {
-        if (error.code === '23505') {
-          setError('Esta categoría ya existe en la base de datos');
-        } else {
-          setError(`Error al crear la categoría: ${error.message}`);
-        }
-        setLoading(false);
-        return;
-      }
-
-      setSuccess('Categoría creada exitosamente');
-      setNewCategory('');
-      onCategoryCreated();
+      const result = await createCategory(newCategory);
       
+      if (result.success) {
+        setSuccess('Categoría creada exitosamente');
+        setNewCategory('');
+        onCategoryCreated();
+      } else {
+        setError(`Error al crear la categoría: ${result.error}`);
+      }
     } catch (error: any) {
       setError(`Error inesperado: ${error.message}`);
     } finally {
@@ -390,18 +357,17 @@ const CategoryManagerModal: React.FC<{
     setError(null);
     
     try {
-      const { error } = await supabase
-        .from('categories')
-        .update({ name: newName.trim() })
-        .eq('name', oldName);
-
-      if (error) throw error;
+      const result = await updateCategory(oldName, newName);
       
-      setSuccess('Categoría actualizada exitosamente');
-      setEditingIndex(null);
-      onCategoryCreated();
+      if (result.success) {
+        setSuccess('Categoría actualizada exitosamente');
+        setEditingIndex(null);
+        onCategoryCreated();
+      } else {
+        setError(`Error al actualizar: ${result.error}`);
+      }
     } catch (error: any) {
-      setError(`Error al actualizar: ${error.message}`);
+      setError(`Error inesperado: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -416,24 +382,16 @@ const CategoryManagerModal: React.FC<{
     setError(null);
     
     try {
-      const { error: updateError } = await supabase
-        .from('menu_items')
-        .update({ category: 'Sin categoría' })
-        .eq('category', categoryName);
-
-      if (updateError) throw updateError;
-
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('name', categoryName);
-
-      if (error) throw error;
+      const result = await deleteCategory(categoryName);
       
-      setSuccess('Categoría eliminada exitosamente');
-      onCategoryCreated();
+      if (result.success) {
+        setSuccess('Categoría eliminada exitosamente');
+        onCategoryCreated();
+      } else {
+        setError(`Error al eliminar: ${result.error}`);
+      }
     } catch (error: any) {
-      setError(`Error al eliminar: ${error.message}`);
+      setError(`Error inesperado: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -547,13 +505,16 @@ const CategoryManagerModal: React.FC<{
         </div>
 
         <div className="border-t border-gray-200 p-3 bg-gray-50 text-xs text-gray-500 flex-shrink-0">
-          <p>Las categorías se sincronizan automáticamente con Supabase</p>
+          <p>Las categorías se sincronizan automáticamente con el Menú</p>
         </div>
       </div>
     </div>
   );
 };
 
+// ============================================
+// MODAL DE GESTIÓN RÁPIDA DE MENÚ
+// ============================================
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -563,7 +524,7 @@ const QuickMenuManager: React.FC<{
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const { getAllItems, createItem, updateItem, deleteItem, refreshMenu } = useMenu();
-  const { categories: dbCategories, refreshCategories } = useCategories();
+  const { categories: dbCategories, refreshCategories } = useCategories(); // <-- USA HOOK UNIFICADO
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [newProduct, setNewProduct] = useState({
@@ -941,30 +902,29 @@ const QuickMenuManager: React.FC<{
 };
 
 // ============================================
-// FUNCIÓN PARA LIMITAR NOMBRES LARGOS (CORREGIDA)
+// FUNCIÓN PARA LIMITAR NOMBRES LARGOS
 // ============================================
 const limitNameLength = (fullName: string): string => {
-  // Si el nombre tiene más de 35 caracteres, recortar
   if (fullName.length > 35) {
-    // Dividir por comas primero (apellido, nombre)
     const parts = fullName.split(',');
     
     if (parts.length >= 2) {
       const lastName = parts[0].trim();
       const firstNames = parts[1].trim().split(' ');
       
-      // Tomar solo el primer nombre si hay varios
       if (firstNames.length >= 2) {
         return `${lastName}, ${firstNames[0]}`;
       }
     }
     
-    // Si no se puede dividir por coma, tomar primeros 35 caracteres
     return fullName.substring(0, 35) + '...';
   }
   return fullName;
 };
 
+// ============================================
+// COMPONENTE PRINCIPAL ORDER RECEPTION
+// ============================================
 const OrderReception: React.FC = React.memo(() => {
   const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay'>('phone');
   const [customerName, setCustomerName] = useState('');
@@ -1001,7 +961,7 @@ const OrderReception: React.FC = React.memo(() => {
   const { user } = useAuth();
   const { customers } = useCustomers();
   const { getDailySpecialsByCategory, getAllDailySpecials, refreshMenu } = useMenu();
-  const { categories: dbCategories } = useCategories();
+  const { categories: dbCategories, refreshCategories } = useCategories(); // <-- USA HOOK UNIFICADO
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
   const { searchStudents, searchResults } = useStudents();
@@ -1174,7 +1134,7 @@ const OrderReception: React.FC = React.memo(() => {
   }, [cart.length, showToast]);
 
   // ============================================
-  // FUNCIÓN GENERATE TICKET CONTENT CORREGIDA
+  // FUNCIÓN GENERATE TICKET CONTENT
   // ============================================
   const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
     const getCurrentUserName = () => {
@@ -1242,13 +1202,11 @@ const OrderReception: React.FC = React.memo(() => {
         </div>
       `;
     } else {
-      // Cálculos con IGV 10% incluido en el precio
       const subtotal = order.total / 1.10;
       const igv = order.total - subtotal;
       
       let customerInfo = '';
       
-      // PARA PEDIDOS FULLDAY - CON NOMBRES LIMITADOS
       if (order.source.type === 'fullDay' && order.studentInfo) {
         const limitedStudentName = limitNameLength(order.studentInfo.fullName);
         const limitedGuardianName = limitNameLength(order.studentInfo.guardianName);
@@ -1274,7 +1232,6 @@ const OrderReception: React.FC = React.memo(() => {
           ` : ''}
         `;
       } else {
-        // PARA PEDIDOS REGULARES
         customerInfo = `
           <div class="info-row">
             <span class="label">CLIENTE:</span>
@@ -1610,7 +1567,6 @@ const OrderReception: React.FC = React.memo(() => {
       const total = getTotal();
       
       if (activeTab === 'fullDay') {
-        // Crear pedido en tabla fullday
         const result = await createFullDayOrder({
           student_id: selectedStudentId,
           student_name: studentName,
@@ -1634,7 +1590,6 @@ const OrderReception: React.FC = React.memo(() => {
         if (result.success) {
           showToast('✅ Pedido FullDay guardado', 'success');
           
-          // Crear orden temporal solo para imprimir ticket - CON IGV 10%
           const tempOrder: Order = {
             id: 'temp-' + Date.now(),
             orderNumber: `FLD-${Date.now().toString().slice(-8)}`,
@@ -1663,7 +1618,6 @@ const OrderReception: React.FC = React.memo(() => {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
       } else {
-        // Crear pedido regular en tabla orders
         const orderData: any = {
           customerName: customerName,
           phone: phone,
@@ -1687,7 +1641,6 @@ const OrderReception: React.FC = React.memo(() => {
           orderType: 'regular'
         };
 
-        // Crear orden temporal para imprimir ticket - CON IGV 10%
         const tempOrder: Order = {
           id: 'temp-' + Date.now(),
           orderNumber: `ORD-${Date.now().toString().slice(-8)}`,
@@ -1718,7 +1671,6 @@ const OrderReception: React.FC = React.memo(() => {
         }
       }
       
-      // Limpiar todo después de crear el pedido
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -1778,7 +1730,10 @@ const OrderReception: React.FC = React.memo(() => {
         <QuickMenuManager
           isOpen={showMenuManager}
           onClose={() => setShowMenuManager(false)}
-          onRefresh={refreshMenu}
+          onRefresh={() => {
+            refreshMenu();
+            refreshCategories(); // <-- REFRESCAR CATEGORÍAS
+          }}
         />
 
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
