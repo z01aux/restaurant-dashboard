@@ -1,7 +1,5 @@
 // ============================================
-// ARCHIVO: src/utils/fulldayExportUtils.ts (MODIFICADO)
-// Utilidades de exportación para FullDay
-// Ahora 'exportFullDayToExcel' lista productos por categoría
+// ARCHIVO: src/utils/fulldayExportUtils.ts 
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -68,12 +66,10 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
   URL.revokeObjectURL(url);
 };
 
-// --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA PRINCIPAL EN FULLDAY ---
+// --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA ---
 /**
- * Toma un pedido FullDay y devuelve un string con la lista de productos
- * para cada categoría ("Entradas", "Platos de fondo", "Bebidas").
- * Cada producto se muestra con su cantidad (ej. "2x Lomo Saltado").
- * Los productos que no coinciden con ninguna categoría van a "Platos de fondo".
+ * Clasifica los productos de un pedido FullDay por su categoría.
+ * AHORA USA LA CATEGORÍA REAL DEL PRODUCTO.
  */
 const listFullDayItemsByMainCategory = (order: FullDayOrder): { 
   entradas: string; 
@@ -93,25 +89,66 @@ const listFullDayItemsByMainCategory = (order: FullDayOrder): {
   };
 
   order.items.forEach(item => {
-      const itemName = item.name.toLowerCase();
       const itemDisplay = `${item.quantity}x ${item.name}`;
       const itemTotal = item.price * item.quantity;
 
-      // --- AJUSTA ESTAS CONDICIONES SEGÚN TUS PRODUCTOS DE FULLDAY ---
-      if (itemName.includes('entrada') || itemName.includes('ensalada') || itemName.includes('sopa')) {
+      // --- PRIORIDAD 1: Usar la categoría del producto si existe ---
+      // @ts-ignore - Asumiendo que item puede tener una propiedad 'category'
+      const category = item.category ? item.category.toLowerCase() : null;
+      
+      if (category) {
+        if (category.includes('entrada')) {
           result.entradas.push(itemDisplay);
           result.montoEntradas += itemTotal;
-      } else if (itemName.includes('fondo') || itemName.includes('pollo') || itemName.includes('carne') || itemName.includes('pescado') || itemName.includes('lomo') || itemName.includes('saltado')) {
+          return; // Importante: salir después de clasificar
+        }
+        if (category.includes('fondo') || category.includes('plato')) {
           result.fondos.push(itemDisplay);
           result.montoFondos += itemTotal;
-      } else if (itemName.includes('bebida') || itemName.includes('gaseosa') || itemName.includes('jugo') || itemName.includes('agua') || itemName.includes('refresco') || itemName.includes('chicha')) {
+          return;
+        }
+        if (category.includes('bebida')) {
           result.bebidas.push(itemDisplay);
           result.montoBebidas += itemTotal;
-      } else {
-          // Por defecto, a "Platos de fondo"
-          result.fondos.push(itemDisplay);
-          result.montoFondos += itemTotal;
+          return;
+        }
       }
+
+      // --- PRIORIDAD 2: Si no hay categoría, usar palabras clave en el nombre (RESPALDO) ---
+      // Pero con palabras mucho más específicas para evitar confusiones
+      const itemName = item.name.toLowerCase();
+      
+      // Bebidas: términos muy específicos
+      if (itemName.includes('gaseosa') || 
+          itemName.includes('inca kola') || 
+          itemName.includes('coca cola') ||
+          itemName.includes('sprite') ||
+          itemName.includes('fanta') ||
+          itemName.includes('agua') ||
+          itemName.includes('jugo') ||
+          itemName.includes('chicha') ||
+          itemName.includes('maracuya') ||
+          itemName.includes('limonada')) {
+        result.bebidas.push(itemDisplay);
+        result.montoBebidas += itemTotal;
+        return;
+      }
+      
+      // Entradas
+      if (itemName.includes('entrada') || 
+          itemName.includes('ensalada') || 
+          itemName.includes('sopa') ||
+          itemName.includes('caldo') ||
+          itemName.includes('causa') ||
+          itemName.includes('papa a la huancaina')) {
+        result.entradas.push(itemDisplay);
+        result.montoEntradas += itemTotal;
+        return;
+      }
+      
+      // Si no coincide con ninguna, es un plato de fondo
+      result.fondos.push(itemDisplay);
+      result.montoFondos += itemTotal;
   });
 
   return {
@@ -130,9 +167,7 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
     return;
   }
 
-  // --- ESTRUCTURA DE DATOS MODIFICADA PARA LA HOJA PRINCIPAL ---
-  // Se ha eliminado 'APODERADO' y 'PRODUCTOS'.
-  // Se han añadido las columnas con la lista de productos por categoría.
+  // --- ESTRUCTURA DE DATOS PARA LA HOJA PRINCIPAL ---
   const data = orders.map(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
@@ -145,25 +180,23 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
       'ALUMNO': order.student_name.toUpperCase(),
       'GRADO': order.grade,
       'SECCIÓN': order.section,
-      // 'APODERADO' ELIMINADO
       'TELÉFONO': order.phone || '',
       'MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
       'MÉTODO PAGO': order.payment_method || 'NO APLICA',
-      // --- NUEVAS COLUMNAS (LISTAS DE PRODUCTOS) ---
+      // --- COLUMNAS POR CATEGORÍA (AHORA CORRECTAS) ---
       'Entradas': categorizedItems.entradas,
       'Platos de fondo': categorizedItems.fondos,
       'Bebidas': categorizedItems.bebidas,
       'Monto Entradas': `S/ ${categorizedItems.montoEntradas.toFixed(2)}`,
       'Monto Fondo': `S/ ${categorizedItems.montoFondos.toFixed(2)}`,
       'Monto Bebidas': `S/ ${categorizedItems.montoBebidas.toFixed(2)}`,
-      // -----------------------
     };
   });
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
   
-  // Ajustar el ancho de las columnas. Las columnas de texto llevan más ancho.
+  // Ajustar el ancho de las columnas
   ws['!cols'] = [
     { wch: 12 }, // FECHA
     { wch: 8 },  // HORA
@@ -174,14 +207,12 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
     { wch: 15 }, // TELÉFONO
     { wch: 12 }, // MONTO TOTAL
     { wch: 12 }, // MÉTODO PAGO
-    // --- NUEVAS COLUMNAS ---
-    { wch: 40 }, // Entradas (lista de productos)
-    { wch: 40 }, // Platos de fondo (lista de productos)
-    { wch: 40 }, // Bebidas (lista de productos)
+    { wch: 40 }, // Entradas
+    { wch: 40 }, // Platos de fondo
+    { wch: 40 }, // Bebidas
     { wch: 15 }, // Monto Entradas
     { wch: 15 }, // Monto Fondo
     { wch: 15 }, // Monto Bebidas
-    // -----------------------
   ];
 
   const nombreHoja = tipo === 'today' ? 'Pedidos del Día' : 'Todos los Pedidos';
@@ -200,31 +231,16 @@ export const exportFullDayByDateRange = (
   endDate: Date
 ) => {
   console.log('🔍 EXPORTACIÓN POR RANGO DE FECHAS - INICIANDO');
-  console.log('📅 Fechas recibidas:', {
-    startDate: startDate.toString(),
-    endDate: endDate.toString(),
-    startISO: startDate.toISOString(),
-    endISO: endDate.toISOString()
-  });
-
+  
   // Ajustar fechas para que cubran todo el día en hora local
   const startOfDay = getStartOfDay(startDate);
   const endOfDay = getEndOfDay(endDate);
-
-  console.log('📅 Rango ajustado:', {
-    startOfDay: startOfDay.toISOString(),
-    endOfDay: endOfDay.toISOString()
-  });
-
-  console.log('📦 Total de pedidos en el sistema:', orders.length);
 
   // Filtrar órdenes por rango de fechas
   const filteredOrders = orders.filter(order => {
     const orderDate = new Date(order.created_at);
     return orderDate >= startOfDay && orderDate <= endOfDay;
   });
-
-  console.log('📊 Pedidos encontrados en el rango:', filteredOrders.length);
 
   if (filteredOrders.length === 0) {
     alert('No hay pedidos en el rango de fechas seleccionado');
@@ -268,7 +284,7 @@ export const exportFullDayByDateRange = (
   wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, '📊 RESUMEN');
 
-  // HOJA 2: DETALLE POR ALUMNO (CORREGIDO)
+  // HOJA 2: DETALLE POR ALUMNO
   const detailData: any[][] = [
     ['DETALLE DE PEDIDOS'],
     [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
