@@ -1,9 +1,10 @@
-// ===================================================
+// ============================================
 // ARCHIVO: src/components/students/StudentManager.tsx
-// ===================================================
+// MODAL FIJO EN LA PARTE SUPERIOR - VERSIÓN CORREGIDA
+// ============================================
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, Save, X, GraduationCap, Users, Phone, User, XCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Save, XCircle, GraduationCap, Users, Phone, User } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 import { useAuth } from '../../hooks/useAuth';
