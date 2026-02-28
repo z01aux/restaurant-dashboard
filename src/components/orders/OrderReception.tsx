@@ -1,11 +1,11 @@
-// =================================================
+// ============================================
 // ARCHIVO: src/components/orders/OrderReception.tsx
-// =================================================
+// ============================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, 
-  Settings, RotateCcw, Search, Tag, FolderPlus, Edit
+  Settings, RotateCcw, Search, Tag, FolderPlus, Edit, Grid, List
 } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import { useMenu } from '../../hooks/useMenu';
@@ -14,9 +14,8 @@ import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudents } from '../../hooks/useStudents';
 import { useFullDay } from '../../hooks/useFullDay';
-import { useCategories } from '../../hooks/useCategories'; // <-- NUEVO HOOK UNIFICADO
+import { useCategories } from '../../hooks/useCategories';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
-//import { supabase } from '../../lib/supabase';
 
 const styles = `
   .hide-scrollbar::-webkit-scrollbar {
@@ -40,6 +39,125 @@ const styles = `
   
   .animate-slide-in {
     animation: slideIn 0.3s ease-out;
+  }
+
+  /* Mejora para el contador de productos */
+  .product-counter {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border-radius: 9999px;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 20;
+    animation: popIn 0.2s ease-out;
+  }
+
+  @keyframes popIn {
+    0% {
+      transform: scale(0.5);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Mejora para las cards de productos */
+  .product-card {
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  .product-card:hover .product-counter {
+    transform: scale(1.1);
+  }
+
+  /* Barra de categorías mejorada */
+  .categories-container {
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    margin-bottom: 16px;
+  }
+
+  .categories-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: #f97316 #fee2e2;
+  }
+
+  .categories-scroll::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .categories-scroll::-webkit-scrollbar-track {
+    background: #fee2e2;
+    border-radius: 20px;
+  }
+
+  .categories-scroll::-webkit-scrollbar-thumb {
+    background: #f97316;
+    border-radius: 20px;
+  }
+
+  .categories-scroll::-webkit-scrollbar-thumb:hover {
+    background: #ea580c;
+  }
+
+  .category-button {
+    flex: 0 0 auto;
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+  }
+
+  .category-button-active {
+    background: linear-gradient(135deg, #ef4444, #f97316);
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+  }
+
+  .category-button-inactive {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #e5e7eb;
+  }
+
+  .category-button-inactive:hover {
+    background: #e5e7eb;
+    transform: translateY(-1px);
+  }
+
+  /* Vista compacta para móvil */
+  @media (max-width: 640px) {
+    .category-button {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+    }
   }
 `;
 
@@ -237,44 +355,45 @@ const MenuProduct: React.FC<{
   }, [item.id, quantityInCart, onUpdateQuantity]);
 
   return (
-    <div className="bg-white rounded-lg p-2 border border-gray-200 hover:border-red-300 hover:shadow-md transition-all relative group">
+    <div className="bg-white rounded-lg p-3 border border-gray-200 product-card group">
+      {/* CONTADOR MEJORADO - MÁS VISIBLE EN DESKTOP */}
       {quantityInCart > 0 && (
-        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white z-10">
+        <div className="product-counter">
           {quantityInCart}
         </div>
       )}
       
-      <div className="mb-1">
-        <div className="font-semibold text-gray-900 text-xs mb-1 line-clamp-2 min-h-[2rem]">
+      <div className="mb-2">
+        <div className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2 min-h-[2.5rem]">
           {item.name}
         </div>
-        <div className="font-bold text-red-600 text-sm">
+        <div className="font-bold text-red-600 text-base">
           S/ {item.price.toFixed(2)}
         </div>
       </div>
 
       {quantityInCart > 0 ? (
-        <div className="flex items-center justify-between space-x-1">
+        <div className="flex items-center justify-between space-x-1 mt-2">
           <button
             onClick={handleDecrement}
-            className="w-7 h-7 flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center"
           >
-            <Minus size={12} />
+            <Minus size={14} />
           </button>
-          <span className="text-xs font-medium w-6 text-center">{quantityInCart}</span>
+          <span className="w-8 text-center font-bold text-red-600 text-sm">{quantityInCart}</span>
           <button
             onClick={handleIncrement}
-            className="w-7 h-7 flex items-center justify-center bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            className="flex-1 py-2 bg-gradient-to-r from-red-500 to-amber-500 text-white rounded-lg hover:from-red-600 hover:to-amber-600 transition-colors flex items-center justify-center"
           >
-            <Plus size={12} />
+            <Plus size={14} />
           </button>
         </div>
       ) : (
         <button
           onClick={handleAddClick}
-          className="w-full bg-red-500 text-white py-1.5 rounded-lg flex items-center justify-center space-x-1 text-xs font-medium hover:bg-red-600 transition-colors"
+          className="w-full mt-2 bg-gradient-to-r from-red-500 to-amber-500 text-white py-2 rounded-lg flex items-center justify-center space-x-1 text-sm font-medium hover:from-red-600 hover:to-amber-600 transition-colors"
         >
-          <Plus size={12} />
+          <Plus size={14} />
           <span>Agregar</span>
         </button>
       )}
@@ -283,7 +402,7 @@ const MenuProduct: React.FC<{
 });
 
 // ============================================
-// MODAL DE GESTIÓN DE CATEGORÍAS - AHORA USA EL HOOK UNIFICADO
+// MODAL DE GESTIÓN DE CATEGORÍAS
 // ============================================
 const CategoryManagerModal: React.FC<{
   isOpen: boolean;
@@ -298,7 +417,6 @@ const CategoryManagerModal: React.FC<{
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
 
-  // Usar el hook unificado de categorías
   const { createCategory, updateCategory, deleteCategory } = useCategories();
 
   useEffect(() => {
@@ -524,7 +642,7 @@ const QuickMenuManager: React.FC<{
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const { getAllItems, createItem, updateItem, deleteItem, refreshMenu } = useMenu();
-  const { categories: dbCategories, refreshCategories } = useCategories(); // <-- USA HOOK UNIFICADO
+  const { categories: dbCategories, refreshCategories } = useCategories();
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [newProduct, setNewProduct] = useState({
@@ -961,7 +1079,7 @@ const OrderReception: React.FC = React.memo(() => {
   const { user } = useAuth();
   const { customers } = useCustomers();
   const { getDailySpecialsByCategory, getAllDailySpecials, refreshMenu } = useMenu();
-  const { categories: dbCategories, refreshCategories } = useCategories(); // <-- USA HOOK UNIFICADO
+  const { categories: dbCategories, refreshCategories } = useCategories();
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
   const { searchStudents, searchResults } = useStudents();
@@ -1732,7 +1850,7 @@ const OrderReception: React.FC = React.memo(() => {
           onClose={() => setShowMenuManager(false)}
           onRefresh={() => {
             refreshMenu();
-            refreshCategories(); // <-- REFRESCAR CATEGORÍAS
+            refreshCategories();
           }}
         />
 
@@ -1777,7 +1895,7 @@ const OrderReception: React.FC = React.memo(() => {
                     <div className="text-xs opacity-90">{totalItems} items</div>
                   </div>
                   {totalItems > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-white">
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-white product-counter">
                       {totalItems}
                     </span>
                   )}
@@ -2002,21 +2120,24 @@ const OrderReception: React.FC = React.memo(() => {
                 placeholder="Buscar productos..."
               />
 
+              {/* BARRA DE CATEGORÍAS MEJORADA */}
               {!searchTerm && categories.length > 0 && (
-                <div className="flex space-x-2 mb-4 overflow-x-auto pb-2 hide-scrollbar">
-                  {categories.map(category => (
-                    <button
-                      key={category}
-                      onClick={() => handleCategoryChange(category)}
-                      className={`px-3 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-colors ${
-                        activeCategory === category
-                          ? 'bg-red-500 text-white'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {category}
-                    </button>
-                  ))}
+                <div className="categories-container">
+                  <div className="categories-scroll">
+                    {categories.map(category => (
+                      <button
+                        key={category}
+                        onClick={() => handleCategoryChange(category)}
+                        className={`category-button ${
+                          activeCategory === category
+                            ? 'category-button-active'
+                            : 'category-button-inactive'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -2349,25 +2470,28 @@ const OrderReception: React.FC = React.memo(() => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
                   />
 
+                  {/* BARRA DE CATEGORÍAS MEJORADA EN DESKTOP */}
                   {!searchTerm && categories.length > 0 && (
-                    <div className="flex space-x-2 mb-4 overflow-x-auto">
-                      {categories.map(category => (
-                        <button
-                          key={category}
-                          onClick={() => handleCategoryChange(category)}
-                          className={`px-3 py-1 rounded-lg text-xs whitespace-nowrap ${
-                            activeCategory === category
-                              ? 'bg-red-500 text-white'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          {category}
-                        </button>
-                      ))}
+                    <div className="categories-container">
+                      <div className="categories-scroll">
+                        {categories.map(category => (
+                          <button
+                            key={category}
+                            onClick={() => handleCategoryChange(category)}
+                            className={`category-button ${
+                              activeCategory === category
+                                ? 'category-button-active'
+                                : 'category-button-inactive'
+                            }`}
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto pr-1">
                     {currentItems.map((item: MenuItem) => {
                       const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
                       const quantityInCart = cartItem ? cartItem.quantity : 0;
@@ -2397,7 +2521,7 @@ const OrderReception: React.FC = React.memo(() => {
                     </div>
                   ) : (
                     <>
-                      <div className="space-y-3 max-h-[400px] overflow-y-auto mb-4">
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto mb-4 pr-1">
                         {cart.map((item, index) => (
                           <CartItem
                             key={`${item.menuItem.id}-${index}`}
