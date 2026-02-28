@@ -1,6 +1,7 @@
 // ============================================
-// ARCHIVO: src/utils/fulldayExportUtils.ts
+// ARCHIVO: src/utils/fulldayExportUtils.ts (MODIFICADO)
 // Utilidades de exportación para FullDay
+// Ahora 'exportFullDayToExcel' agrupa productos por categoría
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -31,7 +32,6 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
     
-    // CORREGIDO: Ahora lista TODOS los productos correctamente
     const productos = order.items.map(item => 
       `${item.quantity}x ${item.name}`
     ).join(' | ');
@@ -68,20 +68,65 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
   URL.revokeObjectURL(url);
 };
 
+// --- FUNCIÓN AUXILIAR PARA AGRUPAR POR CATEGORÍA PRINCIPAL EN FULLDAY ---
+/**
+ * Agrupa los productos de un pedido FullDay por las categorías "Entradas", "Platos de fondo" y "Bebidas".
+ * Suma la cantidad y el total de cada grupo.
+ * NOTA: Esta función asume que el nombre del producto o una propiedad 'category' puede contener estas palabras.
+ * Si los productos de FullDay no tienen categoría, puedes modificar esta lógica.
+ */
+const groupFullDayItemsByMainCategory = (order: FullDayOrder): { 
+  entradas: { quantity: number; total: number }; 
+  fondos: { quantity: number; total: number }; 
+  bebidas: { quantity: number; total: number } 
+} => {
+  const result = {
+      entradas: { quantity: 0, total: 0 },
+      fondos: { quantity: 0, total: 0 },
+      bebidas: { quantity: 0, total: 0 }
+  };
+
+  order.items.forEach(item => {
+      // Para FullDay, podrías no tener una categoría definida. 
+      // Como alternativa, puedes buscar palabras clave en el nombre del producto.
+      // O, si tienes un campo category, puedes usar item.category.
+      const itemName = item.name.toLowerCase();
+      const itemTotal = item.price * item.quantity;
+      const itemQuantity = item.quantity;
+
+      // Lógica de ejemplo basada en el nombre del producto.
+      // AJUSTA ESTAS CONDICIONES SEGÚN TUS PRODUCTOS DE FULLDAY.
+      if (itemName.includes('entrada') || itemName.includes('ensalada') || itemName.includes('sopa')) {
+          result.entradas.quantity += itemQuantity;
+          result.entradas.total += itemTotal;
+      } else if (itemName.includes('fondo') || itemName.includes('pollo') || itemName.includes('carne') || itemName.includes('pescado') || itemName.includes('lomo')) {
+          result.fondos.quantity += itemQuantity;
+          result.fondos.total += itemTotal;
+      } else if (itemName.includes('bebida') || itemName.includes('gaseosa') || itemName.includes('jugo') || itemName.includes('agua') || itemName.includes('refresco')) {
+          result.bebidas.quantity += itemQuantity;
+          result.bebidas.total += itemTotal;
+      } else {
+          // Si no coincide con ninguna, por defecto lo ponemos en "fondos" para no perderlo.
+          result.fondos.quantity += itemQuantity;
+          result.fondos.total += itemTotal;
+      }
+  });
+  return result;
+};
+
 export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'all' = 'today') => {
   if (orders.length === 0) {
     alert('No hay pedidos para exportar');
     return;
   }
 
+  // --- ESTRUCTURA DE DATOS MODIFICADA PARA LA HOJA PRINCIPAL ---
+  // Se ha eliminado 'APODERADO' y 'PRODUCTOS'.
+  // Se han añadido las columnas de cantidades y montos por categoría.
   const data = orders.map(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
-    
-    // CORREGIDO: Ahora lista TODOS los productos correctamente con saltos de línea
-    const productos = order.items.map(item => 
-      `${item.quantity}x ${item.name}`
-    ).join('\n');
+    const groupedItems = groupFullDayItemsByMainCategory(order);
 
     return {
       'FECHA': fecha,
@@ -90,21 +135,44 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
       'ALUMNO': order.student_name.toUpperCase(),
       'GRADO': order.grade,
       'SECCIÓN': order.section,
-      'APODERADO': order.guardian_name.toUpperCase(),
+      // 'APODERADO' ELIMINADO
       'TELÉFONO': order.phone || '',
       'MONTO': `S/ ${order.total.toFixed(2)}`,
       'MÉTODO PAGO': order.payment_method || 'NO APLICA',
-      'PRODUCTOS': productos
+      // --- NUEVAS COLUMNAS ---
+      'Entradas': groupedItems.entradas.quantity,
+      'Platos de fondo': groupedItems.fondos.quantity,
+      'Bebidas': groupedItems.bebidas.quantity,
+      'Monto Entradas': `S/ ${groupedItems.entradas.total.toFixed(2)}`,
+      'Monto Fondo': `S/ ${groupedItems.fondos.total.toFixed(2)}`,
+      'Monto Bebidas': `S/ ${groupedItems.bebidas.total.toFixed(2)}`,
+      // -----------------------
     };
   });
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
   
+  // Ajustar el ancho de las columnas para las nuevas columnas
   ws['!cols'] = [
-    { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 30 },
-    { wch: 20 }, { wch: 8 }, { wch: 30 }, { wch: 15 },
-    { wch: 12 }, { wch: 12 }, { wch: 50 }
+    { wch: 12 }, // FECHA
+    { wch: 8 },  // HORA
+    { wch: 15 }, // N° ORDEN
+    { wch: 30 }, // ALUMNO
+    { wch: 20 }, // GRADO
+    { wch: 8 },  // SECCIÓN
+    // Columna de APODERADO ELIMINADA
+    { wch: 15 }, // TELÉFONO
+    { wch: 12 }, // MONTO
+    { wch: 12 }, // MÉTODO PAGO
+    // --- NUEVAS COLUMNAS ---
+    { wch: 10 }, // Entradas (cantidad)
+    { wch: 15 }, // Platos de fondo (cantidad)
+    { wch: 10 }, // Bebidas (cantidad)
+    { wch: 15 }, // Monto Entradas
+    { wch: 15 }, // Monto Fondo
+    { wch: 15 }, // Monto Bebidas
+    // -----------------------
   ];
 
   const nombreHoja = tipo === 'today' ? 'Pedidos del Día' : 'Todos los Pedidos';
@@ -207,7 +275,6 @@ export const exportFullDayByDateRange = (
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
     
-    // CORREGIDO: Ahora lista TODOS los productos correctamente con saltos de línea
     const productos = order.items.map(item => 
       `${item.quantity}x ${item.name}${item.notes ? ` (${item.notes})` : ''}`
     ).join('\n');
