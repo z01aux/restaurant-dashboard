@@ -1,5 +1,9 @@
+// ============================================
+// ARCHIVO: src/components/menu/MenuManager.tsx
+// ============================================
+
 import React, { useState, useMemo, useCallback } from 'react';
-import { Plus, Edit, Trash2, Search, Save, X, Star, StarOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Save, XCircle, Star, StarOff } from 'lucide-react';
 import { MenuItem } from '../../types';
 import { useMenu } from '../../hooks/useMenu';
 
@@ -110,195 +114,6 @@ const ProductCard: React.FC<{
   );
 });
 
-// Componente del Formulario - Memoizado
-const ProductForm: React.FC<{
-  showForm: boolean;
-  editingItem: MenuItem | null;
-  formData: any;
-  formLoading: boolean;
-  categories: string[];
-  onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
-  onFormDataChange: (field: string, value: any) => void;
-}> = React.memo(({
-  showForm,
-  editingItem,
-  formData,
-  formLoading,
-  categories,
-  onClose,
-  onSubmit,
-  onFormDataChange
-}) => {
-  if (!showForm) return null;
-
-  const handleInputChange = useCallback((field: string) => 
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-      onFormDataChange(field, e.target.value);
-    }, [onFormDataChange]);
-
-  const handleCheckboxChange = useCallback((field: string) => 
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onFormDataChange(field, e.target.checked);
-    }, [onFormDataChange]);
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {editingItem ? 'Editar Producto' : 'Nuevo Producto'}
-          </h3>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={formLoading}
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre *
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={handleInputChange('name')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              placeholder="Nombre del producto"
-              required
-              disabled={formLoading}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Descripción
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={handleInputChange('description')}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              placeholder="Descripción del producto"
-              disabled={formLoading}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Precio *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.price}
-              onChange={handleInputChange('price')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              placeholder="0.00"
-              required
-              disabled={formLoading}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categoría *
-              </label>
-              <select
-                value={formData.category}
-                onChange={handleInputChange('category')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                required
-                disabled={formLoading}
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo *
-              </label>
-              <select
-                value={formData.type}
-                onChange={handleInputChange('type')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                required
-                disabled={formLoading}
-              >
-                <option value="food">Comida</option>
-                <option value="drink">Bebida</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="available"
-              checked={formData.available}
-              onChange={handleCheckboxChange('available')}
-              className="w-4 h-4 text-red-500 border-gray-300 rounded focus:ring-red-500"
-              disabled={formLoading}
-            />
-            <label htmlFor="available" className="text-sm font-medium text-gray-700">
-              Disponible
-            </label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isDailySpecial"
-              checked={formData.isDailySpecial}
-              onChange={handleCheckboxChange('isDailySpecial')}
-              className="w-4 h-4 text-yellow-500 border-gray-300 rounded focus:ring-yellow-500"
-              disabled={formLoading}
-            />
-            <label htmlFor="isDailySpecial" className="text-sm font-medium text-gray-700">
-              Producto del Día (aparece en Recepción)
-            </label>
-          </div>
-
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={formLoading}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={formLoading}
-              className="flex-1 bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
-            >
-              <Save size={16} />
-              <span>
-                {formLoading 
-                  ? (editingItem ? 'Actualizando...' : 'Creando...') 
-                  : (editingItem ? 'Actualizar' : 'Crear Producto')
-                }
-              </span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-});
-
 // Componente de Confirmación de Eliminación - Memoizado
 const DeleteConfirmation: React.FC<{
   showDeleteConfirm: string | null;
@@ -394,13 +209,13 @@ const MenuManager: React.FC = React.memo(() => {
       name: '',
       description: '',
       price: '',
-      category: 'Entradas',
+      category: availableCategories[1] || 'Entradas',
       type: 'food',
       available: true,
       isDailySpecial: false
     });
     setShowForm(true);
-  }, []);
+  }, [availableCategories]);
 
   const handleEditItem = useCallback((item: MenuItem) => {
     setEditingItem(item);
@@ -524,7 +339,7 @@ const MenuManager: React.FC = React.memo(() => {
     setActiveCategory(category);
   }, []);
 
-  // Renderizado de productos memoizado - AHORA SÍ USANDO EL SKELETON
+  // Renderizado de productos memoizado
   const renderedProducts = useMemo(() => {
     if (loading) {
       return (
@@ -575,6 +390,7 @@ const MenuManager: React.FC = React.memo(() => {
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
+          
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
             <div>
@@ -605,24 +421,163 @@ const MenuManager: React.FC = React.memo(() => {
             </div>
           </div>
 
-          {/* Formulario Modal */}
-          <ProductForm
-            showForm={showForm}
-            editingItem={editingItem}
-            formData={formData}
-            formLoading={formLoading}
-            categories={getCategories()}
-            onClose={handleCloseForm}
-            onSubmit={handleSubmit}
-            onFormDataChange={handleFormDataChange}
-          />
+          {/* FORMULARIO FIJO EN LA PARTE SUPERIOR */}
+          {showForm && (
+            <div className="mb-6 p-6 bg-white border-2 border-red-200 rounded-xl shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {editingItem ? '✏️ Editar Producto' : '➕ Nuevo Producto'}
+                </h3>
+                <button 
+                  onClick={handleCloseForm}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  disabled={formLoading}
+                >
+                  <XCircle size={24} className="text-red-500 hover:text-red-700" />
+                </button>
+              </div>
 
-          {/* Modal de confirmación de eliminación */}
-          <DeleteConfirmation
-            showDeleteConfirm={showDeleteConfirm}
-            onCancel={handleCancelDelete}
-            onConfirm={handleConfirmDelete}
-          />
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => handleFormDataChange('name', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="Nombre del producto"
+                      required
+                      disabled={formLoading}
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Precio *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.price}
+                      onChange={(e) => handleFormDataChange('price', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="0.00"
+                      required
+                      disabled={formLoading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Categoría *
+                    </label>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => handleFormDataChange('category', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      required
+                      disabled={formLoading}
+                    >
+                      {getCategories().map(category => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo *
+                    </label>
+                    <select
+                      value={formData.type}
+                      onChange={(e) => handleFormDataChange('type', e.target.value as 'food' | 'drink')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      required
+                      disabled={formLoading}
+                    >
+                      <option value="food">Comida</option>
+                      <option value="drink">Bebida</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descripción
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => handleFormDataChange('description', e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Descripción del producto"
+                    disabled={formLoading}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="available"
+                      checked={formData.available}
+                      onChange={(e) => handleFormDataChange('available', e.target.checked)}
+                      className="w-4 h-4 text-red-500 border-gray-300 rounded focus:ring-red-500"
+                      disabled={formLoading}
+                    />
+                    <label htmlFor="available" className="text-sm font-medium text-gray-700">
+                      Disponible
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isDailySpecial"
+                      checked={formData.isDailySpecial}
+                      onChange={(e) => handleFormDataChange('isDailySpecial', e.target.checked)}
+                      className="w-4 h-4 text-yellow-500 border-gray-300 rounded focus:ring-yellow-500"
+                      disabled={formLoading}
+                    />
+                    <label htmlFor="isDailySpecial" className="text-sm font-medium text-gray-700">
+                      Producto del Día
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleCloseForm}
+                    disabled={formLoading}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={formLoading}
+                    className="px-6 py-2 bg-gradient-to-r from-red-500 to-amber-500 text-white rounded-lg hover:shadow-md transition-all duration-300 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
+                  >
+                    <Save size={16} />
+                    <span>
+                      {formLoading 
+                        ? (editingItem ? 'Actualizando...' : 'Creando...') 
+                        : (editingItem ? 'Actualizar Producto' : 'Crear Producto')
+                      }
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* Navegación de Categorías */}
           <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
@@ -643,6 +598,13 @@ const MenuManager: React.FC = React.memo(() => {
 
           {/* Grid de Productos */}
           {renderedProducts}
+
+          {/* Modal de confirmación de eliminación */}
+          <DeleteConfirmation
+            showDeleteConfirm={showDeleteConfirm}
+            onCancel={handleCancelDelete}
+            onConfirm={handleConfirmDelete}
+          />
 
           {/* Estadísticas */}
           <div className="mt-8 pt-6 border-t border-gray-200">
