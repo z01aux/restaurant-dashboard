@@ -1,11 +1,12 @@
-// ======================================================
+// ============================================
 // ARCHIVO: src/components/customers/CustomersManager.tsx
-// ======================================================
+// ============================================
 
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, XCircle, RefreshCw, Mail } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, XCircle, RefreshCw, Mail, RotateCcw } from 'lucide-react';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useOrders } from '../../hooks/useOrders';
+import { supabase } from '../../lib/supabase';
 
 const CustomersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,6 +14,7 @@ const CustomersManager: React.FC = () => {
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -31,6 +33,50 @@ const CustomersManager: React.FC = () => {
   } = useCustomers();
 
   const { orders } = useOrders();
+
+  // Función para resetear TODAS las estadísticas de clientes a CERO
+  const resetAllCustomerStats = async () => {
+    if (!window.confirm('⚠️ ¿ESTÁS SEGURO?\n\nEsto pondrá a CERO todos los contadores de pedidos, total gastado y última orden de TODOS los clientes.\n\nLos pedidos anteriores NO se recuperarán. ¿Continuar?')) {
+      return;
+    }
+
+    setResetting(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const customer of customers) {
+        // Resetear a cero
+        const { error } = await supabase
+          .from('customers')
+          .update({
+            orders_count: 0,
+            total_spent: 0,
+            last_order: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', customer.id);
+
+        if (error) {
+          console.error(`Error reseteando cliente ${customer.name}:`, error);
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        alert(`✅ Estadísticas reseteadas correctamente para ${successCount} clientes.\n${errorCount > 0 ? `❌ Errores: ${errorCount}` : ''}\n\nAhora los contadores empezarán desde CERO con los nuevos pedidos.`);
+        await fetchCustomers(); // Recargar la lista
+      } else {
+        alert('❌ No se pudo resetear ningún cliente');
+      }
+    } catch (error: any) {
+      alert('❌ Error al resetear estadísticas: ' + error.message);
+    } finally {
+      setResetting(false);
+    }
+  };
 
   // Función para calcular estadísticas en tiempo real
   const calculateCustomerStats = (customer: any) => {
@@ -106,7 +152,6 @@ const CustomersManager: React.FC = () => {
     setFormLoading(true);
 
     try {
-      // Validaciones básicas
       if (!formData.name.trim() || !formData.phone.trim()) {
         alert('Por favor completa al menos el nombre y teléfono del cliente');
         return;
@@ -115,7 +160,6 @@ const CustomersManager: React.FC = () => {
       let result;
 
       if (editingCustomer) {
-        // Actualizar cliente existente
         result = await updateCustomer(editingCustomer.id, {
           name: formData.name,
           phone: formData.phone,
@@ -123,7 +167,6 @@ const CustomersManager: React.FC = () => {
           email: formData.email || undefined
         });
       } else {
-        // Crear nuevo cliente
         result = await createCustomer({
           name: formData.name,
           phone: formData.phone,
@@ -204,6 +247,17 @@ const CustomersManager: React.FC = () => {
                 />
               </div>
               
+              {/* BOTÓN DE RESETEO - COLOR ROJO INTENSO */}
+              <button 
+                onClick={resetAllCustomerStats}
+                disabled={resetting || customers.length === 0}
+                className="bg-red-700 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 hover:bg-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="RESETEAR TODAS LAS ESTADÍSTICAS A CERO"
+              >
+                <RotateCcw size={18} className={resetting ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline">Resetear Estadísticas</span>
+              </button>
+
               <button 
                 onClick={refreshAllCustomers}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 hover:bg-blue-600 transition-colors"
@@ -222,6 +276,21 @@ const CustomersManager: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* ADVERTENCIA DE RESETEO */}
+          {customers.some(c => c.orders_count > 0 || c.total_spent > 0) && (
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <div className="text-yellow-600 text-xl">⚠️</div>
+                <div>
+                  <h3 className="font-semibold text-yellow-800">Hay estadísticas antiguas</h3>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Algunos clientes tienen pedidos anteriores. Usa el botón <strong>"Resetear Estadísticas"</strong> para empezar desde cero con los nuevos pedidos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* FORMULARIO FIJO EN LA PARTE SUPERIOR */}
           {showForm && (
@@ -418,7 +487,7 @@ const CustomersManager: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Estadísticas del Cliente - AHORA EN TIEMPO REAL */}
+                      {/* Estadísticas del Cliente - EN TIEMPO REAL */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
                         <div className="text-center">
                           <div className="text-xl font-bold text-red-600">{stats.ordersCount}</div>
@@ -449,13 +518,12 @@ const CustomersManager: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Indicador de datos en tiempo real */}
+                      {/* Indicador de datos */}
                       <div className="mt-2 text-right">
                         <span className="text-[10px] text-gray-400 italic">
-                          {stats.ordersCount !== customer.orders_count || 
-                           stats.totalSpent !== customer.total_spent 
-                            ? '⚠️ Datos en tiempo real' 
-                            : '✅ Datos sincronizados'}
+                          {stats.ordersCount > 0 
+                            ? `📊 Basado en ${stats.ordersCount} pedido(s) reales` 
+                            : '⏳ Sin pedidos aún'}
                         </span>
                       </div>
                     </div>
@@ -465,7 +533,7 @@ const CustomersManager: React.FC = () => {
             )}
           </div>
 
-          {/* Estadísticas generales - AHORA EN TIEMPO REAL */}
+          {/* Estadísticas generales */}
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="bg-red-50 rounded-lg p-4 text-center border border-red-200">
@@ -502,17 +570,6 @@ const CustomersManager: React.FC = () => {
                 </div>
                 <div className="text-sm text-gray-600">Promedio General</div>
               </div>
-            </div>
-            
-            {/* Botón de actualización masiva */}
-            <div className="mt-4 text-center">
-              <button
-                onClick={refreshAllCustomers}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm inline-flex items-center space-x-2"
-              >
-                <RefreshCw size={16} />
-                <span>Actualizar Todas las Estadísticas</span>
-              </button>
             </div>
           </div>
         </div>
