@@ -1,6 +1,6 @@
-// ============================================
+// =========================================
 // ARCHIVO: src/utils/fulldayExportUtils.ts
-// ============================================
+// =========================================
 
 import * as XLSX from 'xlsx';
 import { FullDayOrder } from '../types/fullday';
@@ -67,10 +67,6 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
 };
 
 // --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA ---
-/**
- * Clasifica los productos de un pedido FullDay por su categoría.
- * AHORA SOLO DEVUELVE LAS LISTAS DE PRODUCTOS (SIN MONTOS)
- */
 const listFullDayItemsByMainCategory = (order: FullDayOrder): { 
   entradas: string; 
   fondos: string; 
@@ -151,46 +147,46 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
   }
 
   // --- ESTRUCTURA DE DATOS PARA LA HOJA PRINCIPAL ---
-  // ELIMINADAS las columnas de montos por categoría
+  // CON EMOJIS EN LOS ENCABEZADOS
   const data = orders.map(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
     const categorizedItems = listFullDayItemsByMainCategory(order);
 
     return {
-      'FECHA': fecha,
-      'HORA': hora,
-      'N° ORDEN': order.order_number,
-      'ALUMNO': order.student_name.toUpperCase(),
-      'GRADO': order.grade,
-      'SECCIÓN': order.section,
-      'TELÉFONO': order.phone || '',
-      'MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
-      'MÉTODO PAGO': order.payment_method || 'NO APLICA',
-      // --- SOLO LISTAS DE PRODUCTOS POR CATEGORÍA (SIN MONTOS) ---
-      'Entradas': categorizedItems.entradas,
-      'Platos de fondo': categorizedItems.fondos,
-      'Bebidas': categorizedItems.bebidas,
+      '📅 FECHA': fecha,
+      '⏰ HORA': hora,
+      '🔢 N° ORDEN': order.order_number,
+      '👤 ALUMNO': order.student_name.toUpperCase(),
+      '📚 GRADO': order.grade,
+      '📌 SECCIÓN': order.section,
+      '📞 TELÉFONO': order.phone || '',
+      '💰 MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
+      '💳 MÉTODO PAGO': order.payment_method || 'NO APLICA',
+      // --- COLUMNAS CON EMOJIS DISTINTIVOS ---
+      '🥗 ENTRADAS': categorizedItems.entradas,
+      '🍽️ PLATOS DE FONDO': categorizedItems.fondos,
+      '🥤 BEBIDAS': categorizedItems.bebidas,
     };
   });
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
   
-  // Ajustar el ancho de las columnas - ELIMINADAS las columnas de montos
+  // Ajustar el ancho de las columnas
   ws['!cols'] = [
-    { wch: 12 }, // FECHA
-    { wch: 8 },  // HORA
-    { wch: 15 }, // N° ORDEN
-    { wch: 30 }, // ALUMNO
-    { wch: 20 }, // GRADO
-    { wch: 8 },  // SECCIÓN
-    { wch: 15 }, // TELÉFONO
-    { wch: 12 }, // MONTO TOTAL
-    { wch: 12 }, // MÉTODO PAGO
-    { wch: 40 }, // Entradas
-    { wch: 40 }, // Platos de fondo
-    { wch: 40 }, // Bebidas
+    { wch: 12 }, // 📅 FECHA
+    { wch: 8 },  // ⏰ HORA
+    { wch: 15 }, // 🔢 N° ORDEN
+    { wch: 30 }, // 👤 ALUMNO
+    { wch: 20 }, // 📚 GRADO
+    { wch: 8 },  // 📌 SECCIÓN
+    { wch: 15 }, // 📞 TELÉFONO
+    { wch: 12 }, // 💰 MONTO TOTAL
+    { wch: 12 }, // 💳 MÉTODO PAGO
+    { wch: 40 }, // 🥗 ENTRADAS
+    { wch: 40 }, // 🍽️ PLATOS DE FONDO
+    { wch: 40 }, // 🥤 BEBIDAS
   ];
 
   const nombreHoja = tipo === 'today' ? 'Pedidos del Día' : 'Todos los Pedidos';
@@ -210,11 +206,9 @@ export const exportFullDayByDateRange = (
 ) => {
   console.log('🔍 EXPORTACIÓN POR RANGO DE FECHAS - INICIANDO');
   
-  // Ajustar fechas para que cubran todo el día en hora local
   const startOfDay = getStartOfDay(startDate);
   const endOfDay = getEndOfDay(endDate);
 
-  // Filtrar órdenes por rango de fechas
   const filteredOrders = orders.filter(order => {
     const orderDate = new Date(order.created_at);
     return orderDate >= startOfDay && orderDate <= endOfDay;
@@ -225,7 +219,6 @@ export const exportFullDayByDateRange = (
     return;
   }
 
-  // Crear libro de Excel
   const wb = XLSX.utils.book_new();
   
   const startStr = startDate.toISOString().split('T')[0].replace(/-/g, '');
