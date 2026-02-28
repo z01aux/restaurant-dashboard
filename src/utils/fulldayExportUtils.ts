@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/utils/fulldayExportUtils.ts 
+// ARCHIVO: src/utils/fulldayExportUtils.ts
 // ============================================
 
 import * as XLSX from 'xlsx';
@@ -69,28 +69,21 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
 // --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA ---
 /**
  * Clasifica los productos de un pedido FullDay por su categoría.
- * AHORA USA LA CATEGORÍA REAL DEL PRODUCTO.
+ * AHORA SOLO DEVUELVE LAS LISTAS DE PRODUCTOS (SIN MONTOS)
  */
 const listFullDayItemsByMainCategory = (order: FullDayOrder): { 
   entradas: string; 
   fondos: string; 
   bebidas: string;
-  montoEntradas: number;
-  montoFondos: number;
-  montoBebidas: number;
 } => {
   const result = {
       entradas: [] as string[],
       fondos: [] as string[],
       bebidas: [] as string[],
-      montoEntradas: 0,
-      montoFondos: 0,
-      montoBebidas: 0,
   };
 
   order.items.forEach(item => {
       const itemDisplay = `${item.quantity}x ${item.name}`;
-      const itemTotal = item.price * item.quantity;
 
       // --- PRIORIDAD 1: Usar la categoría del producto si existe ---
       // @ts-ignore - Asumiendo que item puede tener una propiedad 'category'
@@ -99,26 +92,22 @@ const listFullDayItemsByMainCategory = (order: FullDayOrder): {
       if (category) {
         if (category.includes('entrada')) {
           result.entradas.push(itemDisplay);
-          result.montoEntradas += itemTotal;
-          return; // Importante: salir después de clasificar
+          return;
         }
         if (category.includes('fondo') || category.includes('plato')) {
           result.fondos.push(itemDisplay);
-          result.montoFondos += itemTotal;
           return;
         }
         if (category.includes('bebida')) {
           result.bebidas.push(itemDisplay);
-          result.montoBebidas += itemTotal;
           return;
         }
       }
 
       // --- PRIORIDAD 2: Si no hay categoría, usar palabras clave en el nombre (RESPALDO) ---
-      // Pero con palabras mucho más específicas para evitar confusiones
       const itemName = item.name.toLowerCase();
       
-      // Bebidas: términos muy específicos
+      // Bebidas
       if (itemName.includes('gaseosa') || 
           itemName.includes('inca kola') || 
           itemName.includes('coca cola') ||
@@ -130,7 +119,6 @@ const listFullDayItemsByMainCategory = (order: FullDayOrder): {
           itemName.includes('maracuya') ||
           itemName.includes('limonada')) {
         result.bebidas.push(itemDisplay);
-        result.montoBebidas += itemTotal;
         return;
       }
       
@@ -142,22 +130,17 @@ const listFullDayItemsByMainCategory = (order: FullDayOrder): {
           itemName.includes('causa') ||
           itemName.includes('papa a la huancaina')) {
         result.entradas.push(itemDisplay);
-        result.montoEntradas += itemTotal;
         return;
       }
       
       // Si no coincide con ninguna, es un plato de fondo
       result.fondos.push(itemDisplay);
-      result.montoFondos += itemTotal;
   });
 
   return {
       entradas: result.entradas.join('\n'),
       fondos: result.fondos.join('\n'),
       bebidas: result.bebidas.join('\n'),
-      montoEntradas: result.montoEntradas,
-      montoFondos: result.montoFondos,
-      montoBebidas: result.montoBebidas,
   };
 };
 
@@ -168,6 +151,7 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
   }
 
   // --- ESTRUCTURA DE DATOS PARA LA HOJA PRINCIPAL ---
+  // ELIMINADAS las columnas de montos por categoría
   const data = orders.map(order => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
@@ -183,20 +167,17 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
       'TELÉFONO': order.phone || '',
       'MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
       'MÉTODO PAGO': order.payment_method || 'NO APLICA',
-      // --- COLUMNAS POR CATEGORÍA (AHORA CORRECTAS) ---
+      // --- SOLO LISTAS DE PRODUCTOS POR CATEGORÍA (SIN MONTOS) ---
       'Entradas': categorizedItems.entradas,
       'Platos de fondo': categorizedItems.fondos,
       'Bebidas': categorizedItems.bebidas,
-      'Monto Entradas': `S/ ${categorizedItems.montoEntradas.toFixed(2)}`,
-      'Monto Fondo': `S/ ${categorizedItems.montoFondos.toFixed(2)}`,
-      'Monto Bebidas': `S/ ${categorizedItems.montoBebidas.toFixed(2)}`,
     };
   });
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
   
-  // Ajustar el ancho de las columnas
+  // Ajustar el ancho de las columnas - ELIMINADAS las columnas de montos
   ws['!cols'] = [
     { wch: 12 }, // FECHA
     { wch: 8 },  // HORA
@@ -210,9 +191,6 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
     { wch: 40 }, // Entradas
     { wch: 40 }, // Platos de fondo
     { wch: 40 }, // Bebidas
-    { wch: 15 }, // Monto Entradas
-    { wch: 15 }, // Monto Fondo
-    { wch: 15 }, // Monto Bebidas
   ];
 
   const nombreHoja = tipo === 'today' ? 'Pedidos del Día' : 'Todos los Pedidos';
