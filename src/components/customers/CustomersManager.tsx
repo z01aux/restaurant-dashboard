@@ -1,5 +1,10 @@
-import React, { useState } from 'react'; // Eliminado useCallback que no se usaba
-import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, X, RefreshCw } from 'lucide-react';
+// ============================================
+// ARCHIVO: src/components/customers/CustomersManager.tsx
+// MODAL FIJO EN LA PARTE SUPERIOR
+// ============================================
+
+import React, { useState } from 'react';
+import { Plus, Edit, Trash2, Search, Phone, MapPin, Save, XCircle, RefreshCw, Mail } from 'lucide-react';
 import { useCustomers } from '../../hooks/useCustomers';
 
 const CustomersManager: React.FC = () => {
@@ -28,7 +33,8 @@ const CustomersManager: React.FC = () => {
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone.includes(searchTerm) ||
-    customer.address?.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Abrir formulario para nuevo cliente
@@ -48,6 +54,12 @@ const CustomersManager: React.FC = () => {
       email: customer.email || ''
     });
     setShowForm(true);
+  };
+
+  // Cerrar formulario
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingCustomer(null);
   };
 
   // Crear o actualizar cliente
@@ -84,8 +96,7 @@ const CustomersManager: React.FC = () => {
 
       if (result.success) {
         alert(`✅ Cliente ${editingCustomer ? 'actualizado' : 'creado'} exitosamente`);
-        setShowForm(false);
-        setEditingCustomer(null);
+        handleCloseForm();
         setFormData({ name: '', phone: '', address: '', email: '' });
         // Recargar la lista para asegurar que se vean los cambios
         await fetchCustomers();
@@ -135,6 +146,7 @@ const CustomersManager: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
+          
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
             <div>
@@ -165,27 +177,24 @@ const CustomersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Formulario Modal */}
+          {/* FORMULARIO FIJO EN LA PARTE SUPERIOR */}
           {showForm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl p-6 w-full max-w-md">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {editingCustomer ? 'Editar Cliente' : 'Nuevo Cliente'}
-                  </h3>
-                  <button 
-                    onClick={() => {
-                      setShowForm(false);
-                      setEditingCustomer(null);
-                    }}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                    disabled={formLoading}
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
+            <div className="mb-6 p-6 bg-white border-2 border-red-200 rounded-xl shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {editingCustomer ? '✏️ Editar Cliente' : '➕ Nuevo Cliente'}
+                </h3>
+                <button 
+                  onClick={handleCloseForm}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  disabled={formLoading}
+                >
+                  <XCircle size={24} className="text-red-500 hover:text-red-700" />
+                </button>
+              </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Nombre *
@@ -198,6 +207,7 @@ const CustomersManager: React.FC = () => {
                       placeholder="Nombre completo del cliente"
                       required
                       disabled={formLoading}
+                      autoFocus
                     />
                   </div>
 
@@ -205,73 +215,79 @@ const CustomersManager: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Teléfono *
                     </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      placeholder="Número de teléfono"
-                      required
-                      disabled={formLoading}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Dirección
-                    </label>
-                    <textarea
-                      value={formData.address}
-                      onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      placeholder="Dirección completa"
-                      disabled={formLoading}
-                    />
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        placeholder="Número de teléfono"
+                        required
+                        disabled={formLoading}
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Email
                     </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      placeholder="correo@ejemplo.com"
-                      disabled={formLoading}
-                    />
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        placeholder="correo@ejemplo.com"
+                        disabled={formLoading}
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex space-x-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowForm(false);
-                        setEditingCustomer(null);
-                      }}
-                      disabled={formLoading}
-                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={formLoading}
-                      className="flex-1 bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
-                    >
-                      <Save size={16} />
-                      <span>
-                        {formLoading 
-                          ? (editingCustomer ? 'Actualizando...' : 'Creando...') 
-                          : (editingCustomer ? 'Actualizar Cliente' : 'Crear Cliente')
-                        }
-                      </span>
-                    </button>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Dirección
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="text"
+                        value={formData.address}
+                        onChange={(e) => setFormData({...formData, address: e.target.value})}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        placeholder="Dirección completa"
+                        disabled={formLoading}
+                      />
+                    </div>
                   </div>
-                </form>
-              </div>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleCloseForm}
+                    disabled={formLoading}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={formLoading}
+                    className="px-6 py-2 bg-gradient-to-r from-red-500 to-amber-500 text-white rounded-lg hover:shadow-md transition-all duration-300 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
+                  >
+                    <Save size={16} />
+                    <span>
+                      {formLoading 
+                        ? (editingCustomer ? 'Actualizando...' : 'Creando...') 
+                        : (editingCustomer ? 'Actualizar Cliente' : 'Crear Cliente')
+                      }
+                    </span>
+                  </button>
+                </div>
+              </form>
             </div>
           )}
 
@@ -345,7 +361,7 @@ const CustomersManager: React.FC = () => {
                         )}
                         {customer.email && (
                           <div className="flex items-center space-x-1">
-                            <span>📧</span>
+                            <Mail size={14} />
                             <span className="max-w-xs truncate">{customer.email}</span>
                           </div>
                         )}
@@ -404,7 +420,7 @@ const CustomersManager: React.FC = () => {
                 <div className="text-2xl font-bold text-purple-600">
                   {customers.length > 0 
                     ? (customers.reduce((total, customer) => total + customer.total_spent, 0) / customers.length).toFixed(2)
-                    : '0'
+                    : '0.00'
                   }
                 </div>
                 <div className="text-sm text-gray-600">Promedio por Cliente</div>
