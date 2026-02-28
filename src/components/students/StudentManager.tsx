@@ -1,10 +1,9 @@
-// ============================================
+// ===================================================
 // ARCHIVO: src/components/students/StudentManager.tsx
-// Con botones para importar Excel y JSON
-// ============================================
+// ===================================================
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, Save, X, GraduationCap, Users, Phone, User } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Save, X, GraduationCap, Users, Phone, User, XCircle } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 import { useAuth } from '../../hooks/useAuth';
@@ -118,6 +117,7 @@ const StudentManager: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
+          
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
             <div>
@@ -139,8 +139,8 @@ const StudentManager: React.FC = () => {
               </div>
               
               {/* Botones de importación */}
-              <StudentImport /> {/* Botón para importar Excel */}
-              <StudentJSONImport /> {/* Botón para importar JSON */}
+              <StudentImport />
+              <StudentJSONImport />
               
               {/* Botón nuevo alumno */}
               <button 
@@ -153,27 +153,27 @@ const StudentManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Formulario Modal */}
+          {/* FORMULARIO FIJO EN LA PARTE SUPERIOR - SIEMPRE VISIBLE */}
           {showForm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl p-6 w-full max-w-md">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'}
-                  </h3>
-                  <button 
-                    onClick={() => {
-                      setShowForm(false);
-                      setEditingStudent(null);
-                    }}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                    disabled={formLoading}
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
+            <div className="mb-6 p-6 bg-white border-2 border-purple-200 rounded-xl shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {editingStudent ? '✏️ Editar Alumno' : '➕ Nuevo Alumno'}
+                </h3>
+                <button 
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingStudent(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  disabled={formLoading}
+                >
+                  <XCircle size={24} className="text-red-500 hover:text-red-700" />
+                </button>
+              </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Nombre del Alumno *
@@ -186,43 +186,8 @@ const StudentManager: React.FC = () => {
                       placeholder="Ej: Juan Pérez García"
                       required
                       disabled={formLoading}
+                      autoFocus
                     />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Grado *
-                      </label>
-                      <select
-                        value={formData.grade}
-                        onChange={(e) => setFormData({...formData, grade: e.target.value as Grade})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                        required
-                        disabled={formLoading}
-                      >
-                        {GRADES.map(grade => (
-                          <option key={grade} value={grade}>{grade}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Sección *
-                      </label>
-                      <select
-                        value={formData.section}
-                        onChange={(e) => setFormData({...formData, section: e.target.value as Section})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                        required
-                        disabled={formLoading}
-                      >
-                        {SECTIONS.map(section => (
-                          <option key={section} value={section}>Sección "{section}"</option>
-                        ))}
-                      </select>
-                    </div>
                   </div>
 
                   <div>
@@ -242,6 +207,40 @@ const StudentManager: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Grado *
+                    </label>
+                    <select
+                      value={formData.grade}
+                      onChange={(e) => setFormData({...formData, grade: e.target.value as Grade})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      required
+                      disabled={formLoading}
+                    >
+                      {GRADES.map(grade => (
+                        <option key={grade} value={grade}>{grade}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sección *
+                    </label>
+                    <select
+                      value={formData.section}
+                      onChange={(e) => setFormData({...formData, section: e.target.value as Section})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      required
+                      disabled={formLoading}
+                    >
+                      {SECTIONS.map(section => (
+                        <option key={section} value={section}>Sección "{section}"</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Teléfono (Opcional)
                     </label>
                     <input
@@ -253,35 +252,35 @@ const StudentManager: React.FC = () => {
                       disabled={formLoading}
                     />
                   </div>
+                </div>
 
-                  <div className="flex space-x-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowForm(false);
-                        setEditingStudent(null);
-                      }}
-                      disabled={formLoading}
-                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={formLoading}
-                      className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all duration-300 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
-                    >
-                      <Save size={16} />
-                      <span>
-                        {formLoading 
-                          ? (editingStudent ? 'Actualizando...' : 'Creando...') 
-                          : (editingStudent ? 'Actualizar Alumno' : 'Crear Alumno')
-                        }
-                      </span>
-                    </button>
-                  </div>
-                </form>
-              </div>
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      setEditingStudent(null);
+                    }}
+                    disabled={formLoading}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={formLoading}
+                    className="px-6 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:shadow-md transition-all duration-300 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
+                  >
+                    <Save size={16} />
+                    <span>
+                      {formLoading 
+                        ? (editingStudent ? 'Actualizando...' : 'Creando...') 
+                        : (editingStudent ? 'Actualizar Alumno' : 'Crear Alumno')
+                      }
+                    </span>
+                  </button>
+                </div>
+              </form>
             </div>
           )}
 
