@@ -1,3 +1,9 @@
+// ============================================
+// ARCHIVO: src/components/orders/OrdersManager.tsx
+// CON FILTRO POR ÁREA (Cocina, Local, Delivery)
+// SIN INCLUIR FULLDAY
+// ============================================
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Pencil, Download } from 'lucide-react';
 import { Order } from '../../types';
@@ -29,7 +35,8 @@ const OrderRow = React.memo(({
   getNumberType,
   getSourceText,
   getPaymentColor,
-  getPaymentText
+  getPaymentText,
+  getAreaIcon
 }: {
   order: Order;
   onMouseEnter: (e: React.MouseEvent) => void;
@@ -42,6 +49,7 @@ const OrderRow = React.memo(({
   getSourceText: (type: string) => string;
   getPaymentColor: (method?: string) => string;
   getPaymentText: (method?: string) => string;
+  getAreaIcon: (type: string) => string;
 }) => {
   const displayNumber = getDisplayNumber(order);
   const numberType = getNumberType(order);
@@ -82,8 +90,9 @@ const OrderRow = React.memo(({
       </td>
       <td className="px-4 sm:px-6 py-4">
         <div className="mb-1">
-          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-            {getSourceText(order.source.type)}
+          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 items-center space-x-1">
+            <span>{getAreaIcon(order.source.type)}</span>
+            <span>{getSourceText(order.source.type)}</span>
           </span>
         </div>
         <div className="flex items-center space-x-2">
@@ -91,7 +100,6 @@ const OrderRow = React.memo(({
             {getPaymentText(order.paymentMethod)}
           </span>
 
-          {/* ── CAMBIADO: employee también puede editar método de pago ── */}
           {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'employee') && (
             <button
               onClick={handleEditClick}
@@ -138,10 +146,89 @@ const OrderRow = React.memo(({
 });
 
 // ============================================
+// COMPONENTE DE ESTADÍSTICAS POR ÁREA
+// ============================================
+const AreaStats: React.FC<{
+  orders: Order[];
+  areaFilter: string;
+  setAreaFilter: (filter: string) => void;
+}> = React.memo(({ orders, areaFilter, setAreaFilter }) => {
+  
+  // Calcular estadísticas por área (excluyendo FullDay)
+  const stats = useMemo(() => {
+    const regularOrders = orders.filter(o => o.orderType !== 'fullday');
+    
+    const phone = regularOrders.filter(o => o.source.type === 'phone');
+    const walkIn = regularOrders.filter(o => o.source.type === 'walk-in');
+    const delivery = regularOrders.filter(o => o.source.type === 'delivery');
+
+    return {
+      phone: {
+        count: phone.length,
+        total: phone.reduce((sum, o) => sum + o.total, 0),
+        icon: '🍳',
+        label: 'Cocina'
+      },
+      walkIn: {
+        count: walkIn.length,
+        total: walkIn.reduce((sum, o) => sum + o.total, 0),
+        icon: '👤',
+        label: 'Local'
+      },
+      delivery: {
+        count: delivery.length,
+        total: delivery.reduce((sum, o) => sum + o.total, 0),
+        icon: '🚚',
+        label: 'Delivery'
+      }
+    };
+  }, [orders]);
+
+  const areas = [
+    { key: '', label: 'Todas', icon: '🌐', count: stats.phone.count + stats.walkIn.count + stats.delivery.count, total: stats.phone.total + stats.walkIn.total + stats.delivery.total },
+    { key: 'phone', label: stats.phone.label, icon: stats.phone.icon, count: stats.phone.count, total: stats.phone.total },
+    { key: 'walk-in', label: stats.walkIn.label, icon: stats.walkIn.icon, count: stats.walkIn.count, total: stats.walkIn.total },
+    { key: 'delivery', label: stats.delivery.label, icon: stats.delivery.icon, count: stats.delivery.count, total: stats.delivery.total },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      {areas.map((area) => (
+        <button
+          key={area.key || 'all'}
+          onClick={() => setAreaFilter(area.key)}
+          className={`p-3 rounded-xl border-2 transition-all ${
+            areaFilter === area.key
+              ? area.key === 'phone'
+                ? 'border-green-500 bg-green-50'
+                : area.key === 'walk-in'
+                ? 'border-blue-500 bg-blue-50'
+                : area.key === 'delivery'
+                ? 'border-orange-500 bg-orange-50'
+                : 'border-gray-500 bg-gray-50'
+              : 'border-gray-200 bg-white hover:border-gray-300'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xl">{area.icon}</span>
+            <span className="text-lg font-bold text-gray-700">{area.count}</span>
+          </div>
+          <div className="text-left">
+            <div className="text-xs font-medium text-gray-600">{area.label}</div>
+            <div className="text-sm font-bold text-gray-900">S/ {area.total.toFixed(2)}</div>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+});
+
+// ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
 const OrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [areaFilter, setAreaFilter] = useState<string>(''); // '' = todas, 'phone', 'walk-in', 'delivery'
   const [paymentFilter, setPaymentFilter] = useState<string>('');
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentSort, setCurrentSort] = useState('status-time');
@@ -244,6 +331,12 @@ const OrdersManager: React.FC = () => {
     if (!todayOrders.length) return [];
     let filtered = todayOrders;
 
+    // Filtrar por área
+    if (areaFilter) {
+      filtered = filtered.filter(o => o.source.type === areaFilter);
+    }
+
+    // Filtrar por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -254,10 +347,12 @@ const OrdersManager: React.FC = () => {
       );
     }
 
+    // Filtrar por método de pago
     if (paymentFilter) {
       filtered = filtered.filter(o => o.paymentMethod === paymentFilter);
     }
 
+    // Ordenar
     if (filtered.length > 1) {
       filtered = [...filtered].sort((a, b) => {
         switch (currentSort) {
@@ -281,7 +376,7 @@ const OrdersManager: React.FC = () => {
     }
 
     return filtered;
-  }, [todayOrders, searchTerm, paymentFilter, currentSort]);
+  }, [todayOrders, searchTerm, areaFilter, paymentFilter, currentSort]);
 
   const pagination = usePagination({
     items: filteredAndSortedOrders,
@@ -296,11 +391,14 @@ const OrdersManager: React.FC = () => {
 
   const getNumberType   = useCallback((order: Order) => order.source.type === 'phone' ? 'kitchen' : 'order', []);
   const getSourceText   = useCallback((t: string) => ({ phone: 'Teléfono', 'walk-in': 'Presencial', delivery: 'Delivery' }[t] || t), []);
+  const getAreaIcon     = useCallback((t: string) => ({ phone: '🍳', 'walk-in': '👤', delivery: '🚚' }[t] || '📋'), []);
+  
   const getPaymentColor = useCallback((m?: string) => ({
     'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
     'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
     'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
   }[m || ''] || 'bg-gray-100 text-gray-800 border-gray-200'), []);
+  
   const getPaymentText  = useCallback((m?: string) => ({ EFECTIVO: 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', TARJETA: 'TARJETA' }[m || ''] || 'NO APLICA'), []);
 
   const handleRowMouseEnter = useCallback((order: Order, event: React.MouseEvent) => {
@@ -409,6 +507,12 @@ const OrdersManager: React.FC = () => {
 
   const handleToggleHistory = useCallback(() => setShowHistory(prev => !prev), []);
 
+  const handleClearFilters = useCallback(() => {
+    setAreaFilter('');
+    setPaymentFilter('');
+    setSearchTerm('');
+  }, []);
+
   const desktopProps = isDesktopPagination(pagination) ? {
     currentPage: pagination.currentPage,
     totalPages: pagination.totalPages,
@@ -424,6 +528,9 @@ const OrdersManager: React.FC = () => {
     loadedItems: pagination.loadedItems,
     onLoadMore: pagination.loadMore,
   } : {};
+
+  // Determinar si hay filtros activos
+  const hasActiveFilters = areaFilter !== '' || paymentFilter !== '' || searchTerm !== '';
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -519,9 +626,13 @@ const OrdersManager: React.FC = () => {
 
       {showHistory && <SalesHistory />}
 
-      {/* FILTROS */}
+      {/* ESTADÍSTICAS POR ÁREA (siempre visibles) */}
+      <AreaStats orders={localOrders} areaFilter={areaFilter} setAreaFilter={setAreaFilter} />
+
+      {/* FILTROS - CON EL NUEVO SELECTOR DE ÁREA */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
         <div className="flex flex-col sm:flex-row gap-3">
+          {/* Buscador */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -533,20 +644,55 @@ const OrdersManager: React.FC = () => {
               disabled={exporting}
             />
           </div>
-          <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" disabled={exporting}>
-            <option value="">Todos los pagos</option>
+
+          {/* Selector de Área - NUEVO */}
+          <select 
+            value={areaFilter} 
+            onChange={(e) => setAreaFilter(e.target.value)} 
+            className="px-3 py-2 border rounded-lg text-sm min-w-[140px]"
+            disabled={exporting}
+          >
+            <option value="">📋 Todas las áreas</option>
+            <option value="phone">🍳 Cocina</option>
+            <option value="walk-in">👤 Local</option>
+            <option value="delivery">🚚 Delivery</option>
+          </select>
+
+          {/* Selector de Método de Pago (existente) */}
+          <select 
+            value={paymentFilter} 
+            onChange={(e) => setPaymentFilter(e.target.value)} 
+            className="px-3 py-2 border rounded-lg text-sm min-w-[160px]"
+            disabled={exporting}
+          >
+            <option value="">💰 Todos los pagos</option>
             <option value="EFECTIVO">💵 Efectivo</option>
             <option value="YAPE/PLIN">📱 Yape/Plin</option>
             <option value="TARJETA">💳 Tarjeta</option>
           </select>
         </div>
-        {paymentFilter && (
-          <div className="mt-2 flex items-center space-x-2">
-            <span className="text-xs text-gray-500">Filtro activo:</span>
-            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${getPaymentColor(paymentFilter)}`}>
-              {getPaymentText(paymentFilter)}
-            </span>
-            <button onClick={() => setPaymentFilter('')} className="text-xs text-red-500 hover:text-red-700" disabled={exporting}>Limpiar</button>
+
+        {/* Indicadores de filtros activos */}
+        {hasActiveFilters && (
+          <div className="mt-3 flex items-center justify-between">
+            <div className="flex flex-wrap gap-2">
+              {areaFilter && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  📋 Área: {areaFilter === 'phone' ? 'Cocina' : areaFilter === 'walk-in' ? 'Local' : 'Delivery'}
+                </span>
+              )}
+              {paymentFilter && (
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPaymentColor(paymentFilter)}`}>
+                  {getPaymentText(paymentFilter)}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleClearFilters}
+              className="text-xs text-red-600 hover:text-red-800 font-medium"
+            >
+              Limpiar filtros
+            </button>
           </div>
         )}
       </div>
@@ -580,7 +726,7 @@ const OrdersManager: React.FC = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente / Monto</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo / Pago</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Área / Pago</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productos</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -601,6 +747,7 @@ const OrdersManager: React.FC = () => {
                     getSourceText={getSourceText}
                     getPaymentColor={getPaymentColor}
                     getPaymentText={getPaymentText}
+                    getAreaIcon={getAreaIcon}
                   />
                 ))}
               </tbody>
