@@ -1,11 +1,11 @@
-// ============================================
+// =================================================
 // ARCHIVO: src/components/orders/OrderReception.tsx
-// ============================================
+// =================================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   Plus, Minus, X, ShoppingBag, Trash2, Edit2, Check, DollarSign, 
-  Settings, RotateCcw, Search, Tag, FolderPlus, Edit, Grid, List
+  Settings, RotateCcw, Search, Tag, FolderPlus, Edit
 } from 'lucide-react';
 import { MenuItem, OrderItem, Order } from '../../types';
 import { useMenu } from '../../hooks/useMenu';
