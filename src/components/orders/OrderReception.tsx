@@ -1333,7 +1333,7 @@ const OrderReception: React.FC = React.memo(() => {
       
       let customerInfo = '';
       
-      if (order.source.type === 'fullDay' && order.studentInfo) {
+      if ((order.source.type === 'fullDay' || order.source.type === 'loncheritas') && order.studentInfo) {
         const limitedStudentName = limitNameLength(order.studentInfo.fullName);
         const limitedGuardianName = limitNameLength(order.studentInfo.guardianName);
         
@@ -1387,7 +1387,7 @@ const OrderReception: React.FC = React.memo(() => {
           </div>
           <div class="info-row">
             <span class="label">TIPO:</span>
-            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : 'OEP'}</span>
+            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : order.source.type === 'loncheritas' ? 'LONCHERITAS' : 'OEP'}</span>
           </div>
           <div class="info-row">
             <span class="label">FECHA:</span>
@@ -1464,7 +1464,7 @@ const OrderReception: React.FC = React.memo(() => {
           
           <div class="center">
             <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
-            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : 'OEP'} ***</div>
+            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : order.source.type === 'loncheritas' ? 'LONCHERITAS' : 'OEP'} ***</div>
             <div class="normal" style="margin-top: 10px; font-size: 10px;">
               ${new Date().toLocaleString('es-ES', { 
                 year: 'numeric',
