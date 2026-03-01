@@ -1,7 +1,3 @@
-// ============================================
-// ARCHIVO: src/App.tsx (CON OEP)
-// ============================================
-
 import React from 'react';
 import DashboardLayout from './components/layout/DashboardLayout';
 import StatsCards from './components/dashboard/StatsCards';
@@ -14,6 +10,8 @@ import UserManager from './components/users/UserManager';
 import StudentManager from './components/students/StudentManager';
 import { FullDayOrdersManager } from './components/fullday/FullDayOrdersManager';
 import { OEPOrdersManager } from './components/oep/OEPOrdersManager';
+// ✅ NUEVO: Loncheritas
+import { LoncheritasOrdersManager } from './components/loncheritas/LoncheritasOrdersManager';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 import { OrderProvider } from './contexts/OrderContext';
@@ -33,23 +31,24 @@ function App() {
     window.dispatchEvent(event);
   };
 
-  // Pestañas base para todos los usuarios - CON OEP
+  // Pestañas base para todos los usuarios
   const baseTabs = [
-    { id: 'reception', name: '🎯 Recepción' },
-    { id: 'orders', name: '📋 Órdenes' },
-    { id: 'fullday', name: '🎒 FullDay' },
-    { id: 'oep', name: '📦 OEP' },
-    { id: 'menu', name: '🍽️ Menú' },
-    { id: 'kitchen', name: '👨‍🍳 Cocina' },
-    { id: 'dashboard', name: '📊 Dashboard' },
-    { id: 'customers', name: '👥 Clientes' },
+    { id: 'reception',    name: '🎯 Recepción' },
+    { id: 'orders',       name: '📋 Órdenes' },
+    { id: 'fullday',      name: '🎒 FullDay' },
+    { id: 'loncheritas',  name: '🍱 Loncheritas' }, // ✅ NUEVO
+    { id: 'oep',          name: '📦 OEP' },
+    { id: 'menu',         name: '🍽️ Menú' },
+    { id: 'kitchen',      name: '👨‍🍳 Cocina' },
+    { id: 'dashboard',    name: '📊 Dashboard' },
+    { id: 'customers',    name: '👥 Clientes' },
   ];
 
   // Solo administradores ven Alumnos y Usuarios
-  const adminTabs = user?.role === 'admin' 
+  const adminTabs = user?.role === 'admin'
     ? [
         { id: 'students', name: '🎒 Alumnos' },
-        { id: 'users', name: '🔧 Usuarios' },
+        { id: 'users',    name: '🔧 Usuarios' },
       ]
     : [];
 
@@ -89,7 +88,7 @@ function App() {
 
           {/* Tab Content */}
           {activeTab === 'reception' && <OrderReception />}
-          
+
           {activeTab === 'dashboard' && (
             <div>
               <StatsCards />
@@ -116,14 +115,15 @@ function App() {
             </div>
           )}
 
-          {activeTab === 'orders' && <OrdersManager />}
-          {activeTab === 'fullday' && <FullDayOrdersManager />}
-          {activeTab === 'oep' && <OEPOrdersManager />}
-          {activeTab === 'menu' && <MenuManager />}
-          {activeTab === 'kitchen' && <KitchenManager />}
-          {activeTab === 'customers' && <CustomersManager />}
-          {activeTab === 'students' && <StudentManager />}
-          {activeTab === 'users' && <UserManager />}
+          {activeTab === 'orders'      && <OrdersManager />}
+          {activeTab === 'fullday'     && <FullDayOrdersManager />}
+          {activeTab === 'loncheritas' && <LoncheritasOrdersManager />} {/* ✅ NUEVO */}
+          {activeTab === 'oep'         && <OEPOrdersManager />}
+          {activeTab === 'menu'        && <MenuManager />}
+          {activeTab === 'kitchen'     && <KitchenManager />}
+          {activeTab === 'customers'   && <CustomersManager />}
+          {activeTab === 'students'    && <StudentManager />}
+          {activeTab === 'users'       && <UserManager />}
         </DashboardLayout>
       </OrderProvider>
     </ProtectedRoute>

@@ -17,6 +17,7 @@ import { useFullDay } from '../../hooks/useFullDay';
 import { useCategories } from '../../hooks/useCategories';
 // <-- AGREGADO PARA OEP
 import { useOEP } from '../../hooks/useOEP';
+import { useLoncheritas } from '../../hooks/useLoncheritas';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 
 const styles = `
@@ -1047,7 +1048,7 @@ const limitNameLength = (fullName: string): string => {
 // ============================================
 const OrderReception: React.FC = React.memo(() => {
   // <-- AGREGADO 'oep' AL TIPO DE activeTab
-  const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep'>('phone');
+  const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep' | 'loncheritas'>('phone');
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -1087,6 +1088,8 @@ const OrderReception: React.FC = React.memo(() => {
   const { createOrder: createFullDayOrder } = useFullDay();
   // <-- AGREGADO PARA OEP
   const { createOrder: createOEPOrder } = useOEP();
+  // <-- AGREGADO PARA LONCHERITAS
+  const { createOrder: createLoncheritasOrder } = useLoncheritas();
   const { searchStudents, searchResults } = useStudents();
 
   const isAdmin = user?.role === 'admin';
@@ -1128,7 +1131,7 @@ const OrderReception: React.FC = React.memo(() => {
   }, [customerSearchTerm, customers, activeTab]);
 
   useEffect(() => {
-    if (studentSearchTerm.trim().length > 1 && activeTab === 'fullDay') {
+    if (studentSearchTerm.trim().length > 1 && (activeTab === 'fullDay' || activeTab === 'loncheritas')) {
       searchStudents(studentSearchTerm);
     } else {
       setStudentSearchResults([]);
@@ -1660,7 +1663,7 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    if (activeTab === 'fullDay') {
+    if (activeTab === 'fullDay' || activeTab === 'loncheritas') {
       if (!studentName || !guardianName) {
         showToast('Completa los datos del alumno', 'error');
         return;
@@ -1677,8 +1680,7 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    // <-- AGREGADO OEP A LA CONDICIÓN DE PAGO
-    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep') && !paymentMethod) {
+    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep' || activeTab === 'loncheritas') && !paymentMethod) {
       showToast('Selecciona un método de pago', 'error');
       return;
     }
@@ -1742,7 +1744,60 @@ const OrderReception: React.FC = React.memo(() => {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
       } 
-      // <-- NUEVO BLOQUE PARA OEP
+      // BLOQUE PARA LONCHERITAS
+      else if (activeTab === 'loncheritas') {
+        const result = await createLoncheritasOrder({
+          student_id: selectedStudentId,
+          student_name: studentName,
+          grade: selectedGrade,
+          section: selectedSection,
+          guardian_name: guardianName,
+          phone: phone || undefined,
+          items: cart.map(item => ({
+            menuItem: {
+              id: item.menuItem.id,
+              name: item.menuItem.name,
+              price: item.menuItem.price,
+            },
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+          payment_method: paymentMethod,
+          notes: orderNotes
+        });
+
+        if (result.success) {
+          showToast('✅ Pedido Loncheritas guardado', 'success');
+
+          const tempOrder: Order = {
+            id: 'temp-' + Date.now(),
+            orderNumber: `LON-${Date.now().toString().slice(-8)}`,
+            items: cart,
+            status: 'pending',
+            createdAt: new Date(),
+            total: total,
+            customerName: studentName,
+            phone: phone || 'Sin teléfono',
+            source: { type: 'loncheritas' },
+            notes: orderNotes,
+            paymentMethod: paymentMethod,
+            studentInfo: {
+              fullName: studentName,
+              grade: selectedGrade,
+              section: selectedSection,
+              guardianName: guardianName,
+              phone: phone
+            },
+            orderType: 'fullday',
+            igvRate: 10
+          };
+
+          printOrderImmediately(tempOrder);
+        } else {
+          showToast('❌ Error al guardar: ' + result.error, 'error');
+        }
+      }
+      // BLOQUE PARA OEP
       else if (activeTab === 'oep') {
         const result = await createOEPOrder({
           customer_name: customerName,
@@ -1862,7 +1917,7 @@ const OrderReception: React.FC = React.memo(() => {
   // <-- AGREGADO createOEPOrder A LAS DEPENDENCIAS
   }, [
     cart, customerName, phone, activeTab, tableNumber, address, orderNotes, 
-    paymentMethod, createOrder, createFullDayOrder, createOEPOrder,
+    paymentMethod, createOrder, createFullDayOrder, createOEPOrder, createLoncheritasOrder,
     getTotal, showToast, printOrderImmediately, isCreatingOrder, 
     studentName, guardianName, selectedGrade, selectedSection, selectedStudentId
   ]);
@@ -1870,7 +1925,7 @@ const OrderReception: React.FC = React.memo(() => {
   const isFormValid = useMemo(() => {
     if (cart.length === 0) return false;
     
-    if (activeTab === 'fullDay') {
+    if (activeTab === 'fullDay' || activeTab === 'loncheritas') {
       return studentName && guardianName;
     }
     
@@ -1925,8 +1980,8 @@ const OrderReception: React.FC = React.memo(() => {
                       className="text-xs bg-gray-100 rounded-lg px-2 py-1 border border-gray-300"
                     >
                       <option value="phone">📞 Cocina</option>
-                      {/* <-- AGREGADO OEP */}
                       <option value="oep">📦 OEP</option>
+                      <option value="loncheritas">🍱 Loncheritas</option>
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
                       <option value="fullDay">🎒 FullDay</option>
@@ -1967,11 +2022,11 @@ const OrderReception: React.FC = React.memo(() => {
           <div className="lg:hidden px-3 pt-4">
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4">
               <h3 className="text-sm font-bold text-gray-900 mb-3">
-                {activeTab === 'fullDay' ? 'Datos del Alumno' : 'Datos del Cliente'}
+                {(activeTab === 'fullDay' || activeTab === 'loncheritas') ? 'Datos del Alumno' : 'Datos del Cliente'}
               </h3>
               
               <div className="space-y-3">
-                {activeTab === 'fullDay' ? (
+                {(activeTab === 'fullDay' || activeTab === 'loncheritas') ? (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2128,7 +2183,7 @@ const OrderReception: React.FC = React.memo(() => {
                 )}
 
                 {/* <-- AGREGADO OEP A LA CONDICIÓN DE PAGO */}
-                {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep') && (
+                {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep' || activeTab === 'loncheritas') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Método de Pago *
@@ -2292,7 +2347,7 @@ const OrderReception: React.FC = React.memo(() => {
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-gray-900">
-                      {activeTab === 'fullDay' ? 'Nuevo Pedido FullDay' : 'Nuevo Pedido'}
+                      {(activeTab === 'fullDay' || activeTab === 'loncheritas') ? 'Nuevo Pedido' : 'Nuevo Pedido'}
                     </h2>
                     <select
                       value={activeTab}
@@ -2300,8 +2355,8 @@ const OrderReception: React.FC = React.memo(() => {
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="phone">📞 Cocina</option>
-                      {/* <-- AGREGADO OEP */}
                       <option value="oep">📦 OEP</option>
+                      <option value="loncheritas">🍱 Loncheritas</option>
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
                       <option value="fullDay">🎒 FullDay</option>
@@ -2309,7 +2364,7 @@ const OrderReception: React.FC = React.memo(() => {
                   </div>
                   
                   <div className="space-y-4">
-                    {activeTab === 'fullDay' ? (
+                    {(activeTab === 'fullDay' || activeTab === 'loncheritas') ? (
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2487,7 +2542,7 @@ const OrderReception: React.FC = React.memo(() => {
                     )}
 
                     {/* <-- AGREGADO OEP A LA CONDICIÓN DE PAGO */}
-                    {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep') && (
+                    {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep' || activeTab === 'loncheritas') && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Pago</label>
                         <div className="grid grid-cols-3 gap-2">

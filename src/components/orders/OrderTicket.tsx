@@ -906,6 +906,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       'delivery': 'DELIVERY',
       'fullDay': 'FULLDAY',
       'oep': 'OEP',
+      'loncheritas': 'LONCHERITAS',
     };
     return sourceMap[sourceType] || sourceType;
   };

@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/types/index.ts (ACTUALIZADO CON OEP)
+// ARCHIVO: src/types/index.ts (ACTUALIZADO CON OEP + LONCHERITAS)
 // ============================================
 
 export interface MenuItem {
@@ -20,8 +20,7 @@ export interface OrderItem {
 }
 
 export interface OrderSource {
-  // ✅ CORRECCIÓN: Agregado 'oep' al tipo de source.type
-  type: 'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep';
+  type: 'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep' | 'loncheritas';
   deliveryAddress?: string;
 }
 
@@ -50,7 +49,7 @@ export interface Order {
     phone?: string;
   };
   orderType: 'regular' | 'fullday';
-  igvRate?: number; // Tasa de IGV (10% por defecto)
+  igvRate?: number;
 }
 
 export interface DatabaseOrder {
@@ -61,8 +60,7 @@ export interface DatabaseOrder {
   phone: string;
   address?: string;
   table_number?: string;
-  // ✅ CORRECCIÓN: Agregado 'oep' al tipo de source_type
-  source_type: 'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep';
+  source_type: 'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep' | 'loncheritas';
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   total: number;
   notes?: string;

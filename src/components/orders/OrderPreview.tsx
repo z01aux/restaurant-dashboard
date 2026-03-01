@@ -50,6 +50,7 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
       'delivery': '🚚 Delivery',
       'fullDay': '🎒 FullDay',
       'oep': '📦 OEP',
+      'loncheritas': '🍱 Loncheritas',
     };
     return sourceMap[sourceType] || sourceType;
   };
