@@ -1,6 +1,5 @@
 // ============================================================
-// ARCHIVO: src/hooks/useOEPOrders.ts
-// Hook para gestionar pedidos OEP (con tipos)
+// ARCHIVO: src/hooks/useOEPOrders.ts (CORREGIDO)
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,35 +10,78 @@ export const useOEPOrders = () => {
     const [orders, setOrders] = useState<OEPOrder[]>([]);
     const [loading, setLoading] = useState(false);
     const [totalCount, setTotalCount] = useState(0);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchOrders = useCallback(async (limit = 1000) => {
         try {
             setLoading(true);
+            setError(null);
+            
+            console.log('🔍 Intentando cargar pedidos OEP desde Supabase...');
 
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            // Verificar conexión a Supabase
+            const { data: testData, error: testError } = await supabase
+                .from('oep')
+                .select('count', { count: 'exact', head: true });
 
+            if (testError) {
+                console.error('❌ Error de conexión a Supabase:', testError);
+                setError('Error de conexión a la base de datos');
+                setLoading(false);
+                return;
+            }
+
+            // Cargar pedidos
             const { data, error } = await supabase
                 .from('oep')
                 .select('*')
-                .gte('created_at', thirtyDaysAgo.toISOString())
                 .order('created_at', { ascending: false })
                 .limit(limit);
 
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Error al cargar pedidos OEP:', error);
+                setError(error.message);
+                throw error;
+            }
 
-            const convertedOrders: OEPOrder[] = (data || []).map((order: OEPDatabaseOrder) => ({
-                ...order,
-                status: order.status as OEPOrderStatus,
-                payment_method: order.payment_method as OEPOrder['payment_method'],
-                created_at: new Date(order.created_at),
-                updated_at: new Date(order.updated_at)
-            }));
+            console.log('📦 Datos crudos de Supabase:', data);
+
+            if (!data || data.length === 0) {
+                console.log('ℹ️ No hay pedidos OEP en la base de datos');
+                setOrders([]);
+                setTotalCount(0);
+                return;
+            }
+
+            // Convertir los datos correctamente
+            const convertedOrders: OEPOrder[] = data.map((order: OEPDatabaseOrder) => {
+                console.log('🔄 Procesando orden:', order.id, order.order_number);
+                
+                return {
+                    id: order.id,
+                    order_number: order.order_number || '',
+                    customer_name: order.customer_name || '',
+                    phone: order.phone || null,
+                    address: order.address || null,
+                    items: Array.isArray(order.items) ? order.items : [],
+                    status: (order.status as OEPOrderStatus) || 'pending',
+                    total: Number(order.total) || 0,
+                    payment_method: order.payment_method as OEPPaymentMethod | null,
+                    notes: order.notes || null,
+                    created_at: new Date(order.created_at),
+                    updated_at: new Date(order.updated_at)
+                };
+            });
+
+            console.log('✅ Pedidos OEP convertidos:', convertedOrders.length);
+            console.log('📋 Primer pedido:', convertedOrders[0]);
 
             setOrders(convertedOrders);
             setTotalCount(convertedOrders.length);
-        } catch (error) {
-            console.error('Error fetching OEP orders:', error);
+            
+        } catch (error: any) {
+            console.error('❌ Error en fetchOrders:', error);
+            setError(error.message);
         } finally {
             setLoading(false);
         }
@@ -60,6 +102,7 @@ export const useOEPOrders = () => {
 
             return { success: true };
         } catch (error: any) {
+            console.error('Error updating OEP order status:', error);
             return { success: false, error: error.message };
         }
     };
@@ -102,23 +145,40 @@ export const useOEPOrders = () => {
     const getTodayOrders = useCallback(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
 
         return orders.filter(order => {
             const orderDate = new Date(order.created_at);
-            orderDate.setHours(0, 0, 0, 0);
-            return orderDate.getTime() === today.getTime();
+            return orderDate >= today && orderDate < tomorrow;
         });
     }, [orders]);
 
-    useEffect(() => {
+    const refreshOrders = useCallback(() => {
+        console.log('🔄 Refrescando pedidos OEP...');
         fetchOrders();
-    }, []);
+    }, [fetchOrders]);
+
+    useEffect(() => {
+        console.log('🔄 useOEPOrders: Ejecutando fetchOrders inicial');
+        fetchOrders();
+
+        // Configurar polling para actualizar cada 30 segundos
+        const interval = setInterval(() => {
+            console.log('🔄 Polling: Actualizando pedidos OEP');
+            fetchOrders();
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [fetchOrders]);
 
     return {
         orders,
         loading,
         totalCount,
+        error,
         fetchOrders,
+        refreshOrders,
         updateOrderStatus,
         updateOrderPayment,
         deleteOrder,
