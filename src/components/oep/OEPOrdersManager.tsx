@@ -24,11 +24,14 @@ export const OEPOrdersManager: React.FC = () => {
     const [showCashModal, setShowCashModal] = useState(false);
     const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
 
+    // CORREGIDO: Asegurar que orders sea un array
     const filteredOrders = useMemo(() => {
+        const ordersArray = orders || [];
+        
         const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
         const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
 
-        let filtered = orders.filter(o => {
+        let filtered = ordersArray.filter(o => {
             const d = new Date(o.created_at);
             return d >= startOfDay && d <= endOfDay;
         });
