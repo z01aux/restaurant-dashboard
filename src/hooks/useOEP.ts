@@ -6,30 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-
-export interface OEPOrder {
-  id: string;
-  order_number: string;
-  student_id: string | null;
-  student_name: string;
-  grade: string;
-  section: string;
-  guardian_name: string;
-  phone: string | null;
-  items: Array<{
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    notes?: string;
-  }>;
-  status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
-  total: number;
-  payment_method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { OEPOrder } from '../types/oep'; // Importar desde types
 
 export const useOEP = () => {
   const [orders, setOrders] = useState<OEPOrder[]>([]);
@@ -45,8 +22,16 @@ export const useOEP = () => {
         .limit(limit);
 
       if (error) throw error;
-      setOrders(data || []);
-      console.log('✅ Pedidos OEP cargados:', data?.length);
+      
+      // Convertir strings a Date objects
+      const convertedOrders: OEPOrder[] = (data || []).map((order: any) => ({
+        ...order,
+        created_at: new Date(order.created_at),
+        updated_at: new Date(order.updated_at)
+      }));
+      
+      setOrders(convertedOrders);
+      console.log('✅ Pedidos OEP cargados:', convertedOrders.length);
     } catch (error) {
       console.error('Error fetching OEP orders:', error);
     } finally {
@@ -107,8 +92,14 @@ export const useOEP = () => {
 
       if (error) throw error;
 
-      setOrders(prev => [data, ...prev]);
-      return { success: true, data };
+      const newOrder: OEPOrder = {
+        ...data,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at)
+      };
+
+      setOrders(prev => [newOrder, ...prev]);
+      return { success: true, data: newOrder };
     } catch (error: any) {
       console.error('Error creating OEP order:', error);
       return { success: false, error: error.message };
