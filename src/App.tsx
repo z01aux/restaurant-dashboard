@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/App.tsx 
+// ARCHIVO: src/App.tsx (COMPLETO CON PESTAÑA OEP)
 // ============================================
 
 import React from 'react';
@@ -13,6 +13,7 @@ import KitchenManager from './components/kitchen/KitchenManager';
 import UserManager from './components/users/UserManager';
 import StudentManager from './components/students/StudentManager';
 import { FullDayOrdersManager } from './components/fullday/FullDayOrdersManager';
+import { OEPOrdersManager } from './components/oep/OEPOrdersManager'; // <-- NUEVA IMPORTACIÓN
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 import { OrderProvider } from './contexts/OrderContext';
@@ -32,18 +33,19 @@ function App() {
     window.dispatchEvent(event);
   };
 
-  // Pestañas base para todos los usuarios - NUEVO ORDEN
+  // Pestañas base para todos los usuarios - CON OEP AGREGADO
   const baseTabs = [
     { id: 'reception', name: '🎯 Recepción' },
     { id: 'orders', name: '📋 Órdenes' },
     { id: 'fullday', name: '🎒 FullDay' },
+    { id: 'oep', name: '📦 OEP' },          // <-- NUEVA PESTAÑA AQUÍ
     { id: 'menu', name: '🍽️ Menú' },
     { id: 'kitchen', name: '👨‍🍳 Cocina' },
     { id: 'dashboard', name: '📊 Dashboard' },
     { id: 'customers', name: '👥 Clientes' },
   ];
 
-  // Solo administradores ven Alumnos y Usuarios - NUEVO ORDEN
+  // Solo administradores ven Alumnos y Usuarios
   const adminTabs = user?.role === 'admin' 
     ? [
         { id: 'students', name: '🎒 Alumnos' },
@@ -127,6 +129,7 @@ function App() {
 
           {activeTab === 'orders' && <OrdersManager />}
           {activeTab === 'fullday' && <FullDayOrdersManager />}
+          {activeTab === 'oep' && <OEPOrdersManager />}          {/* <-- NUEVA PESTAÑA RENDERIZADA */}
           {activeTab === 'menu' && <MenuManager />}
           {activeTab === 'kitchen' && <KitchenManager />}
           {activeTab === 'customers' && <CustomersManager />}

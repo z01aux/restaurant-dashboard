@@ -1,193 +1,187 @@
 // ============================================================
 // ARCHIVO: src/hooks/useOEP.ts
-// Hook principal para pedidos OEP
-// Equivalente exacto de: src/hooks/useFullDay.ts
+// Hook principal para pedidos OEP (basado en clientes)
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { OEPOrder } from '../types/oep'; // Importar desde types
+import { OEPOrder } from '../types/oep';
 
 export const useOEP = () => {
-  const [orders, setOrders] = useState<OEPOrder[]>([]);
-  const [loading, setLoading] = useState(false);
+    const [orders, setOrders] = useState<OEPOrder[]>([]);
+    const [loading, setLoading] = useState(false);
 
-  const fetchOrders = useCallback(async (limit = 100) => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('oep')                          // ← tabla oep
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(limit);
+    const fetchOrders = useCallback(async (limit = 100) => {
+        try {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('oep')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(limit);
 
-      if (error) throw error;
-      
-      // Convertir strings a Date objects
-      const convertedOrders: OEPOrder[] = (data || []).map((order: any) => ({
-        ...order,
-        created_at: new Date(order.created_at),
-        updated_at: new Date(order.updated_at)
-      }));
-      
-      setOrders(convertedOrders);
-      console.log('✅ Pedidos OEP cargados:', convertedOrders.length);
-    } catch (error) {
-      console.error('Error fetching OEP orders:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+            if (error) throw error;
 
-  const createOrder = useCallback(async (orderData: {
-    student_id?: string | null;
-    student_name: string;
-    grade: string;
-    section: string;
-    guardian_name: string;
-    phone?: string;
-    items: Array<{
-      menuItem: {
-        id: string;
-        name: string;
-        price: number;
-      };
-      quantity: number;
-      notes?: string;
-    }>;
-    payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
-    notes?: string;
-  }) => {
-    try {
-      const total = orderData.items.reduce(
-        (sum, item) => sum + (item.menuItem.price * item.quantity),
-        0
-      );
+            const convertedOrders: OEPOrder[] = (data || []).map((order: any) => ({
+                ...order,
+                created_at: new Date(order.created_at),
+                updated_at: new Date(order.updated_at)
+            }));
 
-      const itemsJson = orderData.items.map(item => ({
-        id: item.menuItem.id,
-        name: item.menuItem.name,
-        price: item.menuItem.price,
-        quantity: item.quantity,
-        notes: item.notes
-      }));
-
-      const { data, error } = await supabase
-        .from('oep')                          // ← tabla oep
-        .insert([{
-          student_id:     orderData.student_id || null,
-          student_name:   orderData.student_name,
-          grade:          orderData.grade,
-          section:        orderData.section,
-          guardian_name:  orderData.guardian_name,
-          phone:          orderData.phone || null,
-          items:          itemsJson,
-          total:          total,
-          payment_method: orderData.payment_method,
-          notes:          orderData.notes,
-          status:         'pending'
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const newOrder: OEPOrder = {
-        ...data,
-        created_at: new Date(data.created_at),
-        updated_at: new Date(data.updated_at)
-      };
-
-      setOrders(prev => [newOrder, ...prev]);
-      return { success: true, data: newOrder };
-    } catch (error: any) {
-      console.error('Error creating OEP order:', error);
-      return { success: false, error: error.message };
-    }
-  }, []);
-
-  const updateOrderStatus = useCallback(async (id: string, status: OEPOrder['status']) => {
-    try {
-      setOrders(prev => prev.map(order =>
-        order.id === id ? { ...order, status } : order
-      ));
-
-      const { data, error } = await supabase
-        .from('oep')                          // ← tabla oep
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        const original = orders.find(o => o.id === id);
-        if (original) {
-          setOrders(prev => prev.map(order =>
-            order.id === id ? original : order
-          ));
+            setOrders(convertedOrders);
+            console.log('✅ Pedidos OEP cargados:', convertedOrders.length);
+        } catch (error) {
+            console.error('Error fetching OEP orders:', error);
+        } finally {
+            setLoading(false);
         }
-        throw error;
-      }
+    }, []);
 
-      return { success: true, data };
-    } catch (error: any) {
-      console.error('Error updating OEP order status:', error);
-      return { success: false, error: error.message };
-    }
-  }, [orders]);
+    const createOrder = useCallback(async (orderData: {
+        customer_id?: string | null;
+        customer_name: string;
+        phone?: string;
+        address?: string;
+        items: Array<{
+            menuItem: {
+                id: string;
+                name: string;
+                price: number;
+            };
+            quantity: number;
+            notes?: string;
+        }>;
+        payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
+        notes?: string;
+    }) => {
+        try {
+            const total = orderData.items.reduce(
+                (sum, item) => sum + (item.menuItem.price * item.quantity),
+                0
+            );
 
-  const deleteOrder = useCallback(async (id: string) => {
-    try {
-      setOrders(prev => prev.filter(order => order.id !== id));
+            const itemsJson = orderData.items.map(item => ({
+                id: item.menuItem.id,
+                name: item.menuItem.name,
+                price: item.menuItem.price,
+                quantity: item.quantity,
+                notes: item.notes
+            }));
 
-      const { error } = await supabase
-        .from('oep')                          // ← tabla oep
-        .delete()
-        .eq('id', id);
+            const { data, error } = await supabase
+                .from('oep')
+                .insert([{
+                    customer_id: orderData.customer_id || null,
+                    customer_name: orderData.customer_name,
+                    phone: orderData.phone || null,
+                    address: orderData.address || null,
+                    items: itemsJson,
+                    total: total,
+                    payment_method: orderData.payment_method,
+                    notes: orderData.notes,
+                    status: 'pending'
+                }])
+                .select()
+                .single();
 
-      if (error) throw error;
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error deleting OEP order:', error);
-      return { success: false, error: error.message };
-    }
-  }, []);
+            if (error) throw error;
 
-  const getTodayOrders = useCallback(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+            const newOrder: OEPOrder = {
+                ...data,
+                created_at: new Date(data.created_at),
+                updated_at: new Date(data.updated_at)
+            };
 
-    return orders.filter(order => {
-      const orderDate = new Date(order.created_at);
-      orderDate.setHours(0, 0, 0, 0);
-      return orderDate.getTime() === today.getTime();
-    });
-  }, [orders]);
+            setOrders(prev => [newOrder, ...prev]);
+            return { success: true, data: newOrder };
+        } catch (error: any) {
+            console.error('Error creating OEP order:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
 
-  const getOrdersByDateRange = useCallback((startDate: Date, endDate: Date) => {
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const updateOrderStatus = useCallback(async (id: string, status: OEPOrder['status']) => {
+        try {
+            setOrders(prev => prev.map(order =>
+                order.id === id ? { ...order, status } : order
+            ));
 
-    return orders.filter(order => {
-      const orderDate = new Date(order.created_at);
-      return orderDate >= start && orderDate <= end;
-    });
-  }, [orders]);
+            const { data, error } = await supabase
+                .from('oep')
+                .update({ status, updated_at: new Date().toISOString() })
+                .eq('id', id)
+                .select()
+                .single();
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+            if (error) {
+                const original = orders.find(o => o.id === id);
+                if (original) {
+                    setOrders(prev => prev.map(order =>
+                        order.id === id ? original : order
+                    ));
+                }
+                throw error;
+            }
 
-  return {
-    orders,
-    loading,
-    fetchOrders,
-    createOrder,
-    updateOrderStatus,
-    deleteOrder,
-    getTodayOrders,
-    getOrdersByDateRange
-  };
+            return { success: true, data };
+        } catch (error: any) {
+            console.error('Error updating OEP order status:', error);
+            return { success: false, error: error.message };
+        }
+    }, [orders]);
+
+    const deleteOrder = useCallback(async (id: string) => {
+        try {
+            setOrders(prev => prev.filter(order => order.id !== id));
+
+            const { error } = await supabase
+                .from('oep')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error deleting OEP order:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const getTodayOrders = useCallback(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        return orders.filter(order => {
+            const orderDate = new Date(order.created_at);
+            orderDate.setHours(0, 0, 0, 0);
+            return orderDate.getTime() === today.getTime();
+        });
+    }, [orders]);
+
+    const getOrdersByDateRange = useCallback((startDate: Date, endDate: Date) => {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        return orders.filter(order => {
+            const orderDate = new Date(order.created_at);
+            return orderDate >= start && orderDate <= end;
+        });
+    }, [orders]);
+
+    useEffect(() => {
+        fetchOrders();
+    }, [fetchOrders]);
+
+    return {
+        orders,
+        loading,
+        fetchOrders,
+        createOrder,
+        updateOrderStatus,
+        deleteOrder,
+        getTodayOrders,
+        getOrdersByDateRange
+    };
 };
