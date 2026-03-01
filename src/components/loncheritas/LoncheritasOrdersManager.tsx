@@ -3,11 +3,12 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Download, Calendar, Printer, Pencil } from 'lucide-react';
+import { Search, Download, Printer, Pencil } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
-import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
+import { FullDayCashRegisterModal } from '../fullday/FullDayCashRegisterModal';
+import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 
@@ -133,7 +134,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
             order={selectedOrder}
             onSave={handleSavePaymentMethod}
           />
-          <LoncheritasCashRegisterModal
+          <FullDayCashRegisterModal
             isOpen={showCashModal}
             onClose={() => setShowCashModal(false)}
             type={cashModalType}
@@ -161,22 +162,12 @@ export const LoncheritasOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Selector de fecha */}
-          <div className="bg-orange-50 rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center space-x-3">
-              <Calendar size={20} className="text-orange-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-900 capitalize">{formatDate(selectedDate)}</p>
-                <p className="text-xs text-gray-500">{filteredOrders.length} pedidos</p>
-              </div>
-            </div>
-            <input
-              type="date"
-              value={selectedDate.toISOString().split('T')[0]}
-              onChange={(e) => setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
-              className="px-3 py-2 border border-orange-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
+          {/* Filtro de fecha */}
+          <FullDayDateFilter
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            totalOrders={filteredOrders.length}
+          />
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-2 mb-6">
