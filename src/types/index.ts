@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/types/index.ts (ACTUALIZADO)
+// ARCHIVO: src/types/index.ts (ACTUALIZADO CON OEP)
 // ============================================
 
 export interface MenuItem {
@@ -20,7 +20,8 @@ export interface OrderItem {
 }
 
 export interface OrderSource {
-  type: 'phone' | 'walk-in' | 'delivery' | 'fullDay';
+  // ✅ CORRECCIÓN: Agregado 'oep' al tipo de source.type
+  type: 'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep';
   deliveryAddress?: string;
 }
 
@@ -49,7 +50,7 @@ export interface Order {
     phone?: string;
   };
   orderType: 'regular' | 'fullday';
-  igvRate?: number; // NUEVO: Tasa de IGV (10% por defecto)
+  igvRate?: number; // Tasa de IGV (10% por defecto)
 }
 
 export interface DatabaseOrder {
@@ -60,7 +61,8 @@ export interface DatabaseOrder {
   phone: string;
   address?: string;
   table_number?: string;
-  source_type: 'phone' | 'walk-in' | 'delivery' | 'fullDay';
+  // ✅ CORRECCIÓN: Agregado 'oep' al tipo de source_type
+  source_type: 'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep';
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   total: number;
   notes?: string;
