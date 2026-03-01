@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/App.tsx (SIN OEP)
+// ARCHIVO: src/App.tsx (CON OEP)
 // ============================================
 
 import React from 'react';
@@ -13,6 +13,7 @@ import KitchenManager from './components/kitchen/KitchenManager';
 import UserManager from './components/users/UserManager';
 import StudentManager from './components/students/StudentManager';
 import { FullDayOrdersManager } from './components/fullday/FullDayOrdersManager';
+import { OEPOrdersManager } from './components/oep/OEPOrdersManager';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 import { OrderProvider } from './contexts/OrderContext';
@@ -32,11 +33,12 @@ function App() {
     window.dispatchEvent(event);
   };
 
-  // Pestañas base para todos los usuarios - SIN OEP
+  // Pestañas base para todos los usuarios - CON OEP
   const baseTabs = [
     { id: 'reception', name: '🎯 Recepción' },
     { id: 'orders', name: '📋 Órdenes' },
     { id: 'fullday', name: '🎒 FullDay' },
+    { id: 'oep', name: '📦 OEP' },
     { id: 'menu', name: '🍽️ Menú' },
     { id: 'kitchen', name: '👨‍🍳 Cocina' },
     { id: 'dashboard', name: '📊 Dashboard' },
@@ -57,10 +59,9 @@ function App() {
     <ProtectedRoute>
       <OrderProvider refreshOrders={refreshOrders} addNewOrder={addNewOrder}>
         <DashboardLayout>
-          {/* Navigation Tabs - VERSIÓN COMPLETA EN TODOS LOS DISPOSITIVOS */}
+          {/* Navigation Tabs */}
           <div className="mb-4 sm:mb-6 lg:mb-8">
             <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-2 w-full mx-auto">
-              {/* Contenedor con scroll horizontal suave SOLO cuando sea necesario */}
               <div className="overflow-x-auto pb-1 hide-scrollbar">
                 <nav className="flex space-x-2 min-w-max sm:min-w-0 sm:flex-wrap sm:justify-center sm:gap-2">
                   {tabs.map((tab) => (
@@ -82,16 +83,6 @@ function App() {
                     </button>
                   ))}
                 </nav>
-              </div>
-              
-              {/* Indicador de scroll en móvil (solo visible cuando hay scroll) */}
-              <div className="sm:hidden flex justify-center mt-1 opacity-50">
-                <div className="flex space-x-1">
-                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-pulse"></div>
-                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                </div>
-                <span className="text-[8px] text-gray-400 ml-1">desliza para ver más</span>
               </div>
             </div>
           </div>
@@ -127,6 +118,7 @@ function App() {
 
           {activeTab === 'orders' && <OrdersManager />}
           {activeTab === 'fullday' && <FullDayOrdersManager />}
+          {activeTab === 'oep' && <OEPOrdersManager />}
           {activeTab === 'menu' && <MenuManager />}
           {activeTab === 'kitchen' && <KitchenManager />}
           {activeTab === 'customers' && <CustomersManager />}
