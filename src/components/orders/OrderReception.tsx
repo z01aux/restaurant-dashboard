@@ -619,7 +619,7 @@ const CategoryManagerModal: React.FC<{
       </div>
     </div>
   );
-};
+});
 
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
@@ -1045,6 +1045,7 @@ const OrderReception: React.FC = React.memo(() => {
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // Estados para FullDay
   const [selectedGrade, setSelectedGrade] = useState<Grade>(GRADES[0]);
   const [selectedSection, setSelectedSection] = useState<Section>(SECTIONS[0]);
   const [studentName, setStudentName] = useState('');
@@ -1090,7 +1091,7 @@ const OrderReception: React.FC = React.memo(() => {
   }, [allMenuItems, searchTerm, activeCategory, getDailySpecialsByCategory]);
 
   useEffect(() => {
-    if (customerSearchTerm.trim().length > 1 && activeTab !== 'fullDay') {
+    if (customerSearchTerm.trim().length > 1 && (activeTab === 'phone' || activeTab === 'walk-in' || activeTab === 'delivery')) {
       const searchLower = customerSearchTerm.toLowerCase();
       const filtered = customers.filter(customer =>
         customer.name.toLowerCase().includes(searchLower) ||
@@ -1106,7 +1107,7 @@ const OrderReception: React.FC = React.memo(() => {
   }, [customerSearchTerm, customers, activeTab]);
 
   useEffect(() => {
-    if (studentSearchTerm.trim().length > 1 && (activeTab === 'fullDay' || activeTab === 'phone')) {
+    if (studentSearchTerm.trim().length > 1 && activeTab === 'fullDay') {
       searchStudents(studentSearchTerm);
     } else {
       setStudentSearchResults([]);
@@ -1635,26 +1636,29 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
+    // Validaciones según el tipo de pedido
     if (activeTab === 'fullDay') {
+      // FullDay requiere datos de alumno
       if (!studentName || !guardianName) {
         showToast('Completa los datos del alumno', 'error');
         return;
       }
     } else if (activeTab === 'phone') {
-      if (!studentName || !guardianName) {
-        showToast('Completa los datos del alumno', 'error');
-        return;
-      }
-    } else {
+      // OEP solo requiere nombre y teléfono (como antes)
       if (!customerName || !phone) {
         showToast('Completa los datos del cliente', 'error');
         return;
       }
-    }
-
-    if (activeTab === 'walk-in' && !tableNumber) {
-      showToast('Ingresa el número de mesa', 'error');
-      return;
+    } else if (activeTab === 'walk-in') {
+      if (!customerName || !phone || !tableNumber) {
+        showToast('Completa los datos del cliente y número de mesa', 'error');
+        return;
+      }
+    } else if (activeTab === 'delivery') {
+      if (!customerName || !phone || !address) {
+        showToast('Completa los datos del cliente y dirección', 'error');
+        return;
+      }
     }
 
     if (!paymentMethod) {
@@ -1670,6 +1674,7 @@ const OrderReception: React.FC = React.memo(() => {
       const total = getTotal();
       
       if (activeTab === 'fullDay') {
+        // FULLDAY - Usar tabla fullday
         const result = await createFullDayOrder({
           student_id: selectedStudentId,
           student_name: studentName,
@@ -1692,42 +1697,18 @@ const OrderReception: React.FC = React.memo(() => {
 
         if (result.success) {
           showToast('✅ Pedido FullDay guardado', 'success');
-          
-          const tempOrder: Order = {
-            id: 'temp-' + Date.now(),
-            orderNumber: `FLD-${Date.now().toString().slice(-8)}`,
-            items: cart,
-            status: 'pending',
-            createdAt: new Date(),
-            total: total,
-            customerName: studentName,
-            phone: phone || 'Sin teléfono',
-            source: { type: 'fullDay' },
-            notes: orderNotes,
-            paymentMethod: paymentMethod,
-            studentInfo: {
-              fullName: studentName,
-              grade: selectedGrade,
-              section: selectedSection,
-              guardianName: guardianName,
-              phone: phone
-            },
-            orderType: 'fullday',
-            igvRate: 10
-          };
-          
-          printOrderImmediately(tempOrder);
         } else {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
       } else if (activeTab === 'phone') {
+        // OEP - Usar tabla oep con los campos correctos
         const result = await createOEPOrder({
-          student_id: selectedStudentId,
-          student_name: studentName,
-          grade: selectedGrade,
-          section: selectedSection,
-          guardian_name: guardianName,
-          phone: phone || undefined,
+          student_id: null, // OEP no usa student_id
+          student_name: customerName, // En OEP, student_name es el nombre del cliente
+          grade: '', // Vacío para OEP
+          section: '', // Vacío para OEP
+          guardian_name: customerName, // En OEP, guardian_name también es el nombre del cliente
+          phone: phone,
           items: cart.map(item => ({
             menuItem: {
               id: item.menuItem.id,
@@ -1752,18 +1733,11 @@ const OrderReception: React.FC = React.memo(() => {
             status: 'pending',
             createdAt: new Date(),
             total: total,
-            customerName: studentName,
-            phone: phone || 'Sin teléfono',
+            customerName: customerName,
+            phone: phone,
             source: { type: 'phone' },
             notes: orderNotes,
             paymentMethod: paymentMethod,
-            studentInfo: {
-              fullName: studentName,
-              grade: selectedGrade,
-              section: selectedSection,
-              guardianName: guardianName,
-              phone: phone
-            },
             orderType: 'regular',
             igvRate: 10
           };
@@ -1773,6 +1747,7 @@ const OrderReception: React.FC = React.memo(() => {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
       } else {
+        // PEDIDOS REGULARES (walk-in, delivery) - Usar tabla orders
         const orderData: any = {
           customerName: customerName,
           phone: phone,
@@ -1826,6 +1801,7 @@ const OrderReception: React.FC = React.memo(() => {
         }
       }
       
+      // Limpiar el formulario después de guardar
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -1855,8 +1831,12 @@ const OrderReception: React.FC = React.memo(() => {
   const isFormValid = useMemo(() => {
     if (cart.length === 0) return false;
     
-    if (activeTab === 'fullDay' || activeTab === 'phone') {
+    if (activeTab === 'fullDay') {
       return !!(studentName && guardianName && paymentMethod);
+    }
+    
+    if (activeTab === 'phone') {
+      return !!(customerName && phone && paymentMethod);
     }
     
     if (activeTab === 'walk-in') {
@@ -1952,11 +1932,12 @@ const OrderReception: React.FC = React.memo(() => {
           <div className="lg:hidden px-3 pt-4">
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4">
               <h3 className="text-sm font-bold text-gray-900 mb-3">
-                {(activeTab === 'fullDay' || activeTab === 'phone') ? 'Datos del Alumno' : 'Datos del Cliente'}
+                {activeTab === 'fullDay' ? 'Datos del Alumno' : 'Datos del Cliente'}
               </h3>
               
               <div className="space-y-3">
-                {(activeTab === 'fullDay' || activeTab === 'phone') ? (
+                {activeTab === 'fullDay' ? (
+                  // FULLDAY - Formulario completo de alumno
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2040,6 +2021,7 @@ const OrderReception: React.FC = React.memo(() => {
                     />
                   </>
                 ) : (
+                  // OEP, LOCAL, DELIVERY - Formulario simple de cliente
                   <>
                     <div className="relative">
                       <input
@@ -2299,7 +2281,8 @@ const OrderReception: React.FC = React.memo(() => {
                   </div>
                   
                   <div className="space-y-4">
-                    {(activeTab === 'fullDay' || activeTab === 'phone') ? (
+                    {activeTab === 'fullDay' ? (
+                      // FULLDAY - Formulario completo de alumno
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2401,6 +2384,7 @@ const OrderReception: React.FC = React.memo(() => {
                         </div>
                       </>
                     ) : (
+                      // OEP, LOCAL, DELIVERY - Formulario simple
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Buscar cliente</label>
