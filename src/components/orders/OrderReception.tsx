@@ -1,5 +1,5 @@
 // =================================================
-// ARCHIVO: src/components/orders/OrderReception.tsx (CON OEP)
+// ARCHIVO: src/components/orders/OrderReception.tsx (CORREGIDO CON OEP)
 // =================================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -42,7 +42,6 @@ const styles = `
     animation: slideIn 0.3s ease-out;
   }
 
-  /* Mejora para el contador de productos */
   .product-counter {
     position: absolute;
     top: -8px;
@@ -74,7 +73,6 @@ const styles = `
     }
   }
 
-  /* Mejora para las cards de productos */
   .product-card {
     transition: all 0.2s ease-in-out;
     position: relative;
@@ -90,7 +88,6 @@ const styles = `
     transform: scale(1.1);
   }
 
-  /* Barra de categorías mejorada */
   .categories-container {
     background: white;
     border-radius: 12px;
@@ -153,7 +150,6 @@ const styles = `
     transform: translateY(-1px);
   }
 
-  /* Vista compacta para móvil */
   @media (max-width: 640px) {
     .category-button {
       padding: 6px 12px;
@@ -1041,9 +1037,10 @@ const limitNameLength = (fullName: string): string => {
 };
 
 // ============================================
-// COMPONENTE PRINCIPAL ORDER RECEPTION
+// COMPONENTE PRINCIPAL ORDER RECEPTION - CORREGIDO CON OEP
 // ============================================
 const OrderReception: React.FC = React.memo(() => {
+  // IMPORTANTE: Incluimos 'oep' en el tipo de activeTab
   const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep'>('phone');
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -1082,7 +1079,7 @@ const OrderReception: React.FC = React.memo(() => {
   const { categories: dbCategories, refreshCategories } = useCategories();
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
-  const { createOrder: createOEPOrder } = useOEP();
+  const { createOrder: createOEPOrder } = useOEP(); // Hook de OEP
   const { searchStudents, searchResults } = useStudents();
 
   const isAdmin = user?.role === 'admin';
@@ -1878,7 +1875,6 @@ const OrderReception: React.FC = React.memo(() => {
         }
       }
       
-      // Limpiar formulario después de guardar
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -2350,7 +2346,7 @@ const OrderReception: React.FC = React.memo(() => {
                               className="px-3 py-2 border border-gray-300 rounded-lg"
                             >
                               {GRADES.map(grade => (
-                                <option key={grade} value={grade}>{grade} Grado</option>
+                                <option key={grade} value={grade}>{grade}</option>
                               ))}
                             </select>
                             <select
