@@ -1,5 +1,5 @@
 // =================================================
-// ARCHIVO: src/components/orders/OrderReception.tsx
+// ARCHIVO: src/components/orders/OrderReception.tsx (MODIFICADO - CON OEP)
 // =================================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -15,6 +15,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useStudents } from '../../hooks/useStudents';
 import { useFullDay } from '../../hooks/useFullDay';
 import { useCategories } from '../../hooks/useCategories';
+import { useOEP } from '../../hooks/useOEP'; // <-- NUEVA IMPORTACIÓN
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 
 const styles = `
@@ -1044,7 +1045,7 @@ const limitNameLength = (fullName: string): string => {
 // COMPONENTE PRINCIPAL ORDER RECEPTION
 // ============================================
 const OrderReception: React.FC = React.memo(() => {
-  const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay'>('phone');
+  const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep'>('phone');
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -1082,6 +1083,7 @@ const OrderReception: React.FC = React.memo(() => {
   const { categories: dbCategories, refreshCategories } = useCategories();
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
+  const { createOrder: createOEPOrder } = useOEP(); // <-- NUEVO HOOK OEP
   const { searchStudents, searchResults } = useStudents();
 
   const isAdmin = user?.role === 'admin';
@@ -1660,7 +1662,7 @@ const OrderReception: React.FC = React.memo(() => {
         showToast('Completa los datos del alumno', 'error');
         return;
       }
-    } else {
+    } else if (activeTab === 'oep' || activeTab === 'phone' || activeTab === 'walk-in' || activeTab === 'delivery') {
       if (!customerName || !phone) {
         showToast('Completa los datos del cliente', 'error');
         return;
@@ -1672,7 +1674,7 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && !paymentMethod) {
+    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep' || activeTab === 'phone') && !paymentMethod) {
       showToast('Selecciona un método de pago', 'error');
       return;
     }
@@ -1735,7 +1737,139 @@ const OrderReception: React.FC = React.memo(() => {
         } else {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
-      } else {
+      }
+      // ============================================
+      // CASO 2: PEDIDO OEP (oep) - USA OEP
+      // ============================================
+      else if (activeTab === 'oep') {
+        console.log('📦 Creando pedido OEP con datos:', {
+          customer_name: customerName,
+          phone: phone,
+          address: address || undefined,
+          items: cart.map(item => ({
+            menuItem: {
+              id: item.menuItem.id,
+              name: item.menuItem.name,
+              price: item.menuItem.price,
+            },
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+          payment_method: paymentMethod,
+          notes: orderNotes
+        });
+
+        const result = await createOEPOrder({
+          customer_name: customerName,
+          phone: phone,
+          address: address || undefined,
+          items: cart.map(item => ({
+            menuItem: {
+              id: item.menuItem.id,
+              name: item.menuItem.name,
+              price: item.menuItem.price,
+            },
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+          payment_method: paymentMethod,
+          notes: orderNotes
+        });
+
+        if (result.success) {
+          showToast('✅ Pedido OEP guardado', 'success');
+
+          // Orden temporal para imprimir ticket
+          const tempOrder: Order = {
+            id: 'temp-' + Date.now(),
+            orderNumber: `OEP-${Date.now().toString().slice(-8)}`,
+            kitchenNumber: `COM-${Date.now().toString().slice(-8)}`,
+            items: cart,
+            status: 'pending',
+            createdAt: new Date(),
+            total: total,
+            customerName: customerName,
+            phone: phone,
+            address: address,
+            source: { type: 'oep' },
+            notes: orderNotes,
+            paymentMethod: paymentMethod,
+            orderType: 'regular',
+            igvRate: 10
+          };
+          printOrderImmediately(tempOrder);
+        } else {
+          showToast('❌ Error al guardar: ' + result.error, 'error');
+        }
+      }
+      // ============================================
+      // CASO 3: PEDIDO DE COCINA (phone) - AHORA USA OEP
+      // ============================================
+      else if (activeTab === 'phone') {
+        console.log('📞 Creando pedido de COCINA (OEP) con datos:', {
+          customer_name: customerName,
+          phone: phone,
+          address: address || undefined,
+          items: cart.map(item => ({
+            menuItem: {
+              id: item.menuItem.id,
+              name: item.menuItem.name,
+              price: item.menuItem.price,
+            },
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+          payment_method: paymentMethod,
+          notes: orderNotes
+        });
+
+        const result = await createOEPOrder({
+          customer_name: customerName,
+          phone: phone,
+          address: address || undefined,
+          items: cart.map(item => ({
+            menuItem: {
+              id: item.menuItem.id,
+              name: item.menuItem.name,
+              price: item.menuItem.price,
+            },
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+          payment_method: paymentMethod,
+          notes: orderNotes
+        });
+
+        if (result.success) {
+          showToast('✅ Pedido de Cocina (OEP) guardado', 'success');
+
+          // Orden temporal para imprimir ticket
+          const tempOrder: Order = {
+            id: 'temp-' + Date.now(),
+            orderNumber: `OEP-${Date.now().toString().slice(-8)}`,
+            kitchenNumber: `COM-${Date.now().toString().slice(-8)}`,
+            items: cart,
+            status: 'pending',
+            createdAt: new Date(),
+            total: total,
+            customerName: customerName,
+            phone: phone,
+            address: address,
+            source: { type: 'phone' },
+            notes: orderNotes,
+            paymentMethod: paymentMethod,
+            orderType: 'regular',
+            igvRate: 10
+          };
+          printOrderImmediately(tempOrder);
+        } else {
+          showToast('❌ Error al guardar: ' + result.error, 'error');
+        }
+      }
+      // ============================================
+      // CASO 4: OTROS PEDIDOS (walk-in, delivery) - Van a pedidos regulares
+      // ============================================
+      else {
         const orderData: any = {
           customerName: customerName,
           phone: phone,
@@ -1746,7 +1880,7 @@ const OrderReception: React.FC = React.memo(() => {
             ...(activeTab === 'delivery' && { deliveryAddress: address })
           },
           notes: orderNotes,
-          paymentMethod: activeTab !== 'phone' ? paymentMethod : undefined,
+          paymentMethod: paymentMethod,
           items: cart.map(item => ({
             menuItem: {
               id: item.menuItem.id,
@@ -1762,7 +1896,7 @@ const OrderReception: React.FC = React.memo(() => {
         const tempOrder: Order = {
           id: 'temp-' + Date.now(),
           orderNumber: `ORD-${Date.now().toString().slice(-8)}`,
-          kitchenNumber: activeTab === 'phone' ? `COM-${Date.now().toString().slice(-8)}` : undefined,
+          kitchenNumber: undefined,
           items: cart,
           status: 'pending',
           createdAt: new Date(),
@@ -1773,7 +1907,7 @@ const OrderReception: React.FC = React.memo(() => {
           tableNumber: tableNumber,
           source: orderData.source,
           notes: orderNotes,
-          paymentMethod: orderData.paymentMethod,
+          paymentMethod: paymentMethod,
           orderType: 'regular',
           igvRate: 10
         };
@@ -1789,6 +1923,7 @@ const OrderReception: React.FC = React.memo(() => {
         }
       }
       
+      // Limpiar formulario después de guardar
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -1810,9 +1945,9 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [
     cart, customerName, phone, activeTab, tableNumber, address, orderNotes, 
-    paymentMethod, createOrder, createFullDayOrder, getTotal, showToast, 
-    printOrderImmediately, isCreatingOrder, studentName, guardianName, 
-    selectedGrade, selectedSection, selectedStudentId
+    paymentMethod, createOrder, createFullDayOrder, createOEPOrder,
+    getTotal, showToast, printOrderImmediately, isCreatingOrder, 
+    studentName, guardianName, selectedGrade, selectedSection, selectedStudentId
   ]);
 
   const isFormValid = useMemo(() => {
@@ -1826,12 +1961,12 @@ const OrderReception: React.FC = React.memo(() => {
       return customerName && phone && tableNumber;
     }
     
-    if (activeTab === 'delivery') {
-      return customerName && phone && address;
+    if (activeTab === 'delivery' || activeTab === 'oep' || activeTab === 'phone') {
+      return customerName && phone;
     }
     
     return customerName && phone;
-  }, [cart, activeTab, customerName, phone, tableNumber, address, studentName, guardianName]);
+  }, [cart, activeTab, customerName, phone, tableNumber, studentName, guardianName]);
 
   return (
     <>
@@ -1867,7 +2002,8 @@ const OrderReception: React.FC = React.memo(() => {
                       onChange={(e) => setActiveTab(e.target.value as any)}
                       className="text-xs bg-gray-100 rounded-lg px-2 py-1 border border-gray-300"
                     >
-                      <option value="phone">📞 Cocina</option>
+                      <option value="phone">📞 Cocina (OEP)</option>
+                      <option value="oep">📦 OEP</option>
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
                       <option value="fullDay">🎒 FullDay</option>
@@ -2055,20 +2191,19 @@ const OrderReception: React.FC = React.memo(() => {
                       />
                     )}
 
-                    {activeTab === 'delivery' && (
+                    {(activeTab === 'delivery' || activeTab === 'oep' || activeTab === 'phone') && (
                       <input
                         type="text"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        placeholder="Dirección de envío *"
-                        required
+                        placeholder="Dirección (opcional)"
                       />
                     )}
                   </>
                 )}
 
-                {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && (
+                {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep' || activeTab === 'phone') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Método de Pago *
@@ -2239,7 +2374,8 @@ const OrderReception: React.FC = React.memo(() => {
                       onChange={(e) => setActiveTab(e.target.value as any)}
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
-                      <option value="phone">📞 Cocina</option>
+                      <option value="phone">📞 Cocina (OEP)</option>
+                      <option value="oep">📦 OEP</option>
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
                       <option value="fullDay">🎒 FullDay</option>
@@ -2411,19 +2547,19 @@ const OrderReception: React.FC = React.memo(() => {
                           />
                         )}
 
-                        {activeTab === 'delivery' && (
+                        {(activeTab === 'delivery' || activeTab === 'oep' || activeTab === 'phone') && (
                           <input
                             type="text"
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
-                            placeholder="Dirección *"
+                            placeholder="Dirección (opcional)"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                           />
                         )}
                       </>
                     )}
 
-                    {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && (
+                    {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep' || activeTab === 'phone') && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Pago</label>
                         <div className="grid grid-cols-3 gap-2">

@@ -111,7 +111,7 @@ export const useOEPSalesClosure = () => {
             const totalTarjeta = todayOrders.filter(o => o.payment_method === 'TARJETA').reduce((s, o) => s + o.total, 0);
             const totalNoAplica = todayOrders.filter(o => !o.payment_method).reduce((s, o) => s + o.total, 0);
 
-            // Generar top productos
+            // Top productos
             const productMap = new Map();
             todayOrders.forEach(order => {
                 order.items.forEach((item: any) => {

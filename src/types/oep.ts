@@ -18,7 +18,6 @@ export interface OEPOrderItem {
 export interface OEPOrder {
     id: string;
     order_number: string;
-    customer_id: string | null;
     customer_name: string;
     phone: string | null;
     address: string | null;
@@ -31,11 +30,9 @@ export interface OEPOrder {
     updated_at: Date;
 }
 
-// Tipo de la base de datos (antes de convertir fechas)
 export interface OEPDatabaseOrder {
     id: string;
     order_number: string;
-    customer_id: string | null;
     customer_name: string;
     phone: string | null;
     address: string | null;
@@ -46,21 +43,4 @@ export interface OEPDatabaseOrder {
     notes: string | null;
     created_at: string;
     updated_at: string;
-}
-
-// Tipo para el resumen de caja
-export interface OEPDailySummary {
-    total_orders: number;
-    total_amount: number;
-    by_payment_method: {
-        EFECTIVO: number;
-        YAPE_PLIN: number;
-        TARJETA: number;
-        NO_APLICA: number;
-    };
-    top_products: Array<{
-        name: string;
-        quantity: number;
-        total: number;
-    }>;
 }
