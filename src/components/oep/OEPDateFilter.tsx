@@ -1,94 +1,83 @@
-import React, { useState } from 'react';
-import { X, Download } from 'lucide-react';
+import React from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-interface OEPDateRangeModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: (startDate: Date, endDate: Date) => void;
+interface OEPDateFilterProps {
+    selectedDate: Date;
+    onDateChange: (date: Date) => void;
+    totalOrders: number;
 }
 
-export const OEPDateRangeModal: React.FC<OEPDateRangeModalProps> = ({
-    isOpen,
-    onClose,
-    onConfirm,
+// Asegúrate de que el componente esté exportado con 'export'
+export const OEPDateFilter: React.FC<OEPDateFilterProps> = ({
+    selectedDate,
+    onDateChange,
+    totalOrders
 }) => {
-    const today = new Date().toISOString().split('T')[0];
-    const [startDate, setStartDate] = useState(today);
-    const [endDate, setEndDate] = useState(today);
-    const [error, setError] = useState('');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    if (!isOpen) return null;
-
-    const handleConfirm = () => {
-        setError('');
-        if (!startDate || !endDate) { setError('Selecciona ambas fechas'); return; }
-        if (startDate > endDate) { setError('La fecha inicial debe ser anterior a la final'); return; }
-        onConfirm(
-            new Date(startDate + 'T00:00:00'),
-            new Date(endDate + 'T23:59:59')
-        );
-        onClose();
+    const isToday = () => {
+        const d = new Date(selectedDate);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
     };
 
+    const goToPrevDay = () => {
+        const d = new Date(selectedDate);
+        d.setDate(d.getDate() - 1);
+        onDateChange(d);
+    };
+
+    const goToNextDay = () => {
+        const d = new Date(selectedDate);
+        d.setDate(d.getDate() + 1);
+        onDateChange(d);
+    };
+
+    const goToToday = () => onDateChange(new Date());
+
+    const formatDate = (date: Date) =>
+        date.toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md">
-                <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-gray-900">Reporte por Rango de Fechas</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        <X size={24} />
-                    </button>
-                </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+            <div className="flex items-center space-x-3">
+                <button onClick={goToPrevDay}
+                    className="p-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <ChevronLeft size={16} />
+                </button>
 
-                <div className="p-6 space-y-4">
-                    {error && (
-                        <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                            {error}
-                        </div>
+                <div className="text-center">
+                    <div className="font-semibold text-gray-900 capitalize">
+                        {isToday() ? '📅 Hoy' : formatDate(selectedDate)}
+                    </div>
+                    {!isToday() && (
+                        <div className="text-xs text-gray-500">{formatDate(selectedDate)}</div>
                     )}
-
-                    <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <h3 className="text-sm font-semibold text-blue-800 mb-2">📋 El reporte incluirá:</h3>
-                        <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-                            <li>Resumen general del período</li>
-                            <li>Desglose diario de ventas</li>
-                            <li>Detalle de pedidos por cliente</li>
-                            <li>Top productos más vendidos</li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
-                        <input
-                            type="date" value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            max={today}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
-                        <input
-                            type="date" value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            max={today}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-
-                    <div className="flex space-x-3 pt-2">
-                        <button onClick={onClose}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                            Cancelar
-                        </button>
-                        <button onClick={handleConfirm}
-                            className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg hover:shadow-md font-semibold flex items-center justify-center space-x-2">
-                            <Download size={16} />
-                            <span>Generar Excel</span>
-                        </button>
-                    </div>
                 </div>
+
+                <button onClick={goToNextDay}
+                    className="p-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <ChevronRight size={16} />
+                </button>
+            </div>
+
+            <div className="flex items-center space-x-3">
+                <span className="text-sm text-blue-700 font-medium">
+                    {totalOrders} pedidos
+                </span>
+                {!isToday() && (
+                    <button onClick={goToToday}
+                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                        Ir a Hoy
+                    </button>
+                )}
+                <input
+                    type="date"
+                    value={selectedDate.toISOString().split('T')[0]}
+                    onChange={(e) => onDateChange(new Date(e.target.value + 'T12:00:00'))}
+                    className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                />
             </div>
         </div>
     );
