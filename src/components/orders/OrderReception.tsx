@@ -1,4 +1,3 @@
-// =================================================
 // ARCHIVO: src/components/orders/OrderReception.tsx
 // =================================================
 
@@ -416,7 +415,6 @@ const CategoryManagerModal: React.FC<{
   const [success, setSuccess] = useState<string | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
-
   const { createCategory, updateCategory, deleteCategory } = useCategories();
 
   useEffect(() => {
@@ -1379,7 +1377,7 @@ const OrderReception: React.FC = React.memo(() => {
           </div>
           <div class="info-row">
             <span class="label">TIPO:</span>
-            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY'}</span>
+            <span class="value">${order.source.type === 'phone' ? 'OEP' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY'}</span>
           </div>
           <div class="info-row">
             <span class="label">FECHA:</span>
@@ -1456,7 +1454,7 @@ const OrderReception: React.FC = React.memo(() => {
           
           <div class="center">
             <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
-            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY'} ***</div>
+            <div class="normal">*** ${order.source.type === 'phone' ? 'OEP' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY'} ***</div>
             <div class="normal" style="margin-top: 10px; font-size: 10px;">
               ${new Date().toLocaleString('es-ES', { 
                 year: 'numeric',
@@ -1867,7 +1865,7 @@ const OrderReception: React.FC = React.memo(() => {
                       onChange={(e) => setActiveTab(e.target.value as any)}
                       className="text-xs bg-gray-100 rounded-lg px-2 py-1 border border-gray-300"
                     >
-                      <option value="phone">📞 Cocina</option>
+                      <option value="phone">🏫 OEP</option>
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
                       <option value="fullDay">🎒 FullDay</option>
@@ -2239,7 +2237,7 @@ const OrderReception: React.FC = React.memo(() => {
                       onChange={(e) => setActiveTab(e.target.value as any)}
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
-                      <option value="phone">📞 Cocina</option>
+                      <option value="phone">🏫 OEP</option>
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
                       <option value="fullDay">🎒 FullDay</option>

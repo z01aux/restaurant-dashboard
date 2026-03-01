@@ -13,6 +13,7 @@ import KitchenManager from './components/kitchen/KitchenManager';
 import UserManager from './components/users/UserManager';
 import StudentManager from './components/students/StudentManager';
 import { FullDayOrdersManager } from './components/fullday/FullDayOrdersManager';
+import { OEPOrdersManager } from './components/oep/OEPOrdersManager';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 import { OrderProvider } from './contexts/OrderContext';
@@ -37,6 +38,7 @@ function App() {
     { id: 'reception', name: '🎯 Recepción' },
     { id: 'orders', name: '📋 Órdenes' },
     { id: 'fullday', name: '🎒 FullDay' },
+    { id: 'oep', name: '🏫 OEP' },
     { id: 'menu', name: '🍽️ Menú' },
     { id: 'kitchen', name: '👨‍🍳 Cocina' },
     { id: 'dashboard', name: '📊 Dashboard' },
@@ -127,6 +129,7 @@ function App() {
 
           {activeTab === 'orders' && <OrdersManager />}
           {activeTab === 'fullday' && <FullDayOrdersManager />}
+          {activeTab === 'oep' && <OEPOrdersManager />}
           {activeTab === 'menu' && <MenuManager />}
           {activeTab === 'kitchen' && <KitchenManager />}
           {activeTab === 'customers' && <CustomersManager />}
