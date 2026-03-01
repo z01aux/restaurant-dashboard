@@ -1,5 +1,5 @@
 // ============================================================
-// ARCHIVO: src/hooks/useOEP.ts
+// ARCHIVO: src/hooks/useOEP.ts (CORREGIDO)
 // Hook principal para pedidos OEP (basado en clientes)
 // ============================================================
 
@@ -38,8 +38,7 @@ export const useOEP = () => {
     }, []);
 
     const createOrder = useCallback(async (orderData: {
-        customer_id?: string | null;
-        customer_name: string;
+        customer_name: string;  // <-- CAMBIADO: ahora es customer_name, no customer_id
         phone?: string;
         address?: string;
         items: Array<{
@@ -68,11 +67,19 @@ export const useOEP = () => {
                 notes: item.notes
             }));
 
+            console.log('📝 Creando pedido OEP:', {
+                customer_name: orderData.customer_name,
+                phone: orderData.phone,
+                address: orderData.address,
+                items: itemsJson,
+                total,
+                payment_method: orderData.payment_method
+            });
+
             const { data, error } = await supabase
                 .from('oep')
                 .insert([{
-                    customer_id: orderData.customer_id || null,
-                    customer_name: orderData.customer_name,
+                    customer_name: orderData.customer_name,  // <-- Solo nombre, sin customer_id
                     phone: orderData.phone || null,
                     address: orderData.address || null,
                     items: itemsJson,
@@ -84,7 +91,10 @@ export const useOEP = () => {
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Error de Supabase:', error);
+                throw error;
+            }
 
             const newOrder: OEPOrder = {
                 ...data,
@@ -93,6 +103,7 @@ export const useOEP = () => {
             };
 
             setOrders(prev => [newOrder, ...prev]);
+            console.log('✅ Pedido OEP creado:', newOrder);
             return { success: true, data: newOrder };
         } catch (error: any) {
             console.error('Error creating OEP order:', error);
