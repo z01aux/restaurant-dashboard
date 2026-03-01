@@ -24,31 +24,33 @@ export const OEPOrdersManager: React.FC = () => {
     const [showCashModal, setShowCashModal] = useState(false);
     const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
 
-    // CORREGIDO: Solución más directa - asignar directamente con || []
+    // CORREGIDO: Solución más explícita con tipos
     const filteredOrders = useMemo(() => {
-        const ordersArray = orders || [];
+        // Asegurar que orders sea un array
+        const ordersArray: OEPOrder[] = orders || [];
         
         const startOfDay = new Date(selectedDate);
         startOfDay.setHours(0, 0, 0, 0);
         const endOfDay = new Date(selectedDate);
         endOfDay.setHours(23, 59, 59, 999);
 
-        // CORREGIDO: Usar ordersArray directamente en lugar de reasignar filtered
-        const filtered = ordersArray.filter((o: OEPOrder) => {
-            const d = new Date(o.created_at);
-            return d >= startOfDay && d <= endOfDay;
+        // Filtrar por fecha
+        const dateFiltered: OEPOrder[] = ordersArray.filter((order: OEPOrder) => {
+            const orderDate = new Date(order.created_at);
+            return orderDate >= startOfDay && orderDate <= endOfDay;
         });
 
+        // Si hay término de búsqueda, filtrar también por texto
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
-            return filtered.filter((o: OEPOrder) =>
-                o.customer_name?.toLowerCase().includes(term) ||
-                o.phone?.includes(term) ||
-                o.order_number?.toLowerCase().includes(term)
+            return dateFiltered.filter((order: OEPOrder) => 
+                order.customer_name?.toLowerCase().includes(term) ||
+                order.phone?.toLowerCase().includes(term) ||
+                order.order_number?.toLowerCase().includes(term)
             );
         }
 
-        return filtered;
+        return dateFiltered;
     }, [orders, searchTerm, selectedDate]);
 
     // ── Caja ─────────────────────────────────────────────────
