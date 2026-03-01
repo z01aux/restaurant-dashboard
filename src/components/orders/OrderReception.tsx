@@ -1,4 +1,3 @@
-// =================================================
 // ARCHIVO: src/components/orders/OrderReception.tsx
 // =================================================
 
@@ -629,7 +628,7 @@ const CategoryManagerModal: React.FC<{
       </div>
     </div>
   );
-};
+});
 
 // ============================================
 // MODAL DE GESTIÓN RÁPIDA DE MENÚ
@@ -1681,17 +1680,10 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    // Validar método de pago para todos los tipos que lo requieren
-    if (activeTab !== 'walk-in' && activeTab !== 'delivery') {
-      if (!paymentMethod) {
-        showToast('Selecciona un método de pago', 'error');
-        return;
-      }
-    } else if (activeTab === 'walk-in' || activeTab === 'delivery') {
-      if (!paymentMethod) {
-        showToast('Selecciona un método de pago', 'error');
-        return;
-      }
+    // Validar método de pago - Todos los tipos requieren método de pago
+    if (!paymentMethod) {
+      showToast('Selecciona un método de pago', 'error');
+      return;
     }
 
     if (isCreatingOrder) return;
@@ -1818,7 +1810,7 @@ const OrderReception: React.FC = React.memo(() => {
             ...(activeTab === 'delivery' && { deliveryAddress: address })
           },
           notes: orderNotes,
-          paymentMethod: activeTab !== 'phone' ? paymentMethod : undefined,
+          paymentMethod: paymentMethod,
           items: cart.map(item => ({
             menuItem: {
               id: item.menuItem.id,
@@ -1845,7 +1837,7 @@ const OrderReception: React.FC = React.memo(() => {
           tableNumber: tableNumber,
           source: orderData.source,
           notes: orderNotes,
-          paymentMethod: orderData.paymentMethod,
+          paymentMethod: paymentMethod,
           orderType: 'regular',
           igvRate: 10
         };
@@ -1892,19 +1884,19 @@ const OrderReception: React.FC = React.memo(() => {
     if (cart.length === 0) return false;
     
     if (activeTab === 'fullDay' || activeTab === 'phone') {
-      return studentName && guardianName;
+      return studentName && guardianName && paymentMethod;
     }
     
     if (activeTab === 'walk-in') {
-      return customerName && phone && tableNumber;
+      return customerName && phone && tableNumber && paymentMethod;
     }
     
     if (activeTab === 'delivery') {
-      return customerName && phone && address;
+      return customerName && phone && address && paymentMethod;
     }
     
-    return customerName && phone;
-  }, [cart, activeTab, customerName, phone, tableNumber, address, studentName, guardianName]);
+    return customerName && phone && paymentMethod;
+  }, [cart, activeTab, customerName, phone, tableNumber, address, studentName, guardianName, paymentMethod]);
 
   // Modificar el JSX para mostrar campos de alumno cuando activeTab es 'phone'
   return (
