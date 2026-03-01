@@ -1,9 +1,8 @@
 // ============================================================
-// ARCHIVO: src/utils/oepReports.ts
+// ARCHIVO: src/utils/oepReports.ts (CORREGIDO)
 // Utilidades para generar reportes de cocina del módulo OEP
 // ============================================================
 
-import * as XLSX from 'xlsx';
 import { OEPOrder } from '../types/oep';
 import { formatDateForDisplay, formatTimeForDisplay } from './dateUtils';
 
