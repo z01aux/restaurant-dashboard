@@ -1950,7 +1950,7 @@ const OrderReception: React.FC = React.memo(() => {
                   <div className="flex items-center space-x-2 mt-1">
                     <select
                       value={activeTab}
-                      onChange={(e) => setActiveTab(e.target.value as any)}
+                      onChange={(e) => setActiveTab(e.target.value as 'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep')}
                       className="text-xs bg-gray-100 rounded-lg px-2 py-1 border border-gray-300"
                     >
                       <option value="phone">📞 Cocina</option>
@@ -2321,7 +2321,7 @@ const OrderReception: React.FC = React.memo(() => {
                     </h2>
                     <select
                       value={activeTab}
-                      onChange={(e) => setActiveTab(e.target.value as any)}
+                      onChange={(e) => setActiveTab(e.target.value as 'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep')}
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="phone">📞 Cocina</option>
@@ -2653,3 +2653,4 @@ const OrderReception: React.FC = React.memo(() => {
 });
 
 export default OrderReception;
+
