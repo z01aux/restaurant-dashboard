@@ -43,12 +43,3 @@ export interface OEPDatabaseOrder {
     created_at: string;
     updated_at: string;
 }
-
-// Para asegurar que todo esté exportado correctamente
-export type {
-    OEPOrderStatus,
-    OEPPaymentMethod,
-    OEPOrderItem,
-    OEPOrder,
-    OEPDatabaseOrder
-};

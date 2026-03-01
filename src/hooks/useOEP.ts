@@ -1,11 +1,10 @@
 // ============================================================
-// ARCHIVO: src/hooks/useOEP.ts
-// Hook principal para pedidos OEP
+// ARCHIVO: src/hooks/useOEP.ts (VERSIÓN CORREGIDA)
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { OEPOrder, OEPDatabaseOrder } from '../types/oep';
+import { OEPOrder, OEPOrderStatus, OEPPaymentMethod } from '../types/oep';
 
 export const useOEP = () => {
     const [orders, setOrders] = useState<OEPOrder[]>([]);
@@ -22,8 +21,17 @@ export const useOEP = () => {
 
             if (error) throw error;
 
-            const convertedOrders: OEPOrder[] = (data || []).map((order: OEPDatabaseOrder) => ({
-                ...order,
+            const convertedOrders: OEPOrder[] = (data || []).map((order: any) => ({
+                id: order.id,
+                order_number: order.order_number || '',
+                customer_name: order.customer_name || '',
+                phone: order.phone || null,
+                address: order.address || null,
+                items: Array.isArray(order.items) ? order.items : [],
+                status: (order.status as OEPOrderStatus) || 'pending',
+                total: Number(order.total) || 0,
+                payment_method: order.payment_method as OEPPaymentMethod | null,
+                notes: order.notes || null,
                 created_at: new Date(order.created_at),
                 updated_at: new Date(order.updated_at)
             }));
@@ -84,7 +92,16 @@ export const useOEP = () => {
             if (error) throw error;
 
             const newOrder: OEPOrder = {
-                ...data,
+                id: data.id,
+                order_number: data.order_number || '',
+                customer_name: data.customer_name || '',
+                phone: data.phone || null,
+                address: data.address || null,
+                items: Array.isArray(data.items) ? data.items : [],
+                status: (data.status as OEPOrderStatus) || 'pending',
+                total: Number(data.total) || 0,
+                payment_method: data.payment_method as OEPPaymentMethod | null,
+                notes: data.notes || null,
                 created_at: new Date(data.created_at),
                 updated_at: new Date(data.updated_at)
             };
@@ -110,17 +127,11 @@ export const useOEP = () => {
             if (error) throw error;
             return { success: true };
         } catch (error: any) {
-            const original = orders.find(o => o.id === id);
-            if (original) {
-                setOrders(prev => prev.map(order =>
-                    order.id === id ? original : order
-                ));
-            }
             return { success: false, error: error.message };
         }
     }, [orders]);
 
-    const updateOrderPayment = useCallback(async (id: string, paymentMethod: OEPOrder['payment_method']) => {
+    const updateOrderPayment = useCallback(async (id: string, paymentMethod: OEPPaymentMethod | null) => {
         try {
             setOrders(prev => prev.map(order =>
                 order.id === id ? { ...order, payment_method: paymentMethod } : order
@@ -134,12 +145,6 @@ export const useOEP = () => {
             if (error) throw error;
             return { success: true };
         } catch (error: any) {
-            const original = orders.find(o => o.id === id);
-            if (original) {
-                setOrders(prev => prev.map(order =>
-                    order.id === id ? original : order
-                ));
-            }
             return { success: false, error: error.message };
         }
     }, [orders]);
@@ -165,17 +170,6 @@ export const useOEP = () => {
         });
     }, [orders]);
 
-    const getOrdersByDateRange = useCallback((startDate: Date, endDate: Date) => {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        return orders.filter(order => {
-            const orderDate = new Date(order.created_at);
-            return orderDate >= start && orderDate <= end;
-        });
-    }, [orders]);
-
     useEffect(() => {
         fetchOrders();
     }, [fetchOrders]);
@@ -188,7 +182,6 @@ export const useOEP = () => {
         updateOrderStatus,
         updateOrderPayment,
         deleteOrder,
-        getTodayOrders,
-        getOrdersByDateRange
+        getTodayOrders
     };
 };

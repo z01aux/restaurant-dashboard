@@ -1,10 +1,9 @@
 // ============================================================
-// ARCHIVO: src/components/oep/OEPPaymentModal.tsx
-// Modal para cambiar método de pago en OEP
+// ARCHIVO: src/components/oep/OEPPaymentModal.tsx (VERSIÓN CORREGIDA)
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, DollarSign, Smartphone, Minus } from 'lucide-react';
+import { X, CreditCard, DollarSign, Smartphone } from 'lucide-react';
 import { OEPOrder } from '../../types/oep';
 
 interface OEPPaymentModalProps {
@@ -29,11 +28,11 @@ export const OEPPaymentModal: React.FC<OEPPaymentModalProps> = ({
 
     if (!isOpen || !order) return null;
 
-    const paymentOptions = [
-        { value: 'EFECTIVO', label: 'Efectivo', icon: DollarSign, color: 'green' },
-        { value: 'YAPE/PLIN', label: 'Yape/Plin', icon: Smartphone, color: 'purple' },
-        { value: 'TARJETA', label: 'Tarjeta', icon: CreditCard, color: 'blue' },
-    ];
+    const handleSelectMethod = (value: string) => {
+        if (value === 'EFECTIVO' || value === 'YAPE/PLIN' || value === 'TARJETA') {
+            setSelectedMethod(value);
+        }
+    };
 
     const handleSave = async () => {
         if (selectedMethod === order.payment_method) {
@@ -44,6 +43,9 @@ export const OEPPaymentModal: React.FC<OEPPaymentModalProps> = ({
         setLoading(true);
         try {
             await onSave(order.id, selectedMethod);
+            onClose();
+        } catch (error) {
+            console.error(error);
         } finally {
             setLoading(false);
         }
@@ -86,35 +88,57 @@ export const OEPPaymentModal: React.FC<OEPPaymentModalProps> = ({
                         </div>
                     </div>
 
-                    <div className="space-y-3 mb-6">
-                        {paymentOptions.map(method => {
-                            const Icon = method.icon;
-                            const isSelected = selectedMethod === method.value;
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                        <button
+                            onClick={() => handleSelectMethod('EFECTIVO')}
+                            className={`p-4 rounded-xl border-2 flex flex-col items-center space-y-2 ${
+                                selectedMethod === 'EFECTIVO'
+                                    ? 'border-green-500 bg-green-50'
+                                    : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                        >
+                            <DollarSign size={24} className="text-green-600" />
+                            <span className="text-sm font-medium">Efectivo</span>
+                        </button>
 
-                            return (
-                                <button
-                                    key={method.value}
-                                    onClick={() => setSelectedMethod(method.value)}
-                                    className={`w-full p-4 rounded-xl border-2 text-left font-semibold transition-all flex items-center space-x-3 ${
-                                        isSelected
-                                            ? `border-${method.color}-500 bg-${method.color}-50`
-                                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <Icon size={20} className={`text-${method.color}-600`} />
-                                    <span>{method.label}</span>
-                                </button>
-                            );
-                        })}
+                        <button
+                            onClick={() => handleSelectMethod('YAPE/PLIN')}
+                            className={`p-4 rounded-xl border-2 flex flex-col items-center space-y-2 ${
+                                selectedMethod === 'YAPE/PLIN'
+                                    ? 'border-purple-500 bg-purple-50'
+                                    : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                        >
+                            <Smartphone size={24} className="text-purple-600" />
+                            <span className="text-sm font-medium">Yape/Plin</span>
+                        </button>
+
+                        <button
+                            onClick={() => handleSelectMethod('TARJETA')}
+                            className={`p-4 rounded-xl border-2 flex flex-col items-center space-y-2 ${
+                                selectedMethod === 'TARJETA'
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                        >
+                            <CreditCard size={24} className="text-blue-600" />
+                            <span className="text-sm font-medium">Tarjeta</span>
+                        </button>
                     </div>
 
                     <div className="flex space-x-3">
-                        <button onClick={onClose} disabled={loading}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                        <button
+                            onClick={onClose}
+                            disabled={loading}
+                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                        >
                             Cancelar
                         </button>
-                        <button onClick={handleSave} disabled={!selectedMethod || loading}
-                            className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg hover:shadow-md disabled:opacity-50 font-semibold">
+                        <button
+                            onClick={handleSave}
+                            disabled={!selectedMethod || loading}
+                            className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg hover:shadow-md disabled:opacity-50 font-semibold"
+                        >
                             {loading ? 'Guardando...' : 'Guardar'}
                         </button>
                     </div>

@@ -1,5 +1,5 @@
 // =================================================
-// ARCHIVO: src/components/orders/OrderReception.tsx (COMPLETO - SIN OEP)
+// ARCHIVO: src/components/orders/OrderReception.tsx (CON OEP)
 // =================================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -15,6 +15,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useStudents } from '../../hooks/useStudents';
 import { useFullDay } from '../../hooks/useFullDay';
 import { useCategories } from '../../hooks/useCategories';
+import { useOEP } from '../../hooks/useOEP';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 
 const styles = `
@@ -356,7 +357,6 @@ const MenuProduct: React.FC<{
 
   return (
     <div className="bg-white rounded-lg p-3 border border-gray-200 product-card group">
-      {/* CONTADOR MEJORADO - MÁS VISIBLE EN DESKTOP */}
       {quantityInCart > 0 && (
         <div className="product-counter">
           {quantityInCart}
@@ -1044,7 +1044,7 @@ const limitNameLength = (fullName: string): string => {
 // COMPONENTE PRINCIPAL ORDER RECEPTION
 // ============================================
 const OrderReception: React.FC = React.memo(() => {
-  const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay'>('phone');
+  const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep'>('phone');
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -1082,6 +1082,7 @@ const OrderReception: React.FC = React.memo(() => {
   const { categories: dbCategories, refreshCategories } = useCategories();
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
+  const { createOrder: createOEPOrder } = useOEP();
   const { searchStudents, searchResults } = useStudents();
 
   const isAdmin = user?.role === 'admin';
@@ -1379,7 +1380,7 @@ const OrderReception: React.FC = React.memo(() => {
           </div>
           <div class="info-row">
             <span class="label">TIPO:</span>
-            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY'}</span>
+            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : 'OEP'}</span>
           </div>
           <div class="info-row">
             <span class="label">FECHA:</span>
@@ -1456,7 +1457,7 @@ const OrderReception: React.FC = React.memo(() => {
           
           <div class="center">
             <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
-            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : 'FULLDAY'} ***</div>
+            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : 'OEP'} ***</div>
             <div class="normal" style="margin-top: 10px; font-size: 10px;">
               ${new Date().toLocaleString('es-ES', { 
                 year: 'numeric',
@@ -1672,7 +1673,7 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone') && !paymentMethod) {
+    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone' || activeTab === 'oep') && !paymentMethod) {
       showToast('Selecciona un método de pago', 'error');
       return;
     }
@@ -1735,8 +1736,9 @@ const OrderReception: React.FC = React.memo(() => {
         } else {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
-      } else if (activeTab === 'phone') {
-        console.log('📞 Creando pedido de COCINA con datos:', {
+      }
+      else if (activeTab === 'oep') {
+        const result = await createOEPOrder({
           customer_name: customerName,
           phone: phone,
           address: address || undefined,
@@ -1753,6 +1755,32 @@ const OrderReception: React.FC = React.memo(() => {
           notes: orderNotes
         });
 
+        if (result.success) {
+          showToast('✅ Pedido OEP guardado', 'success');
+
+          const tempOrder: Order = {
+            id: 'temp-' + Date.now(),
+            orderNumber: `OEP-${Date.now().toString().slice(-8)}`,
+            kitchenNumber: `COM-${Date.now().toString().slice(-8)}`,
+            items: cart,
+            status: 'pending',
+            createdAt: new Date(),
+            total: total,
+            customerName: customerName,
+            phone: phone,
+            address: address,
+            source: { type: 'oep' },
+            notes: orderNotes,
+            paymentMethod: paymentMethod,
+            orderType: 'regular',
+            igvRate: 10
+          };
+          printOrderImmediately(tempOrder);
+        } else {
+          showToast('❌ Error al guardar: ' + result.error, 'error');
+        }
+      }
+      else if (activeTab === 'phone') {
         const tempOrder: Order = {
           id: 'temp-' + Date.now(),
           orderNumber: `COM-${Date.now().toString().slice(-8)}`,
@@ -1795,7 +1823,8 @@ const OrderReception: React.FC = React.memo(() => {
         } else {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
-      } else {
+      }
+      else {
         const orderData: any = {
           customerName: customerName,
           phone: phone,
@@ -1871,7 +1900,7 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [
     cart, customerName, phone, activeTab, tableNumber, address, orderNotes, 
-    paymentMethod, createOrder, createFullDayOrder,
+    paymentMethod, createOrder, createFullDayOrder, createOEPOrder,
     getTotal, showToast, printOrderImmediately, isCreatingOrder, 
     studentName, guardianName, selectedGrade, selectedSection, selectedStudentId
   ]);
@@ -1887,7 +1916,7 @@ const OrderReception: React.FC = React.memo(() => {
       return customerName && phone && tableNumber;
     }
     
-    if (activeTab === 'delivery' || activeTab === 'phone') {
+    if (activeTab === 'delivery' || activeTab === 'phone' || activeTab === 'oep') {
       return customerName && phone;
     }
     
@@ -1929,6 +1958,7 @@ const OrderReception: React.FC = React.memo(() => {
                       className="text-xs bg-gray-100 rounded-lg px-2 py-1 border border-gray-300"
                     >
                       <option value="phone">📞 Cocina</option>
+                      <option value="oep">📦 OEP</option>
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
                       <option value="fullDay">🎒 FullDay</option>
@@ -2116,7 +2146,7 @@ const OrderReception: React.FC = React.memo(() => {
                       />
                     )}
 
-                    {(activeTab === 'delivery' || activeTab === 'phone') && (
+                    {(activeTab === 'delivery' || activeTab === 'phone' || activeTab === 'oep') && (
                       <input
                         type="text"
                         value={address}
@@ -2128,7 +2158,7 @@ const OrderReception: React.FC = React.memo(() => {
                   </>
                 )}
 
-                {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone') && (
+                {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone' || activeTab === 'oep') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Método de Pago *
@@ -2180,7 +2210,6 @@ const OrderReception: React.FC = React.memo(() => {
                 placeholder="Buscar productos..."
               />
 
-              {/* BARRA DE CATEGORÍAS MEJORADA */}
               {!searchTerm && categories.length > 0 && (
                 <div className="categories-container">
                   <div className="categories-scroll">
@@ -2300,6 +2329,7 @@ const OrderReception: React.FC = React.memo(() => {
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="phone">📞 Cocina</option>
+                      <option value="oep">📦 OEP</option>
                       <option value="walk-in">👤 Local</option>
                       <option value="delivery">🚚 Delivery</option>
                       <option value="fullDay">🎒 FullDay</option>
@@ -2471,7 +2501,7 @@ const OrderReception: React.FC = React.memo(() => {
                           />
                         )}
 
-                        {(activeTab === 'delivery' || activeTab === 'phone') && (
+                        {(activeTab === 'delivery' || activeTab === 'phone' || activeTab === 'oep') && (
                           <input
                             type="text"
                             value={address}
@@ -2483,7 +2513,7 @@ const OrderReception: React.FC = React.memo(() => {
                       </>
                     )}
 
-                    {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone') && (
+                    {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone' || activeTab === 'oep') && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Pago</label>
                         <div className="grid grid-cols-3 gap-2">
@@ -2530,7 +2560,6 @@ const OrderReception: React.FC = React.memo(() => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
                   />
 
-                  {/* BARRA DE CATEGORÍAS MEJORADA EN DESKTOP */}
                   {!searchTerm && categories.length > 0 && (
                     <div className="categories-container">
                       <div className="categories-scroll">
