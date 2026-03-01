@@ -1,15 +1,4 @@
-import React from 'react';
-import { Order } from '../../types';
-import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-
-interface OrderTicketProps {
-  order: Order;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
-}
-
-const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseLeave }) => {
-  // Verificar si es un pedido por teléfono para ticket de cocina
+// Verificar si es un pedido por teléfono para ticket de cocina
   const isPhoneOrder = order.source.type === 'phone';
   
   // Determinar la tasa de IGV (10% por defecto, pero puede venir de la orden)
@@ -905,6 +894,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       'walk-in': 'LOCAL', 
       'delivery': 'DELIVERY',
       'fullDay': 'FULLDAY',
+      'oep': 'OEP',
     };
     return sourceMap[sourceType] || sourceType;
   };
@@ -966,3 +956,4 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 };
 
 export default OrderTicket;
+----------------------------------------
