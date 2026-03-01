@@ -1,3 +1,4 @@
+// =================================================
 // ARCHIVO: src/components/orders/OrderReception.tsx
 // =================================================
 
@@ -1680,9 +1681,17 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone') && !paymentMethod) {
-      showToast('Selecciona un método de pago', 'error');
-      return;
+    // Validar método de pago para todos los tipos que lo requieren
+    if (activeTab !== 'walk-in' && activeTab !== 'delivery') {
+      if (!paymentMethod) {
+        showToast('Selecciona un método de pago', 'error');
+        return;
+      }
+    } else if (activeTab === 'walk-in' || activeTab === 'delivery') {
+      if (!paymentMethod) {
+        showToast('Selecciona un método de pago', 'error');
+        return;
+      }
     }
 
     if (isCreatingOrder) return;
