@@ -24,21 +24,24 @@ export const OEPOrdersManager: React.FC = () => {
     const [showCashModal, setShowCashModal] = useState(false);
     const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
 
-    // CORREGIDO: Asegurar que orders sea un array
+    // CORREGIDO: Solución más directa - asignar directamente con || []
     const filteredOrders = useMemo(() => {
         const ordersArray = orders || [];
         
-        const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
 
-        let filtered = ordersArray.filter(o => {
+        // CORREGIDO: Usar ordersArray directamente en lugar de reasignar filtered
+        const filtered = ordersArray.filter((o: OEPOrder) => {
             const d = new Date(o.created_at);
             return d >= startOfDay && d <= endOfDay;
         });
 
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
-            filtered = filtered.filter(o =>
+            return filtered.filter((o: OEPOrder) =>
                 o.customer_name?.toLowerCase().includes(term) ||
                 o.phone?.includes(term) ||
                 o.order_number?.toLowerCase().includes(term)
