@@ -13,7 +13,6 @@ import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudents } from '../../hooks/useStudents';
 import { useFullDay } from '../../hooks/useFullDay';
-// IMPORTAR useOEP
 import { useOEP } from '../../hooks/useOEP';
 import { useCategories } from '../../hooks/useCategories';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
@@ -42,7 +41,6 @@ const styles = `
     animation: slideIn 0.3s ease-out;
   }
 
-  /* Mejora para el contador de productos */
   .product-counter {
     position: absolute;
     top: -8px;
@@ -74,7 +72,6 @@ const styles = `
     }
   }
 
-  /* Mejora para las cards de productos */
   .product-card {
     transition: all 0.2s ease-in-out;
     position: relative;
@@ -90,7 +87,6 @@ const styles = `
     transform: scale(1.1);
   }
 
-  /* Barra de categorías mejorada */
   .categories-container {
     background: white;
     border-radius: 12px;
@@ -153,7 +149,6 @@ const styles = `
     transform: translateY(-1px);
   }
 
-  /* Vista compacta para móvil */
   @media (max-width: 640px) {
     .category-button {
       padding: 6px 12px;
@@ -357,7 +352,6 @@ const MenuProduct: React.FC<{
 
   return (
     <div className="bg-white rounded-lg p-3 border border-gray-200 product-card group">
-      {/* CONTADOR MEJORADO - MÁS VISIBLE EN DESKTOP */}
       {quantityInCart > 0 && (
         <div className="product-counter">
           {quantityInCart}
@@ -402,9 +396,6 @@ const MenuProduct: React.FC<{
   );
 });
 
-// ============================================
-// MODAL DE GESTIÓN DE CATEGORÍAS
-// ============================================
 const CategoryManagerModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -628,11 +619,8 @@ const CategoryManagerModal: React.FC<{
       </div>
     </div>
   );
-});
+};
 
-// ============================================
-// MODAL DE GESTIÓN RÁPIDA DE MENÚ
-// ============================================
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -1019,9 +1007,6 @@ const QuickMenuManager: React.FC<{
   );
 };
 
-// ============================================
-// FUNCIÓN PARA LIMITAR NOMBRES LARGOS
-// ============================================
 const limitNameLength = (fullName: string): string => {
   if (fullName.length > 35) {
     const parts = fullName.split(',');
@@ -1040,9 +1025,6 @@ const limitNameLength = (fullName: string): string => {
   return fullName;
 };
 
-// ============================================
-// COMPONENTE PRINCIPAL ORDER RECEPTION
-// ============================================
 const OrderReception: React.FC = React.memo(() => {
   const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay'>('phone');
   const [customerName, setCustomerName] = useState('');
@@ -1082,7 +1064,6 @@ const OrderReception: React.FC = React.memo(() => {
   const { categories: dbCategories, refreshCategories } = useCategories();
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
-  // USAR useOEP
   const { createOrder: createOEPOrder } = useOEP();
   const { searchStudents, searchResults } = useStudents();
 
@@ -1125,7 +1106,7 @@ const OrderReception: React.FC = React.memo(() => {
   }, [customerSearchTerm, customers, activeTab]);
 
   useEffect(() => {
-    if (studentSearchTerm.trim().length > 1 && activeTab === 'fullDay') {
+    if (studentSearchTerm.trim().length > 1 && (activeTab === 'fullDay' || activeTab === 'phone')) {
       searchStudents(studentSearchTerm);
     } else {
       setStudentSearchResults([]);
@@ -1253,9 +1234,6 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [cart.length, showToast]);
 
-  // ============================================
-  // FUNCIÓN GENERATE TICKET CONTENT
-  // ============================================
   const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
     const getCurrentUserName = () => {
       try {
@@ -1663,7 +1641,6 @@ const OrderReception: React.FC = React.memo(() => {
         return;
       }
     } else if (activeTab === 'phone') {
-      // Para pedidos OEP, requerimos los mismos datos que FullDay
       if (!studentName || !guardianName) {
         showToast('Completa los datos del alumno', 'error');
         return;
@@ -1680,7 +1657,6 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    // Validar método de pago - Todos los tipos requieren método de pago
     if (!paymentMethod) {
       showToast('Selecciona un método de pago', 'error');
       return;
@@ -1694,7 +1670,6 @@ const OrderReception: React.FC = React.memo(() => {
       const total = getTotal();
       
       if (activeTab === 'fullDay') {
-        // PEDIDOS FULLDAY - Usar tabla fullday
         const result = await createFullDayOrder({
           student_id: selectedStudentId,
           student_name: studentName,
@@ -1746,7 +1721,6 @@ const OrderReception: React.FC = React.memo(() => {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
       } else if (activeTab === 'phone') {
-        // PEDIDOS OEP - Usar tabla oep (NO orders)
         const result = await createOEPOrder({
           student_id: selectedStudentId,
           student_name: studentName,
@@ -1799,7 +1773,6 @@ const OrderReception: React.FC = React.memo(() => {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
       } else {
-        // PEDIDOS REGULARES (walk-in, delivery) - Usar tabla orders
         const orderData: any = {
           customerName: customerName,
           phone: phone,
@@ -1853,7 +1826,6 @@ const OrderReception: React.FC = React.memo(() => {
         }
       }
       
-      // Limpiar el formulario después de guardar
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -1884,21 +1856,20 @@ const OrderReception: React.FC = React.memo(() => {
     if (cart.length === 0) return false;
     
     if (activeTab === 'fullDay' || activeTab === 'phone') {
-      return studentName && guardianName && paymentMethod;
+      return !!(studentName && guardianName && paymentMethod);
     }
     
     if (activeTab === 'walk-in') {
-      return customerName && phone && tableNumber && paymentMethod;
+      return !!(customerName && phone && tableNumber && paymentMethod);
     }
     
     if (activeTab === 'delivery') {
-      return customerName && phone && address && paymentMethod;
+      return !!(customerName && phone && address && paymentMethod);
     }
     
-    return customerName && phone && paymentMethod;
+    return !!(customerName && phone && paymentMethod);
   }, [cart, activeTab, customerName, phone, tableNumber, address, studentName, guardianName, paymentMethod]);
 
-  // Modificar el JSX para mostrar campos de alumno cuando activeTab es 'phone'
   return (
     <>
       <style>{styles}</style>
@@ -1921,7 +1892,6 @@ const OrderReception: React.FC = React.memo(() => {
         />
 
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-          {/* Header Móvil */}
           <div className="lg:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-lg border-b border-red-200">
             <div className="px-3 py-3">
               <div className="flex items-center justify-between">
@@ -1932,7 +1902,6 @@ const OrderReception: React.FC = React.memo(() => {
                       value={activeTab}
                       onChange={(e) => {
                         setActiveTab(e.target.value as any);
-                        // Limpiar campos al cambiar de pestaña
                         setStudentName('');
                         setGuardianName('');
                         setStudentSearchTerm('');
@@ -1980,7 +1949,6 @@ const OrderReception: React.FC = React.memo(() => {
             </div>
           </div>
 
-          {/* Contenido Móvil */}
           <div className="lg:hidden px-3 pt-4">
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4">
               <h3 className="text-sm font-bold text-gray-900 mb-3">
@@ -2196,7 +2164,6 @@ const OrderReception: React.FC = React.memo(() => {
                 placeholder="Buscar productos..."
               />
 
-              {/* BARRA DE CATEGORÍAS MEJORADA */}
               {!searchTerm && categories.length > 0 && (
                 <div className="categories-container">
                   <div className="categories-scroll">
@@ -2314,7 +2281,6 @@ const OrderReception: React.FC = React.memo(() => {
                       value={activeTab}
                       onChange={(e) => {
                         setActiveTab(e.target.value as any);
-                        // Limpiar campos al cambiar de pestaña
                         setStudentName('');
                         setGuardianName('');
                         setStudentSearchTerm('');
@@ -2556,7 +2522,6 @@ const OrderReception: React.FC = React.memo(() => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
                   />
 
-                  {/* BARRA DE CATEGORÍAS MEJORADA EN DESKTOP */}
                   {!searchTerm && categories.length > 0 && (
                     <div className="categories-container">
                       <div className="categories-scroll">
