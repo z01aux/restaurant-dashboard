@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Download, Calendar, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
+import { Search, Download, Calendar, Printer, Pencil } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
