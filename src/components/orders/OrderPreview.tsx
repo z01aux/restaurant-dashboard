@@ -194,5 +194,3 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
     </div>
   );
 };
-
-----------------------------------------
