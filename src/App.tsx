@@ -8,7 +8,7 @@ import StatsCards from './components/dashboard/StatsCards';
 import OrdersManager from './components/orders/OrdersManager';
 import MenuManager from './components/menu/MenuManager';
 import OrderReception from './components/orders/OrderReception';
-import CustomersManager from './components/customers/CustomersManager';
+import CustomersManager from './components/customers/CustomersManager_NUEVO';
 import KitchenManager from './components/kitchen/KitchenManager';
 import UserManager from './components/users/UserManager';
 import StudentManager from './components/students/StudentManager';
