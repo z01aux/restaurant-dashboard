@@ -5,7 +5,7 @@
 // ============================================================
 
 import * as XLSX from 'xlsx';
-import { OEPOrder } from '../hooks/useOEP';
+import { OEPOrder, OEPOrderItem } from '../types/oep';
 import { formatDateForDisplay, formatTimeForDisplay } from './dateUtils';
 
 // ── Ticket de cocina (HTML 80mm) ────────────────────────────
@@ -16,7 +16,7 @@ export const generateOEPKitchenTicketHTML = (
   const productMap = new Map<string, { name: string; quantity: number }>();
 
   orders.forEach(order => {
-    order.items.forEach(item => {
+    order.items.forEach((item: OEPOrderItem) => {
       const existing = productMap.get(item.id);
       if (existing) { existing.quantity += item.quantity; }
       else { productMap.set(item.id, { name: item.name, quantity: item.quantity }); }
@@ -97,7 +97,7 @@ export const exportOEPKitchenReportToExcel = (orders: OEPOrder[], selectedDate: 
 
   orders.forEach(order => {
     const gradeKey = `${order.grade} - ${order.section}`;
-    order.items.forEach(item => {
+    order.items.forEach((item: OEPOrderItem) => {
       const existing = productMap.get(item.id);
       if (existing) {
         existing.quantity += item.quantity;

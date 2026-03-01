@@ -4,7 +4,7 @@
 // Equivalente exacto de: src/utils/fulldayTicketUtils.ts
 // ============================================================
 
-import { OEPOrder } from '../types/oep';
+import { OEPOrder, OEPOrderItem } from '../types/oep';
 import { formatDateForDisplay, formatTimeForDisplay } from './dateUtils';
 
 interface OEPTicketSummary {
@@ -32,7 +32,7 @@ export const generateOEPTicketSummary = (orders: OEPOrder[]): OEPTicketSummary =
 
   const productMap = new Map<string, { quantity: number; total: number; name: string }>();
   orders.forEach(order => {
-    order.items.forEach(item => {
+    order.items.forEach((item: OEPOrderItem) => {
       const existing = productMap.get(item.id);
       if (existing) {
         existing.quantity += item.quantity;

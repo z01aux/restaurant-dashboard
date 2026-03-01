@@ -2,11 +2,10 @@
 // ARCHIVO: src/utils/oepExcelUtils.ts
 // Exportación a Excel del módulo OEP
 // Equivalente exacto de: src/utils/fulldayExcelUtils.ts
-// (referencias a exportFullDayToCSV, exportFullDayToExcel, exportFullDayByDateRange)
 // ============================================================
 
 import * as XLSX from 'xlsx';
-import { OEPOrder } from '../hooks/useOEP';
+import { OEPOrder, OEPOrderItem } from '../types/oep';
 import { formatDateForDisplay, formatTimeForDisplay, getStartOfDay, getEndOfDay } from './dateUtils';
 
 // ── CSV ──────────────────────────────────────────────────────
@@ -25,7 +24,7 @@ export const exportOEPToCSV = (orders: OEPOrder[], fileName: string = 'oep_pedid
     order.phone || '',
     order.total.toFixed(2),
     order.payment_method || 'NO APLICA',
-    order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')
+    order.items.map((item: OEPOrderItem) => `${item.quantity}x ${item.name}`).join(', ')
   ]);
 
   const csvContent = [headers, ...rows]
@@ -46,7 +45,7 @@ export const exportOEPToCSV = (orders: OEPOrder[], fileName: string = 'oep_pedid
 const listOEPItemsByCategory = (order: OEPOrder) => {
   const result = { entradas: [] as string[], fondos: [] as string[], bebidas: [] as string[] };
 
-  order.items.forEach(item => {
+  order.items.forEach((item: OEPOrderItem) => {
     const display  = `${item.quantity}x ${item.name}`;
     // @ts-ignore
     const category = item.category ? item.category.toLowerCase() : null;
@@ -175,7 +174,7 @@ export const exportOEPByDateRange = (orders: OEPOrder[], startDate: Date, endDat
         order.guardian_name,
         order.phone || '---',
         order.payment_method || 'NO APLICA',
-        order.items.map(i => `${i.quantity}x ${i.name}${i.notes ? ` (${i.notes})` : ''}`).join('\n'),
+        order.items.map((item: OEPOrderItem) => `${item.quantity}x ${item.name}${item.notes ? ` (${item.notes})` : ''}`).join('\n'),
         `S/ ${order.total.toFixed(2)}`
       ]);
     });
@@ -187,7 +186,7 @@ export const exportOEPByDateRange = (orders: OEPOrder[], startDate: Date, endDat
   // HOJA 3: Top 10 productos
   const productMap = new Map<string, { name: string; quantity: number; total: number }>();
   filtered.forEach(order => {
-    order.items.forEach(item => {
+    order.items.forEach((item: OEPOrderItem) => {
       const ex = productMap.get(item.id);
       if (ex) { ex.quantity += item.quantity; ex.total += item.price * item.quantity; }
       else    { productMap.set(item.id, { name: item.name, quantity: item.quantity, total: item.price * item.quantity }); }
