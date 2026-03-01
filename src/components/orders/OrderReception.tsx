@@ -13,6 +13,8 @@ import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudents } from '../../hooks/useStudents';
 import { useFullDay } from '../../hooks/useFullDay';
+// IMPORTAR useOEP
+import { useOEP } from '../../hooks/useOEP';
 import { useCategories } from '../../hooks/useCategories';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
 
@@ -1080,6 +1082,8 @@ const OrderReception: React.FC = React.memo(() => {
   const { categories: dbCategories, refreshCategories } = useCategories();
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
+  // USAR useOEP
+  const { createOrder: createOEPOrder } = useOEP();
   const { searchStudents, searchResults } = useStudents();
 
   const isAdmin = user?.role === 'admin';
@@ -1658,6 +1662,12 @@ const OrderReception: React.FC = React.memo(() => {
         showToast('Completa los datos del alumno', 'error');
         return;
       }
+    } else if (activeTab === 'phone') {
+      // Para pedidos OEP, requerimos los mismos datos que FullDay
+      if (!studentName || !guardianName) {
+        showToast('Completa los datos del alumno', 'error');
+        return;
+      }
     } else {
       if (!customerName || !phone) {
         showToast('Completa los datos del cliente', 'error');
@@ -1670,7 +1680,7 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && !paymentMethod) {
+    if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone') && !paymentMethod) {
       showToast('Selecciona un método de pago', 'error');
       return;
     }
@@ -1683,6 +1693,7 @@ const OrderReception: React.FC = React.memo(() => {
       const total = getTotal();
       
       if (activeTab === 'fullDay') {
+        // PEDIDOS FULLDAY - Usar tabla fullday
         const result = await createFullDayOrder({
           student_id: selectedStudentId,
           student_name: studentName,
@@ -1733,7 +1744,61 @@ const OrderReception: React.FC = React.memo(() => {
         } else {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
+      } else if (activeTab === 'phone') {
+        // PEDIDOS OEP - Usar tabla oep (NO orders)
+        const result = await createOEPOrder({
+          student_id: selectedStudentId,
+          student_name: studentName,
+          grade: selectedGrade,
+          section: selectedSection,
+          guardian_name: guardianName,
+          phone: phone || undefined,
+          items: cart.map(item => ({
+            menuItem: {
+              id: item.menuItem.id,
+              name: item.menuItem.name,
+              price: item.menuItem.price,
+            },
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+          payment_method: paymentMethod,
+          notes: orderNotes
+        });
+
+        if (result.success) {
+          showToast('✅ Pedido OEP guardado', 'success');
+          
+          const tempOrder: Order = {
+            id: 'temp-' + Date.now(),
+            orderNumber: `OEP-${Date.now().toString().slice(-8)}`,
+            kitchenNumber: `COM-${Date.now().toString().slice(-8)}`,
+            items: cart,
+            status: 'pending',
+            createdAt: new Date(),
+            total: total,
+            customerName: studentName,
+            phone: phone || 'Sin teléfono',
+            source: { type: 'phone' },
+            notes: orderNotes,
+            paymentMethod: paymentMethod,
+            studentInfo: {
+              fullName: studentName,
+              grade: selectedGrade,
+              section: selectedSection,
+              guardianName: guardianName,
+              phone: phone
+            },
+            orderType: 'regular',
+            igvRate: 10
+          };
+          
+          printOrderImmediately(tempOrder);
+        } else {
+          showToast('❌ Error al guardar: ' + result.error, 'error');
+        }
       } else {
+        // PEDIDOS REGULARES (walk-in, delivery) - Usar tabla orders
         const orderData: any = {
           customerName: customerName,
           phone: phone,
@@ -1760,7 +1825,7 @@ const OrderReception: React.FC = React.memo(() => {
         const tempOrder: Order = {
           id: 'temp-' + Date.now(),
           orderNumber: `ORD-${Date.now().toString().slice(-8)}`,
-          kitchenNumber: activeTab === 'phone' ? `COM-${Date.now().toString().slice(-8)}` : undefined,
+          kitchenNumber: undefined,
           items: cart,
           status: 'pending',
           createdAt: new Date(),
@@ -1787,6 +1852,7 @@ const OrderReception: React.FC = React.memo(() => {
         }
       }
       
+      // Limpiar el formulario después de guardar
       setCart([]);
       setCustomerName('');
       setPhone('');
@@ -1808,7 +1874,7 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [
     cart, customerName, phone, activeTab, tableNumber, address, orderNotes, 
-    paymentMethod, createOrder, createFullDayOrder, getTotal, showToast, 
+    paymentMethod, createOrder, createFullDayOrder, createOEPOrder, getTotal, showToast, 
     printOrderImmediately, isCreatingOrder, studentName, guardianName, 
     selectedGrade, selectedSection, selectedStudentId
   ]);
@@ -1816,7 +1882,7 @@ const OrderReception: React.FC = React.memo(() => {
   const isFormValid = useMemo(() => {
     if (cart.length === 0) return false;
     
-    if (activeTab === 'fullDay') {
+    if (activeTab === 'fullDay' || activeTab === 'phone') {
       return studentName && guardianName;
     }
     
@@ -1831,6 +1897,7 @@ const OrderReception: React.FC = React.memo(() => {
     return customerName && phone;
   }, [cart, activeTab, customerName, phone, tableNumber, address, studentName, guardianName]);
 
+  // Modificar el JSX para mostrar campos de alumno cuando activeTab es 'phone'
   return (
     <>
       <style>{styles}</style>
@@ -1862,7 +1929,17 @@ const OrderReception: React.FC = React.memo(() => {
                   <div className="flex items-center space-x-2 mt-1">
                     <select
                       value={activeTab}
-                      onChange={(e) => setActiveTab(e.target.value as any)}
+                      onChange={(e) => {
+                        setActiveTab(e.target.value as any);
+                        // Limpiar campos al cambiar de pestaña
+                        setStudentName('');
+                        setGuardianName('');
+                        setStudentSearchTerm('');
+                        setCustomerName('');
+                        setPhone('');
+                        setAddress('');
+                        setTableNumber('');
+                      }}
                       className="text-xs bg-gray-100 rounded-lg px-2 py-1 border border-gray-300"
                     >
                       <option value="phone">🏫 OEP</option>
@@ -1906,11 +1983,11 @@ const OrderReception: React.FC = React.memo(() => {
           <div className="lg:hidden px-3 pt-4">
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4">
               <h3 className="text-sm font-bold text-gray-900 mb-3">
-                {activeTab === 'fullDay' ? 'Datos del Alumno' : 'Datos del Cliente'}
+                {(activeTab === 'fullDay' || activeTab === 'phone') ? 'Datos del Alumno' : 'Datos del Cliente'}
               </h3>
               
               <div className="space-y-3">
-                {activeTab === 'fullDay' ? (
+                {(activeTab === 'fullDay' || activeTab === 'phone') ? (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2066,7 +2143,7 @@ const OrderReception: React.FC = React.memo(() => {
                   </>
                 )}
 
-                {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && (
+                {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Método de Pago *
@@ -2230,11 +2307,21 @@ const OrderReception: React.FC = React.memo(() => {
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-gray-900">
-                      {activeTab === 'fullDay' ? 'Nuevo Pedido FullDay' : 'Nuevo Pedido'}
+                      {activeTab === 'fullDay' ? 'Nuevo Pedido FullDay' : activeTab === 'phone' ? 'Nuevo Pedido OEP' : 'Nuevo Pedido'}
                     </h2>
                     <select
                       value={activeTab}
-                      onChange={(e) => setActiveTab(e.target.value as any)}
+                      onChange={(e) => {
+                        setActiveTab(e.target.value as any);
+                        // Limpiar campos al cambiar de pestaña
+                        setStudentName('');
+                        setGuardianName('');
+                        setStudentSearchTerm('');
+                        setCustomerName('');
+                        setPhone('');
+                        setAddress('');
+                        setTableNumber('');
+                      }}
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="phone">🏫 OEP</option>
@@ -2245,7 +2332,7 @@ const OrderReception: React.FC = React.memo(() => {
                   </div>
                   
                   <div className="space-y-4">
-                    {activeTab === 'fullDay' ? (
+                    {(activeTab === 'fullDay' || activeTab === 'phone') ? (
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2421,7 +2508,7 @@ const OrderReception: React.FC = React.memo(() => {
                       </>
                     )}
 
-                    {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay') && (
+                    {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'phone') && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Pago</label>
                         <div className="grid grid-cols-3 gap-2">
