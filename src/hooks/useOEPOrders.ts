@@ -1,5 +1,5 @@
 // ============================================================
-// ARCHIVO: src/hooks/useOEPOrders.ts (CORREGIDO)
+// ARCHIVO: src/hooks/useOEPOrders.ts (CORREGIDO - CON LISTENER DE EVENTOS)
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -20,7 +20,7 @@ export const useOEPOrders = () => {
             console.log('🔍 Intentando cargar pedidos OEP desde Supabase...');
 
             // Verificar conexión a Supabase
-            const { data: testData, error: testError } = await supabase
+            const { error: testError } = await supabase
                 .from('oep')
                 .select('count', { count: 'exact', head: true });
 
@@ -163,13 +163,38 @@ export const useOEPOrders = () => {
         console.log('🔄 useOEPOrders: Ejecutando fetchOrders inicial');
         fetchOrders();
 
+        // ============================================================
+        // CORRECCIÓN: Escuchar el evento de nuevo pedido OEP/Cocina
+        // Cuando OrderReception crea un pedido de Cocina (phone) u OEP,
+        // este listener detecta el evento y refresca los pedidos OEP
+        // inmediatamente sin esperar el polling de 30 segundos.
+        // ============================================================
+        const handleNewOEPOrder = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const orderData = customEvent.detail;
+            // Refrescar si es un pedido OEP o de Cocina (phone)
+            if (
+                orderData?.orderType === 'oep' ||
+                orderData?.source?.type === 'oep' ||
+                orderData?.source?.type === 'phone'
+            ) {
+                console.log('📦 Nuevo pedido OEP/Cocina detectado, refrescando lista OEP...');
+                setTimeout(() => fetchOrders(1000), 200);
+            }
+        };
+
+        window.addEventListener('newOrderCreated', handleNewOEPOrder);
+
         // Configurar polling para actualizar cada 30 segundos
         const interval = setInterval(() => {
             console.log('🔄 Polling: Actualizando pedidos OEP');
             fetchOrders();
         }, 30000);
 
-        return () => clearInterval(interval);
+        return () => {
+            window.removeEventListener('newOrderCreated', handleNewOEPOrder);
+            clearInterval(interval);
+        };
     }, [fetchOrders]);
 
     return {
