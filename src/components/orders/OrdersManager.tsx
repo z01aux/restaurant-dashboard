@@ -1,10 +1,5 @@
-// ============================================
-// ARCHIVO: src/components/orders/OrdersManager.tsx
-// ============================================
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-// CORREGIDO: Eliminados los iconos no utilizados
-import { Search, Pencil, Download } from 'lucide-react';
+import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -537,11 +532,12 @@ const OrdersManager: React.FC = () => {
         </button>
       </div>
 
-      {/* CORREGIDO: Eliminadas las props cashRegister y todaySummary */}
       <FullDayCashRegisterModal
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
+        cashRegister={cashRegister}
+        todaySummary={undefined}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
