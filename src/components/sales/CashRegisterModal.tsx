@@ -2,7 +2,7 @@
 // ARCHIVO: src/components/sales/CashRegisterModal.tsx (MODIFICADO CON DISEÑO FULLDAY)
 // ============================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, DollarSign, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import { DailySummary } from '../../types/sales';
 
@@ -325,3 +325,4 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     </div>
   );
 };
+
