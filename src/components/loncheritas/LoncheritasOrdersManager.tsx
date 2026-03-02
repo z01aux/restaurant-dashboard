@@ -51,6 +51,13 @@ export const LoncheritasOrdersManager: React.FC = () => {
     [getTodayOrders]
   );
 
+  // ── Exportar Excel ───────────────────────────────────────
+  const handleExportExcel = useCallback(async (startDate: Date, endDate: Date) => {
+    console.log('Exportando Loncheritas a Excel:', startDate, endDate);
+    alert('Función de exportación a Excel en desarrollo para Loncheritas');
+    // TODO: Implementar exportación a Excel para Loncheritas
+  }, []);
+
   // ── Imprimir Resumen ─────────────────────────────────────
   const handlePrintSummary = useCallback((startDate: Date, endDate: Date) => {
     const s = new Date(startDate); s.setHours(0,0,0,0);
@@ -129,6 +136,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
             isOpen={showDateRangeModal}
             onClose={() => setShowDateRangeModal(false)}
             onConfirmTicket={handlePrintSummary}
+            onConfirmExcel={handleExportExcel}
           />
 
           {/* Header */}

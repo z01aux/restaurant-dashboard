@@ -83,6 +83,13 @@ export const OEPOrdersManager: React.FC = () => {
         }
     };
 
+    // ── Exportar Excel ───────────────────────────────────────
+    const handleExportExcel = useCallback(async (startDate: Date, endDate: Date) => {
+        console.log('Exportando OEP a Excel:', startDate, endDate);
+        alert('Función de exportación a Excel en desarrollo para OEP');
+        // TODO: Implementar exportación a Excel para OEP
+    }, []);
+
     // ── Imprimir Resumen ─────────────────────────────────────
     const handlePrintSummary = useCallback((startDate: Date, endDate: Date) => {
         const s = new Date(startDate); s.setHours(0,0,0,0);
@@ -126,6 +133,7 @@ export const OEPOrdersManager: React.FC = () => {
                         isOpen={showDateRangeModal}
                         onClose={() => setShowDateRangeModal(false)}
                         onConfirmTicket={handlePrintSummary}
+                        onConfirmExcel={handleExportExcel}
                     />
 
                     {/* Header */}

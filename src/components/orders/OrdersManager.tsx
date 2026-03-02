@@ -13,7 +13,6 @@ import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
 import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
-import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
 import { PaymentMethodModal } from './PaymentMethodModal';
 import { DateRangeModal } from './DateRangeModal';
 
@@ -383,30 +382,14 @@ const OrdersManager: React.FC = () => {
     }
   }, [regularOrders, getTodaySummary, exporting]);
 
-  const handlePrintTicket = useCallback((startDate: Date, endDate: Date) => {
-    const filtered = regularOrders.filter(o => {
-      const d = new Date(o.createdAt); d.setHours(0, 0, 0, 0);
-      const s = new Date(startDate);   s.setHours(0, 0, 0, 0);
-      const e = new Date(endDate);     e.setHours(23, 59, 59, 999);
-      return d >= s && d <= e;
-    });
-    if (!filtered.length) { alert('No hay órdenes en el rango seleccionado'); return; }
-    printResumenTicket(generateTicketSummary(filtered, startDate, endDate), startDate, endDate);
-  }, [regularOrders]);
-
-  const handleExportTodayExcel= useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
-  const handleExportAllExcel  = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
+  const handleExportTodayExcel = useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
+  const handleExportAllExcel   = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
 
   const handlePrintSummary = useCallback((startDate: Date, endDate: Date) => {
     const s = new Date(startDate); s.setHours(0,0,0,0);
     const e = new Date(endDate);   e.setHours(23,59,59,999);
     const filtered = regularOrders.filter(o => { const d = new Date(o.createdAt); return d >= s && d <= e; });
     if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
-    const mapped = filtered.map(o => ({
-      total: o.total,
-      payment_method: o.paymentMethod,
-      items: o.items.map(i => ({ name: i.menuItem.name, quantity: i.quantity, price: i.menuItem.price }))
-    }));
     printResumenTicket(generateTicketSummary(filtered), startDate, endDate);
   }, [regularOrders]);
 
@@ -544,7 +527,7 @@ const OrdersManager: React.FC = () => {
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
         cashRegister={cashRegister}
-        todaySummary={getTodaySummary()}
+        todaySummary={getTodaySummary(regularOrders)}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
@@ -645,7 +628,7 @@ const OrdersManager: React.FC = () => {
           </div>
         ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-  `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`
+            No hay órdenes para el {selectedDate.toLocaleDateString('es-PE')}
           </div>
         ) : (
           <div className="overflow-x-auto">

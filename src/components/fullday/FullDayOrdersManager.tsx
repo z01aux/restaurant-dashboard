@@ -14,7 +14,7 @@ import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../u
 import { FullDayOrder, FullDayPaymentMethod } from '../../types/fullday';
 
 export const FullDayOrdersManager: React.FC = () => {
-  const { orders, loading, getTodayOrders, updateOrderPayment } = useFullDayOrders();
+  const { orders, loading, updateOrderPayment } = useFullDayOrders();
   const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useFullDaySalesClosure();
   const { user } = useAuth();
 
@@ -24,7 +24,6 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
-  const [exporting, setExporting] = useState(false);
 
   // Estado para modal de edición de pago
   const [showPaymentModal, setShowPaymentModal] = useState(false);
