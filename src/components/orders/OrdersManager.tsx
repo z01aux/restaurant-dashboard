@@ -158,7 +158,6 @@ const OrdersManager: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [todaySummary, setTodaySummary] = useState<any>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
-  const [summaryError, setSummaryError] = useState<string | null>(null); // Para mostrar errores
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -402,24 +401,22 @@ const OrdersManager: React.FC = () => {
   const handleOpenCashRegister  = useCallback(async () => { 
     setCashModalType('open');  
     setTodaySummary(null);
-    setSummaryError(null);
     setShowCashModal(true); 
   }, []);
   
   const handleCloseCashRegister = useCallback(async () => { 
     setCashModalType('close');
     setLoadingSummary(true);
-    setSummaryError(null);
+    setTodaySummary(null);
     setShowCashModal(true);
     
+    // Intentar cargar el resumen, pero no bloquear el modal si falla
     try {
-      // Intentar cargar el resumen
       const summary = await getTodaySummary(regularOrders);
       setTodaySummary(summary);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error cargando resumen:', error);
-      setSummaryError(error.message || 'Error al cargar el resumen del día');
-      setTodaySummary(null);
+      // Dejamos todaySummary como null, el modal se mostrará igual
     } finally {
       setLoadingSummary(false);
     }
@@ -553,7 +550,7 @@ const OrdersManager: React.FC = () => {
         </button>
       </div>
 
-      {/* MODAL DE CAJA */}
+      {/* MODAL DE CAJA - AHORA USA EL COMPONENTE CORRECTO */}
       <CashRegisterModal
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
