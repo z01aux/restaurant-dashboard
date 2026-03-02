@@ -1,6 +1,10 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// VERSIÓN LIMPIA - Sin historial, solo botón de caja estilo Loncheritas/OEP
+// VERSIÓN CON:
+// - Emoji 🎒 en el título
+// - Total del día (igual que Loncheritas y OEP)
+// - Botón de caja estilo Loncheritas/OEP
+// - Filtro de pago con montos
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -20,7 +24,7 @@ import { FullDayOrder, FullDayPaymentMethod } from '../../types/fullday';
 
 export const FullDayOrdersManager: React.FC = () => {
   const { orders, loading, getTodayOrders, updateOrderPayment } = useFullDayOrders();
-  const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister } = useFullDaySalesClosure(); // ← Eliminado 'closures'
+  const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister } = useFullDaySalesClosure();
   const { user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +36,12 @@ export const FullDayOrdersManager: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<FullDayOrder | null>(null);
+
+  // Calcular total del día
+  const todayTotal = useMemo(() =>
+    getTodayOrders().reduce((sum, o) => sum + o.total, 0),
+    [getTodayOrders]
+  );
 
   // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
@@ -186,14 +196,18 @@ export const FullDayOrdersManager: React.FC = () => {
             onConfirm={handleExportByDateRange}
           />
 
-          {/* Header con botón de caja estilo Loncheritas/OEP */}
+          {/* Header con emoji 🎒 y total del día */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Pedidos FullDay</h1>
-              <p className="text-sm text-gray-600 mt-1">{filteredOrders.length} pedidos</p>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <span>🎒</span> Pedidos FullDay
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                {filteredOrders.length} pedidos · Total del día: <span className="font-semibold text-purple-600">S/ {todayTotal.toFixed(2)}</span>
+              </p>
             </div>
             
-            {/* BOTÓN DE CAJA - ESTILO LONCHERITAS/OEP */}
+            {/* Botón de caja - estilo Loncheritas/OEP */}
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200 shadow-sm">
                 <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
