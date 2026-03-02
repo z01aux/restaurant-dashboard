@@ -1,5 +1,11 @@
+// ============================================
+// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
+// VERSIÓN COMPLETA CON FILTRO DE PAGO POR MONTOS
+// (Mantiene todas las funcionalidades existentes)
+// ============================================
+
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Download, Calendar, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
+import { Search, Calendar, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,6 +14,7 @@ import { FullDaySalesHistory } from '../sales_fullday/FullDaySalesHistory';
 import { FullDayDateRangeModal } from './FullDayDateRangeModal';
 import { FullDayDateFilter } from './FullDayDateFilter';
 import { FullDayPaymentModal } from './FullDayPaymentModal';
+import { PaymentFilter } from '../ui/PaymentFilter'; // ← NUEVO
 import FullDayTicket from './FullDayTicket';
 import { exportFullDayToCSV, exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
 import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
@@ -20,24 +27,60 @@ export const FullDayOrdersManager: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [paymentFilter, setPaymentFilter] = useState(''); // ← NUEVO
   const [showHistory, setShowHistory] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   const [exporting, setExporting] = useState(false);
-
-  // Estado para modal de edición de pago
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<FullDayOrder | null>(null);
 
+  // Calcular MONTOS TOTALES por método de pago para el día seleccionado ← NUEVO
+  const paymentTotals = useMemo(() => {
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const dayOrders = orders.filter(o => {
+      const d = new Date(o.created_at);
+      return d >= startOfDay && d <= endOfDay;
+    });
+
+    return {
+      efectivo: dayOrders
+        .filter(o => o.payment_method === 'EFECTIVO')
+        .reduce((sum, o) => sum + o.total, 0),
+      yape: dayOrders
+        .filter(o => o.payment_method === 'YAPE/PLIN')
+        .reduce((sum, o) => sum + o.total, 0),
+      tarjeta: dayOrders
+        .filter(o => o.payment_method === 'TARJETA')
+        .reduce((sum, o) => sum + o.total, 0),
+    };
+  }, [orders, selectedDate]);
+
+  // FILTROS - incluye paymentFilter ← MODIFICADO
   const filteredOrders = useMemo(() => {
     let filtered = orders;
-    const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
+
+    // Filtro por fecha
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
     filtered = filtered.filter(o => {
       const d = new Date(o.created_at);
       return d >= startOfDay && d <= endOfDay;
     });
+
+    // NUEVO: Filtro por método de pago
+    if (paymentFilter) {
+      filtered = filtered.filter(o => o.payment_method === paymentFilter);
+    }
+
+    // Filtro por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -46,8 +89,9 @@ export const FullDayOrdersManager: React.FC = () => {
         o.order_number?.toLowerCase().includes(term)
       );
     }
+
     return filtered;
-  }, [orders, searchTerm, selectedDate]);
+  }, [orders, searchTerm, selectedDate, paymentFilter]);
 
   // ── Exportaciones ────────────────────────────────────────────
   const handleExportTodayCSV = useCallback(() => {
@@ -123,15 +167,29 @@ export const FullDayOrdersManager: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
 
-          {/* Modal edición de pago */}
+          {/* Modales (sin cambios) */}
           <FullDayPaymentModal
             isOpen={showPaymentModal}
             onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
             order={selectedOrder}
             onSave={handleSavePaymentMethod}
           />
+          <FullDayCashRegisterModal
+            isOpen={showCashModal}
+            onClose={() => setShowCashModal(false)}
+            type={cashModalType}
+            cashRegister={cashRegister}
+            orders={orders}
+            onConfirm={handleCashConfirm}
+            loading={salesLoading}
+          />
+          <FullDayDateRangeModal
+            isOpen={showDateRangeModal}
+            onClose={() => setShowDateRangeModal(false)}
+            onConfirm={handleExportByDateRange}
+          />
 
-          {/* Header */}
+          {/* Header (sin cambios) */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Pedidos FullDay</h1>
@@ -152,10 +210,23 @@ export const FullDayOrdersManager: React.FC = () => {
             </div>
           </div>
 
+          {/* Selector de fecha (ya existente) */}
           <FullDayDateFilter selectedDate={selectedDate} onDateChange={setSelectedDate} totalOrders={filteredOrders.length} />
           {showHistory && <FullDaySalesHistory closures={closures} />}
 
-          {/* Botones de acción */}
+          {/* NUEVO: Filtro por método de pago con montos */}
+          <div className="mb-4">
+            <PaymentFilter
+              paymentFilter={paymentFilter}
+              setPaymentFilter={setPaymentFilter}
+              totalEfectivo={paymentTotals.efectivo}
+              totalYape={paymentTotals.yape}
+              totalTarjeta={paymentTotals.tarjeta}
+              showAmounts={true}
+            />
+          </div>
+
+          {/* Botones de acción (sin cambios) */}
           <div className="flex flex-wrap gap-2 mb-6">
             <button onClick={handleExportTodayCSV} disabled={exporting}
               className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
@@ -179,7 +250,7 @@ export const FullDayOrdersManager: React.FC = () => {
             </button>
           </div>
 
-          {/* Búsqueda */}
+          {/* Búsqueda (sin cambios) */}
           <div className="mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -190,7 +261,25 @@ export const FullDayOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Lista de pedidos */}
+          {/* Indicador de filtro activo (NUEVO) */}
+          {paymentFilter && (
+            <div className="mb-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+              <span className="text-sm text-blue-700">
+                <span className="font-semibold">Filtro activo:</span> Mostrando solo pedidos en {
+                  paymentFilter === 'EFECTIVO' ? '💵 Efectivo' :
+                    paymentFilter === 'YAPE/PLIN' ? '📱 Yape/Plin' : '💳 Tarjeta'
+                }
+              </span>
+              <button
+                onClick={() => setPaymentFilter('')}
+                className="text-xs text-red-600 hover:text-red-800 font-medium"
+              >
+                Limpiar filtro
+              </button>
+            </div>
+          )}
+
+          {/* Lista de pedidos (sin cambios estructurales) */}
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-12">
@@ -199,14 +288,22 @@ export const FullDayOrdersManager: React.FC = () => {
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="text-center py-12">
+                <p className="text-4xl mb-3">🎒</p>
                 <p className="text-gray-500">No hay pedidos para esta fecha</p>
+                {paymentFilter && (
+                  <button
+                    onClick={() => setPaymentFilter('')}
+                    className="mt-2 text-sm text-purple-600 hover:text-purple-800 font-medium"
+                  >
+                    Quitar filtro de pago
+                  </button>
+                )}
               </div>
             ) : (
               filteredOrders.map(order => (
                 <div key={order.id} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-purple-300 transition-all">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-
                       {/* Número y hora */}
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="text-xs font-mono bg-purple-100 text-purple-800 px-2 py-1 rounded">
@@ -253,11 +350,10 @@ export const FullDayOrdersManager: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Botones de ticket (imprimir + PDF) */}
+                      {/* Botones de ticket (ya existentes) */}
                       <div className="mt-4 pt-3 border-t border-gray-100">
                         <FullDayTicket order={order} />
                       </div>
-
                     </div>
 
                     {/* Panel derecho: total + método de pago + botón editar */}
@@ -269,7 +365,6 @@ export const FullDayOrdersManager: React.FC = () => {
                         <span className={`text-xs px-2 py-1 rounded-full inline-block ${getPaymentColor(order.payment_method)}`}>
                           {order.payment_method || 'NO APLICA'}
                         </span>
-                        {/* Botón editar pago — admin, manager y employee */}
                         {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'employee') && (
                           <button
                             onClick={() => handleEditPayment(order)}
@@ -294,22 +389,6 @@ export const FullDayOrdersManager: React.FC = () => {
               ))
             )}
           </div>
-
-          {/* Modales */}
-          <FullDayCashRegisterModal
-            isOpen={showCashModal}
-            onClose={() => setShowCashModal(false)}
-            type={cashModalType}
-            cashRegister={cashRegister}
-            orders={orders}
-            onConfirm={handleCashConfirm}
-            loading={salesLoading}
-          />
-          <FullDayDateRangeModal
-            isOpen={showDateRangeModal}
-            onClose={() => setShowDateRangeModal(false)}
-            onConfirm={handleExportByDateRange}
-          />
 
         </div>
       </div>
