@@ -55,7 +55,7 @@ export const OEPOrdersManager: React.FC = () => {
             if (r.success) { alert('✅ Caja abierta correctamente'); setShowCashModal(false); }
             else alert('❌ ' + r.error);
         } else {
-            const r = await closeCashRegister(data.finalCash!, data.notes || '');
+            const r = await closeCashRegister(orders, data.finalCash!, data.notes || '');
             if (r.success) { alert('✅ Caja cerrada correctamente'); setShowCashModal(false); }
             else alert('❌ ' + r.error);
         }
