@@ -171,7 +171,6 @@ const OrdersManager: React.FC = () => {
     loading,
     deleteOrder,
     updateOrderPayment,
-    exportOrdersToCSV,
     getTodayOrders,
     fetchOrders,
     getRegularOrders
