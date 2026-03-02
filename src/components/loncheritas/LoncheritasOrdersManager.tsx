@@ -1,17 +1,21 @@
 // ============================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// VERSIÓN COMPLETA CON SELECTOR DE FECHA CON FLECHAS
+// VERSIÓN COMPLETA CON:
+// - Selector de fecha con flechas
+// - Filtro de pago con montos
+// - Ticket por pedido (Imprimir + PDF)
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react'; // ← Eliminado Calendar
+import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
-import { LoncheritasDateFilter } from './LoncheritasDateFilter'; // ← NUEVO
+import { LoncheritasDateFilter } from './LoncheritasDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
+import LoncheritasTicket from './LoncheritasTicket'; // ← NUEVO
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
@@ -290,7 +294,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* NUEVO: Selector de fecha con flechas */}
+          {/* Selector de fecha con flechas */}
           <LoncheritasDateFilter
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
@@ -357,7 +361,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
             </div>
           )}
 
-          {/* Lista de pedidos */}
+          {/* Lista de pedidos con tickets */}
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-12">
@@ -422,7 +426,13 @@ export const LoncheritasOrdersManager: React.FC = () => {
                           ))}
                         </div>
                       </div>
+                      
+                      {/* NUEVO: Botones de ticket */}
+                      <div className="mt-4 pt-3 border-t border-gray-100">
+                        <LoncheritasTicket order={order} />
+                      </div>
                     </div>
+
                     <div className="text-right ml-4 min-w-[130px]">
                       <div className="text-lg font-bold text-orange-600 mb-2">
                         S/ {order.total.toFixed(2)}
