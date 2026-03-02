@@ -10,7 +10,7 @@ import OrderTicket from './OrderTicket';
 import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
-import { CashRegisterModal } from '../sales/CashRegisterModal'; // CAMBIADO: Ahora importa CashRegisterModal
+import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
 import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
 import { PaymentMethodModal } from './PaymentMethodModal';
@@ -156,7 +156,8 @@ const OrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [todaySummary, setTodaySummary] = useState<any>(null); // NUEVO: estado para guardar el resumen del día
+  const [todaySummary, setTodaySummary] = useState<any>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false); // Estado para controlar la carga del resumen
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -223,17 +224,6 @@ const OrdersManager: React.FC = () => {
       });
     }
   }, [regularOrders]);
-
-  // NUEVO: Cargar el resumen del día cuando se abre el modal de cierre
-  useEffect(() => {
-    const loadTodaySummary = async () => {
-      if (showCashModal && cashModalType === 'close') {
-        const summary = await getTodaySummary(regularOrders);
-        setTodaySummary(summary);
-      }
-    };
-    loadTodaySummary();
-  }, [showCashModal, cashModalType, regularOrders, getTodaySummary]);
 
   const sortOptions = useMemo(() => [
     { value: 'status-time',       label: '🔄 Estado + Tiempo' },
@@ -410,15 +400,25 @@ const OrdersManager: React.FC = () => {
 
   const handleOpenCashRegister  = useCallback(async () => { 
     setCashModalType('open');  
-    setTodaySummary(null); // Limpiar el resumen anterior
+    setTodaySummary(null);
     setShowCashModal(true); 
   }, []);
   
   const handleCloseCashRegister = useCallback(async () => { 
-    setCashModalType('close'); 
-    // El resumen se cargará en el useEffect
-    setShowCashModal(true); 
-  }, []);
+    setCashModalType('close');
+    setLoadingSummary(true); // Activar estado de carga
+    setShowCashModal(true); // Abrir el modal primero
+    
+    try {
+      // Cargar el resumen después de abrir el modal
+      const summary = await getTodaySummary(regularOrders);
+      setTodaySummary(summary);
+    } catch (error) {
+      console.error('Error cargando resumen:', error);
+    } finally {
+      setLoadingSummary(false); // Desactivar estado de carga
+    }
+  }, [regularOrders, getTodaySummary]);
 
   const handleCashConfirm = useCallback(async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
     if (cashModalType === 'open') {
@@ -548,15 +548,15 @@ const OrdersManager: React.FC = () => {
         </button>
       </div>
 
-      {/* MODAL DE CAJA - AHORA USA EL COMPONENTE CORRECTO CON todaySummary */}
+      {/* MODAL DE CAJA */}
       <CashRegisterModal
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
         cashRegister={cashRegister}
-        todaySummary={todaySummary} // Pasamos el resumen que cargamos en el useEffect
+        todaySummary={todaySummary}
         onConfirm={handleCashConfirm}
-        loading={salesLoading}
+        loading={salesLoading || loadingSummary} // Mostrar loading si está cargando el resumen o la operación de caja
       />
 
       {showHistory && <SalesHistory />}
