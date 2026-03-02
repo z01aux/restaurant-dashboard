@@ -157,7 +157,8 @@ const OrdersManager: React.FC = () => {
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [todaySummary, setTodaySummary] = useState<any>(null);
-  const [loadingSummary, setLoadingSummary] = useState(false); // Estado para controlar la carga del resumen
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null); // Para mostrar errores
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -401,22 +402,26 @@ const OrdersManager: React.FC = () => {
   const handleOpenCashRegister  = useCallback(async () => { 
     setCashModalType('open');  
     setTodaySummary(null);
+    setSummaryError(null);
     setShowCashModal(true); 
   }, []);
   
   const handleCloseCashRegister = useCallback(async () => { 
     setCashModalType('close');
-    setLoadingSummary(true); // Activar estado de carga
-    setShowCashModal(true); // Abrir el modal primero
+    setLoadingSummary(true);
+    setSummaryError(null);
+    setShowCashModal(true);
     
     try {
-      // Cargar el resumen después de abrir el modal
+      // Intentar cargar el resumen
       const summary = await getTodaySummary(regularOrders);
       setTodaySummary(summary);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cargando resumen:', error);
+      setSummaryError(error.message || 'Error al cargar el resumen del día');
+      setTodaySummary(null);
     } finally {
-      setLoadingSummary(false); // Desactivar estado de carga
+      setLoadingSummary(false);
     }
   }, [regularOrders, getTodaySummary]);
 
@@ -556,7 +561,7 @@ const OrdersManager: React.FC = () => {
         cashRegister={cashRegister}
         todaySummary={todaySummary}
         onConfirm={handleCashConfirm}
-        loading={salesLoading || loadingSummary} // Mostrar loading si está cargando el resumen o la operación de caja
+        loading={salesLoading || loadingSummary}
       />
 
       {showHistory && <SalesHistory />}
