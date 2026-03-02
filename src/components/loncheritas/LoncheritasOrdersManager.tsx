@@ -1,4 +1,6 @@
-// ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
+// ============================================
+// ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx (ACTUALIZADO)
+// CON FILTRO DE PAGO NO INTRUSIVO - VERSIÓN DE PRUEBA
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -8,6 +10,7 @@ import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosu
 import { useAuth } from '../../hooks/useAuth';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
+import { PaymentFilter } from '../ui/PaymentFilter'; // <-- NUEVO COMPONENTE
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
@@ -75,6 +78,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [paymentFilter, setPaymentFilter] = useState(''); // <-- NUEVO: estado para filtro de pago
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -82,14 +86,41 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
   const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
 
+  // Calcular totales por método de pago para el día seleccionado
+  const paymentTotals = useMemo(() => {
+    const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
+    
+    const dayOrders = orders.filter(o => {
+      const d = new Date(o.created_at);
+      return d >= startOfDay && d <= endOfDay;
+    });
+
+    return {
+      efectivo: dayOrders.filter(o => o.payment_method === 'EFECTIVO').length,
+      yape: dayOrders.filter(o => o.payment_method === 'YAPE/PLIN').length,
+      tarjeta: dayOrders.filter(o => o.payment_method === 'TARJETA').length,
+    };
+  }, [orders, selectedDate]);
+
+  // FILTROS MEJORADOS - incluye paymentFilter
   const filteredOrders = useMemo(() => {
     let filtered = orders;
+    
+    // Filtro por fecha
     const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
     const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
     filtered = filtered.filter(o => {
       const d = new Date(o.created_at);
       return d >= startOfDay && d <= endOfDay;
     });
+    
+    // NUEVO: Filtro por método de pago
+    if (paymentFilter) {
+      filtered = filtered.filter(o => o.payment_method === paymentFilter);
+    }
+    
+    // Filtro por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -98,8 +129,9 @@ export const LoncheritasOrdersManager: React.FC = () => {
         o.order_number?.toLowerCase().includes(term)
       );
     }
+    
     return filtered;
-  }, [orders, searchTerm, selectedDate]);
+  }, [orders, searchTerm, selectedDate, paymentFilter]);
 
   const todayTotal = useMemo(() =>
     getTodayOrders().reduce((sum, o) => sum + o.total, 0),
@@ -224,8 +256,8 @@ export const LoncheritasOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Selector de fecha */}
-          <div className="bg-orange-50 rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          {/* Selector de fecha actual (mejorado) */}
+          <div className="bg-orange-50 rounded-xl p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
               <Calendar size={20} className="text-orange-500" />
               <div>
@@ -238,6 +270,18 @@ export const LoncheritasOrdersManager: React.FC = () => {
               value={selectedDate.toISOString().split('T')[0]}
               onChange={(e) => setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
               className="px-3 py-2 border border-orange-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+
+          {/* NUEVO: Filtro por método de pago (NO INTRUSIVO) */}
+          <div className="mb-4">
+            <PaymentFilter
+              paymentFilter={paymentFilter}
+              setPaymentFilter={setPaymentFilter}
+              totalEfectivo={paymentTotals.efectivo}
+              totalYape={paymentTotals.yape}
+              totalTarjeta={paymentTotals.tarjeta}
+              showCounts={true}
             />
           </div>
 
@@ -268,6 +312,24 @@ export const LoncheritasOrdersManager: React.FC = () => {
             </div>
           </div>
 
+          {/* Indicador de filtro activo */}
+          {paymentFilter && (
+            <div className="mb-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+              <span className="text-sm text-blue-700">
+                <span className="font-semibold">Filtro activo:</span> Mostrando solo pedidos en {
+                  paymentFilter === 'EFECTIVO' ? '💵 Efectivo' :
+                  paymentFilter === 'YAPE/PLIN' ? '📱 Yape/Plin' : '💳 Tarjeta'
+                }
+              </span>
+              <button
+                onClick={() => setPaymentFilter('')}
+                className="text-xs text-red-600 hover:text-red-800 font-medium"
+              >
+                Limpiar filtro
+              </button>
+            </div>
+          )}
+
           {/* Lista de pedidos */}
           <div className="space-y-4">
             {loading ? (
@@ -279,6 +341,14 @@ export const LoncheritasOrdersManager: React.FC = () => {
               <div className="text-center py-12">
                 <p className="text-4xl mb-3">🍱</p>
                 <p className="text-gray-500">No hay pedidos para esta fecha</p>
+                {paymentFilter && (
+                  <button
+                    onClick={() => setPaymentFilter('')}
+                    className="mt-2 text-sm text-orange-600 hover:text-orange-800 font-medium"
+                  >
+                    Quitar filtro de pago
+                  </button>
+                )}
               </div>
             ) : (
               filteredOrders.map(order => (
