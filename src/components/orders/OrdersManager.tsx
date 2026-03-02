@@ -406,8 +406,8 @@ const OrdersManager: React.FC = () => {
     const filtered = regularOrders.filter(o => { const d = new Date(o.createdAt); return d >= s && d <= e; });
     if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
     
-    // CORREGIDO: generateTicketSummary ahora recibe 1 argumento (filtered)
-    const summary = generateTicketSummary(filtered);
+    // CORREGIDO: generateTicketSummary recibe 3 argumentos (orders, startDate, endDate)
+    const summary = generateTicketSummary(filtered, startDate, endDate);
     // CORREGIDO: printResumenTicket recibe 3 argumentos
     printResumenTicket(summary, startDate, endDate);
   }, [regularOrders]);
