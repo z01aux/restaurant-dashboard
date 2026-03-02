@@ -156,6 +156,7 @@ const OrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [todaySummary, setTodaySummary] = useState<any>(null); // NUEVO: estado para guardar el resumen del día
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -222,6 +223,17 @@ const OrdersManager: React.FC = () => {
       });
     }
   }, [regularOrders]);
+
+  // NUEVO: Cargar el resumen del día cuando se abre el modal de cierre
+  useEffect(() => {
+    const loadTodaySummary = async () => {
+      if (showCashModal && cashModalType === 'close') {
+        const summary = await getTodaySummary(regularOrders);
+        setTodaySummary(summary);
+      }
+    };
+    loadTodaySummary();
+  }, [showCashModal, cashModalType, regularOrders, getTodaySummary]);
 
   const sortOptions = useMemo(() => [
     { value: 'status-time',       label: '🔄 Estado + Tiempo' },
@@ -398,11 +410,13 @@ const OrdersManager: React.FC = () => {
 
   const handleOpenCashRegister  = useCallback(async () => { 
     setCashModalType('open');  
+    setTodaySummary(null); // Limpiar el resumen anterior
     setShowCashModal(true); 
   }, []);
   
   const handleCloseCashRegister = useCallback(async () => { 
     setCashModalType('close'); 
+    // El resumen se cargará en el useEffect
     setShowCashModal(true); 
   }, []);
 
@@ -534,13 +548,13 @@ const OrdersManager: React.FC = () => {
         </button>
       </div>
 
-      {/* MODAL DE CAJA - AHORA USA EL COMPONENTE CORRECTO */}
+      {/* MODAL DE CAJA - AHORA USA EL COMPONENTE CORRECTO CON todaySummary */}
       <CashRegisterModal
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
         cashRegister={cashRegister}
-        todaySummary={cashModalType === 'close' ? undefined : undefined} // Esto necesita ser arreglado
+        todaySummary={todaySummary} // Pasamos el resumen que cargamos en el useEffect
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
