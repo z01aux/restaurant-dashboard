@@ -394,8 +394,6 @@ const OrdersManager: React.FC = () => {
     printResumenTicket(generateTicketSummary(filtered, startDate, endDate), startDate, endDate);
   }, [regularOrders]);
 
-  const handleExportTodayCSV  = useCallback(() => exportOrdersToCSV(getTodayOrders().filter(o => o.orderType !== 'fullday')), [getTodayOrders, exportOrdersToCSV]);
-  const handleExportAllCSV    = useCallback(() => exportOrdersToCSV(regularOrders), [regularOrders, exportOrdersToCSV]);
   const handleExportTodayExcel= useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
   const handleExportAllExcel  = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
 
@@ -509,14 +507,8 @@ const OrdersManager: React.FC = () => {
         totalOrders={filteredAndSortedOrders.length}
       />
 
-      {/* BOTONES DE ACCIÓN */}
+      {/* BOTONES DE ACCIÓN - SOLO EXCEL Y REPORTES */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExportTodayCSV} disabled={exporting} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>CSV Hoy</span>
-        </button>
-        <button onClick={handleExportAllCSV} disabled={exporting} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>CSV Todo</span>
-        </button>
         <button onClick={handleExportTodayExcel} disabled={exporting} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50">
           <Download size={16} /><span>Excel Hoy</span>
         </button>
