@@ -1,11 +1,11 @@
 // ============================================
-// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx (CORREGIDO)
-// VERSIÓN COMPLETA CON FILTRO DE PAGO POR MONTOS
-// (Importación de Download añadida)
+// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
+// VERSIÓN CON BOTÓN DE CAJA ESTILO LONCHERITAS/OEP
+// (Sin botón "Ver Historial")
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Calendar, Printer, FileSpreadsheet, Pencil, Download } from 'lucide-react'; // ← AÑADIDO Download
+import { Search, Calendar, Printer, FileSpreadsheet, Pencil, Download } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -28,7 +28,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [paymentFilter, setPaymentFilter] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(false); // ← Se mantiene pero no se usa en UI
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
@@ -61,7 +61,7 @@ export const FullDayOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // FILTROS - incluye paymentFilter
+  // FILTROS
   const filteredOrders = useMemo(() => {
     let filtered = orders;
 
@@ -189,32 +189,47 @@ export const FullDayOrdersManager: React.FC = () => {
             onConfirm={handleExportByDateRange}
           />
 
-          {/* Header */}
+          {/* Header con botón de caja estilo Loncheritas/OEP */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Pedidos FullDay</h1>
               <p className="text-sm text-gray-600 mt-1">{filteredOrders.length} pedidos</p>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 shadow-sm border">
+            
+            {/* BOTÓN DE CAJA - ESTILO LONCHERITAS/OEP */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200 shadow-sm">
                 <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                <span className="text-sm font-medium">Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
+                </span>
               </div>
-              {!cashRegister?.is_open
-                ? <button onClick={handleOpenCash}  className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700">Abrir Caja</button>
-                : <button onClick={handleCloseCash} className="bg-red-600   text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700">Cerrar Caja</button>
-              }
-              <button onClick={() => setShowHistory(!showHistory)} className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700">
-                {showHistory ? 'Ocultar Historial' : 'Ver Historial'}
-              </button>
+              
+              {!cashRegister?.is_open ? (
+                <button
+                  onClick={handleOpenCash}
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2"
+                >
+                  <span>💰</span> Abrir Caja
+                </button>
+              ) : (
+                <button
+                  onClick={handleCloseCash}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2"
+                >
+                  <span>🔒</span> Cerrar Caja
+                </button>
+              )}
             </div>
           </div>
 
           {/* Selector de fecha */}
           <FullDayDateFilter selectedDate={selectedDate} onDateChange={setSelectedDate} totalOrders={filteredOrders.length} />
+
+          {/* Historial (se mantiene pero se muestra/oculta con el estado, sin botón) */}
           {showHistory && <FullDaySalesHistory closures={closures} />}
 
-          {/* NUEVO: Filtro por método de pago con montos */}
+          {/* Filtro por método de pago con montos */}
           <div className="mb-4">
             <PaymentFilter
               paymentFilter={paymentFilter}
@@ -226,7 +241,7 @@ export const FullDayOrdersManager: React.FC = () => {
             />
           </div>
 
-          {/* Botones de acción - AHORA CON Download IMPORTADO */}
+          {/* Botones de acción */}
           <div className="flex flex-wrap gap-2 mb-6">
             <button onClick={handleExportTodayCSV} disabled={exporting}
               className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
