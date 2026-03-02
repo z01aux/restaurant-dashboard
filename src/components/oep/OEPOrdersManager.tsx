@@ -1,22 +1,26 @@
-// ============================================================
-// ARCHIVO: src/components/oep/OEPOrdersManager.tsx (VERSIÓN SIMPLIFICADA)
+// ARCHIVO: src/components/oep/OEPOrdersManager.tsx
 // ============================================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Pencil } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
+import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
+import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
 import { OEPOrder } from '../../types/oep';
 
 export const OEPOrdersManager: React.FC = () => {
     const { orders, loading, updateOrderPayment } = useOEPOrders();
+    const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister } = useOEPSalesClosure();
+
     const [searchTerm, setSearchTerm] = useState('');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<OEPOrder | null>(null);
+    const [showCashModal, setShowCashModal] = useState(false);
+    const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
 
     const filteredOrders = useMemo(() => {
         let filtered = orders;
-
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             filtered = filtered.filter(o =>
@@ -25,9 +29,23 @@ export const OEPOrdersManager: React.FC = () => {
                 o.order_number?.toLowerCase().includes(term)
             );
         }
-
         return filtered;
     }, [orders, searchTerm]);
+
+    const handleOpenCash  = useCallback(() => { setCashModalType('open');  setShowCashModal(true); }, []);
+    const handleCloseCash = useCallback(() => { setCashModalType('close'); setShowCashModal(true); }, []);
+
+    const handleCashConfirm = useCallback(async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
+        if (cashModalType === 'open') {
+            const r = await openCashRegister(data.initialCash!);
+            if (r.success) { alert('✅ Caja OEP abierta correctamente'); setShowCashModal(false); }
+            else alert('❌ Error al abrir caja: ' + r.error);
+        } else {
+            const r = await closeCashRegister(orders, data.finalCash!, data.notes || '');
+            if (r.success) { alert('✅ Caja OEP cerrada correctamente'); setShowCashModal(false); }
+            else alert('❌ Error al cerrar caja: ' + r.error);
+        }
+    }, [cashModalType, openCashRegister, closeCashRegister, orders]);
 
     const handleEditPayment = (order: OEPOrder) => {
         setSelectedOrder(order);
@@ -64,6 +82,16 @@ export const OEPOrdersManager: React.FC = () => {
             <div className="max-w-7xl mx-auto">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
 
+                    <OEPCashRegisterModal
+                        isOpen={showCashModal}
+                        onClose={() => setShowCashModal(false)}
+                        type={cashModalType}
+                        cashRegister={cashRegister}
+                        orders={orders}
+                        onConfirm={handleCashConfirm}
+                        loading={salesLoading}
+                    />
+
                     <OEPPaymentModal
                         isOpen={showPaymentModal}
                         onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
@@ -75,6 +103,34 @@ export const OEPOrdersManager: React.FC = () => {
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">Pedidos OEP</h1>
                             <p className="text-sm text-gray-600 mt-1">{filteredOrders.length} pedidos</p>
+                        </div>
+
+                        {/* Botones de Caja */}
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200 shadow-sm">
+                                <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                                <span className="text-sm font-medium text-gray-700">
+                                    Caja OEP: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
+                                </span>
+                            </div>
+
+                            {!cashRegister?.is_open ? (
+                                <button
+                                    onClick={handleOpenCash}
+                                    disabled={salesLoading}
+                                    className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-50"
+                                >
+                                    💰 Abrir Caja OEP
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleCloseCash}
+                                    disabled={salesLoading}
+                                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-50"
+                                >
+                                    🔒 Cerrar Caja OEP
+                                </button>
+                            )}
                         </div>
                     </div>
 
