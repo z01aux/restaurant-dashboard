@@ -1,9 +1,9 @@
 // ============================================
-// ARCHIVO: src/components/sales/CashRegisterModal.tsx
+// ARCHIVO: src/components/sales/CashRegisterModal.tsx (MODIFICADO CON DISEÑO FULLDAY)
 // ============================================
 
-import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, DollarSign, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import { DailySummary } from '../../types/sales';
 
 interface CashRegisterModalProps {
@@ -76,14 +76,15 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+
+        {/* Header - DISEÑO FULLDAY */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
               {type === 'open' ? '🔓 Abrir Caja' : '🔒 Cerrar Caja'}
             </h2>
             <p className="text-gray-600 text-sm mt-1">
-              {type === 'open' 
+              {type === 'open'
                 ? 'Registra el monto inicial para comenzar las operaciones del día'
                 : 'Revisa el resumen del día y registra el cierre de caja'}
             </p>
@@ -96,9 +97,9 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
           </button>
         </div>
 
-        {/* Contenido */}
         <div className="p-6">
-          {/* Resumen si es cierre */}
+
+          {/* Resumen del día - solo al cerrar, DISEÑO FULLDAY */}
           {type === 'close' && todaySummary && (
             <div className="mb-6 space-y-4">
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
@@ -106,7 +107,6 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                   <Clock size={18} className="mr-2" />
                   Resumen del Día
                 </h3>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-blue-600">Total Órdenes</div>
@@ -183,7 +183,7 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
             </div>
           )}
 
-          {/* Formulario */}
+          {/* Formulario - DISEÑO FULLDAY */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center space-x-2">
@@ -209,6 +209,7 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                     placeholder="0.00"
                     required
                     disabled={loading}
+                    autoFocus
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
@@ -233,6 +234,7 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                       placeholder="0.00"
                       required
                       disabled={loading}
+                      autoFocus
                     />
                   </div>
                 </div>
@@ -251,7 +253,7 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                   />
                 </div>
 
-                {/* Diferencia esperada */}
+                {/* Diferencia esperada - DISEÑO FULLDAY */}
                 {todaySummary && cashRegister && (
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <h4 className="font-medium text-gray-700 mb-2">📊 Diferencia Esperada</h4>
@@ -269,7 +271,7 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                       <div className="border-t border-gray-200 my-2 pt-2">
                         <div className="flex justify-between font-bold">
                           <span>Total esperado:</span>
-                          <span className="text-blue-600">
+                          <span className="text-red-600">
                             S/ {calculateExpectedTotal().toFixed(2)}
                           </span>
                         </div>
@@ -278,7 +280,7 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                         <div className="flex justify-between text-sm font-bold">
                           <span>Diferencia:</span>
                           <span className={calculateDifference() === 0 ? 'text-green-600' : 'text-red-600'}>
-                            S/ {calculateDifference().toFixed(2)}
+                            {calculateDifference() >= 0 ? '+' : ''}S/ {calculateDifference().toFixed(2)}
                           </span>
                         </div>
                       )}
@@ -288,6 +290,7 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
               </>
             )}
 
+            {/* Botones - DISEÑO FULLDAY */}
             <div className="flex space-x-3 pt-4">
               <button
                 type="button"
@@ -315,6 +318,7 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                 )}
               </button>
             </div>
+
           </form>
         </div>
       </div>
