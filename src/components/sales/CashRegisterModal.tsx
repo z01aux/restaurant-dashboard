@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/components/sales/CashRegisterModal.tsx (DISEÑO MODERNO - IGUAL A FULLDAY/LONCHERITAS/OEP)
+// ARCHIVO: src/components/sales/CashRegisterModal.tsx (DISEÑO MODERNO - CORREGIDO)
 // ============================================
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -86,11 +86,11 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
-        {/* Header moderno - igual a FullDay/Loncheritas/OEP */}
+        {/* Header - CORREGIDO: ya no dice FullDay */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              {type === 'open' ? 'Abrir Caja - Órdenes' : 'Cerrar Caja - Órdenes'}
+              {type === 'open' ? 'Abrir Caja' : 'Cerrar Caja'}
             </h2>
             <p className="text-gray-600 text-sm mt-1">
               {type === 'open'
@@ -117,7 +117,7 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
                 <h3 className="font-semibold text-blue-800 mb-3 flex items-center">
                   <Clock size={18} className="mr-2" />
-                  Resumen del Día - Órdenes
+                  Resumen del Día
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
