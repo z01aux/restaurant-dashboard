@@ -1,7 +1,6 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// VERSIÓN CON BOTÓN DE CAJA ESTILO LONCHERITAS/OEP
-// (Sin botón "Ver Historial")
+// VERSIÓN CORREGIDA - Eliminado setShowHistory no usado
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -28,7 +27,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [paymentFilter, setPaymentFilter] = useState('');
-  const [showHistory, setShowHistory] = useState(false); // ← Se mantiene pero no se usa en UI
+  const [showHistory, setShowHistory] = useState(false); // ← Se mantiene pero no se usa setter
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
@@ -225,9 +224,6 @@ export const FullDayOrdersManager: React.FC = () => {
 
           {/* Selector de fecha */}
           <FullDayDateFilter selectedDate={selectedDate} onDateChange={setSelectedDate} totalOrders={filteredOrders.length} />
-
-          {/* Historial (se mantiene pero se muestra/oculta con el estado, sin botón) */}
-          {showHistory && <FullDaySalesHistory closures={closures} />}
 
           {/* Filtro por método de pago con montos */}
           <div className="mb-4">
