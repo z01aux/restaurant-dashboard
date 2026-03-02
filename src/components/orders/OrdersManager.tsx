@@ -367,8 +367,6 @@ const OrdersManager: React.FC = () => {
     toast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando reporte...</span></div>';
     document.body.appendChild(toast);
     try {
-      const todaySummary = await getTodaySummary(regularOrders);
-      console.log('📊 Resumen:', todaySummary);
       await exportOrdersByDateRange(regularOrders, startDate, endDate);
     } catch (error: any) {
       const errToast = document.createElement('div');
@@ -380,7 +378,7 @@ const OrdersManager: React.FC = () => {
       if (document.body.contains(toast)) document.body.removeChild(toast);
       setExporting(false);
     }
-  }, [regularOrders, getTodaySummary, exporting]);
+  }, [regularOrders, exporting]);
 
   const handleExportTodayExcel = useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
   const handleExportAllExcel   = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
@@ -390,7 +388,9 @@ const OrdersManager: React.FC = () => {
     const e = new Date(endDate);   e.setHours(23,59,59,999);
     const filtered = regularOrders.filter(o => { const d = new Date(o.createdAt); return d >= s && d <= e; });
     if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
-    printResumenTicket(generateTicketSummary(filtered), startDate, endDate);
+    // CORREGIDO: generateTicketSummary ahora recibe 1 argumento (filtered) y printResumenTicket recibe 3
+    const summary = generateTicketSummary(filtered);
+    printResumenTicket(summary, startDate, endDate);
   }, [regularOrders]);
 
   const handleOpenCashRegister  = useCallback(() => { setCashModalType('open');  setShowCashModal(true); }, []);
@@ -444,6 +444,21 @@ const OrdersManager: React.FC = () => {
 
   // Determinar si hay filtros activos
   const hasActiveFilters = areaFilter !== '' || paymentFilter !== '' || searchTerm !== '';
+
+  // CORREGIDO: Obtener el todaySummary de manera segura
+  const todaySummary = useMemo(() => {
+    try {
+      return getTodaySummary(regularOrders);
+    } catch (error) {
+      console.error('Error al obtener resumen del día:', error);
+      return {
+        total_orders: 0,
+        total_amount: 0,
+        by_payment_method: {},
+        by_order_type: {}
+      };
+    }
+  }, [getTodaySummary, regularOrders]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -527,7 +542,7 @@ const OrdersManager: React.FC = () => {
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
         cashRegister={cashRegister}
-        todaySummary={getTodaySummary(regularOrders)}
+        todaySummary={todaySummary}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
