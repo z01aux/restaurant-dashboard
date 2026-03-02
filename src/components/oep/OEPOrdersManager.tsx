@@ -1,5 +1,5 @@
 // ============================================================
-// ARCHIVO: src/components/oep/OEPOrdersManager.tsx
+// ARCHIVO: src/components/oep/OEPOrdersManager.tsx (CORREGIDO)
 // VERSIÓN COMPLETA CON TODAS LAS MEJORAS:
 // - Filtro de fecha con flechas
 // - Ticket por pedido (Imprimir + PDF)
@@ -8,7 +8,7 @@
 // ============================================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Printer, FileSpreadsheet, Pencil, Calendar } from 'lucide-react';
+import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react'; // ← Eliminado 'Calendar'
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
@@ -238,9 +238,6 @@ export const OEPOrdersManager: React.FC = () => {
     };
     return map[method || ''] || 'bg-gray-100 text-gray-800';
   };
-
-  const formatDateLabel = (date: Date) =>
-    date.toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
