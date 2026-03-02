@@ -156,8 +156,6 @@ const OrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [todaySummary, setTodaySummary] = useState<any>(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -398,39 +396,14 @@ const OrdersManager: React.FC = () => {
   const handleExportTodayExcel= useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
   const handleExportAllExcel  = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
 
-  const handleOpenCashRegister  = useCallback(async () => { 
-    setCashModalType('open');  
-    setTodaySummary(null);
-    setShowCashModal(true); 
-  }, []);
-  
-  const handleCloseCashRegister = useCallback(async () => { 
-    setCashModalType('close');
-    setLoadingSummary(true);
-    setTodaySummary(null);
-    setShowCashModal(true);
-    
-    // Intentar cargar el resumen, pero no bloquear el modal si falla
-    try {
-      const summary = await getTodaySummary(regularOrders);
-      setTodaySummary(summary);
-    } catch (error) {
-      console.error('Error cargando resumen:', error);
-      // Dejamos todaySummary como null, el modal se mostrará igual
-    } finally {
-      setLoadingSummary(false);
-    }
-  }, [regularOrders, getTodaySummary]);
+  const handleOpenCashRegister  = useCallback(() => { setCashModalType('open');  setShowCashModal(true); }, []);
+  const handleCloseCashRegister = useCallback(() => { setCashModalType('close'); setShowCashModal(true); }, []);
 
   const handleCashConfirm = useCallback(async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
     if (cashModalType === 'open') {
       const result = await openCashRegister(data.initialCash!);
-      if (result.success) { 
-        alert('✅ Caja abierta correctamente'); 
-        setShowCashModal(false); 
-      } else {
-        alert('❌ Error al abrir caja: ' + result.error);
-      }
+      if (result.success) { alert('✅ Caja abierta correctamente'); setShowCashModal(false); }
+      else alert('❌ Error al abrir caja: ' + result.error);
     } else {
       const result = await closeCashRegister(regularOrders, data.finalCash!, data.notes || '');
       if (result.success) {
@@ -550,15 +523,12 @@ const OrdersManager: React.FC = () => {
         </button>
       </div>
 
-      {/* MODAL DE CAJA - AHORA USA EL COMPONENTE CORRECTO */}
-      <CashRegisterModal
+      <FullDayCashRegisterModal
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
-        cashRegister={cashRegister}
-        todaySummary={todaySummary}
         onConfirm={handleCashConfirm}
-        loading={salesLoading || loadingSummary}
+        loading={salesLoading}
       />
 
       {showHistory && <SalesHistory />}
@@ -657,7 +627,7 @@ const OrdersManager: React.FC = () => {
           </div>
         ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            No hay órdenes para el {selectedDate.toLocaleDateString('es-PE')}
+  `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`
           </div>
         ) : (
           <div className="overflow-x-auto">
