@@ -528,7 +528,7 @@ const OrdersManager: React.FC = () => {
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
         cashRegister={cashRegister}
-        todaySummary={todaySummary}
+        todaySummary={getTodaySummary}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
