@@ -10,7 +10,7 @@ import OrderTicket from './OrderTicket';
 import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
-import { FullDayCashRegisterModal } from '../fullday/FullDayCashRegisterModal';
+import { FullDayCashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
 import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
 import { PaymentMethodModal } from './PaymentMethodModal';
