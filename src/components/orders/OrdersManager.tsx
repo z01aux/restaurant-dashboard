@@ -156,6 +156,7 @@ const OrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [todaySummary, setTodaySummary] = useState<any>(null);
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -181,10 +182,26 @@ const OrdersManager: React.FC = () => {
     loading: salesLoading,
     openCashRegister,
     closeCashRegister,
-    getTodaySummary
+    getTodaySummary: getTodaySummaryAsync
   } = useSalesClosure();
 
   const regularOrders = useMemo(() => getRegularOrders(), [getRegularOrders, orders]);
+
+  // Cargar el resumen del día cuando cambie regularOrders
+  useEffect(() => {
+    const loadTodaySummary = async () => {
+      try {
+        const summary = await getTodaySummaryAsync(regularOrders);
+        setTodaySummary(summary);
+      } catch (error) {
+        console.error('Error al cargar resumen del día:', error);
+      }
+    };
+    
+    if (regularOrders.length > 0) {
+      loadTodaySummary();
+    }
+  }, [regularOrders, getTodaySummaryAsync]);
 
   useEffect(() => {
     if (regularOrders.length > 0 && !isInitialized) {
@@ -388,8 +405,10 @@ const OrdersManager: React.FC = () => {
     const e = new Date(endDate);   e.setHours(23,59,59,999);
     const filtered = regularOrders.filter(o => { const d = new Date(o.createdAt); return d >= s && d <= e; });
     if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
-    // CORREGIDO: generateTicketSummary ahora recibe 1 argumento (filtered) y printResumenTicket recibe 3
+    
+    // CORREGIDO: generateTicketSummary ahora recibe 1 argumento (filtered)
     const summary = generateTicketSummary(filtered);
+    // CORREGIDO: printResumenTicket recibe 3 argumentos
     printResumenTicket(summary, startDate, endDate);
   }, [regularOrders]);
 
@@ -444,21 +463,6 @@ const OrdersManager: React.FC = () => {
 
   // Determinar si hay filtros activos
   const hasActiveFilters = areaFilter !== '' || paymentFilter !== '' || searchTerm !== '';
-
-  // CORREGIDO: Obtener el todaySummary de manera segura
-  const todaySummary = useMemo(() => {
-    try {
-      return getTodaySummary(regularOrders);
-    } catch (error) {
-      console.error('Error al obtener resumen del día:', error);
-      return {
-        total_orders: 0,
-        total_amount: 0,
-        by_payment_method: {},
-        by_order_type: {}
-      };
-    }
-  }, [getTodaySummary, regularOrders]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
