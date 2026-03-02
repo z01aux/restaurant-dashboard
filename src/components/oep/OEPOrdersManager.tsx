@@ -1,14 +1,10 @@
 // ============================================================
-// ARCHIVO: src/components/oep/OEPOrdersManager.tsx (CORREGIDO)
-// VERSIÓN COMPLETA CON TODAS LAS MEJORAS:
-// - Filtro de fecha con flechas
-// - Ticket por pedido (Imprimir + PDF)
-// - Filtro por método de pago con montos
-// - Exportaciones mejoradas
+// ARCHIVO: src/components/oep/OEPOrdersManager.tsx
+// VERSIÓN CON TOTAL DEL DÍA EN COLOR AZUL
 // ============================================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react'; // ← Eliminado 'Calendar'
+import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
@@ -98,6 +94,12 @@ export const OEPOrdersManager: React.FC = () => {
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
   const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
 
+  // Calcular total del día
+  const todayTotal = useMemo(() =>
+    getTodayOrders().reduce((sum, o) => sum + o.total, 0),
+    [getTodayOrders]
+  );
+
   // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
     const startOfDay = new Date(selectedDate);
@@ -154,11 +156,6 @@ export const OEPOrdersManager: React.FC = () => {
 
     return filtered;
   }, [orders, searchTerm, selectedDate, paymentFilter]);
-
-  const todayTotal = useMemo(() =>
-    getTodayOrders().reduce((sum, o) => sum + o.total, 0),
-    [getTodayOrders]
-  );
 
   // ── Reportes ──────────────────────────────────────────────────
   const handleExcelHoy = useCallback(() => {
@@ -273,14 +270,18 @@ export const OEPOrdersManager: React.FC = () => {
             title="🖨️ Ticket Resumen por Fechas - OEP"
           />
 
-          {/* Header */}
+          {/* Header con emoji 📦 y total del día en color azul */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">📦 Pedidos OEP</h1>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <span>📦</span> Pedidos OEP
+              </h1>
               <p className="text-sm text-gray-600 mt-1">
-                {filteredOrders.length} pedidos · Total del día: S/ {todayTotal.toFixed(2)}
+                {filteredOrders.length} pedidos · Total del día: <span className="font-semibold text-blue-600">S/ {todayTotal.toFixed(2)}</span>
               </p>
             </div>
+            
+            {/* Botón de caja */}
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200 shadow-sm">
                 <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
@@ -288,21 +289,27 @@ export const OEPOrdersManager: React.FC = () => {
                   Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
                 </span>
               </div>
-              {!cashRegister?.is_open
-                ? <button onClick={handleOpenCash} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all">💰 Abrir Caja</button>
-                : <button onClick={handleCloseCash} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all">🔒 Cerrar Caja</button>
-              }
+              
+              {!cashRegister?.is_open ? (
+                <button onClick={handleOpenCash} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2">
+                  <span>💰</span> Abrir Caja
+                </button>
+              ) : (
+                <button onClick={handleCloseCash} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2">
+                  <span>🔒</span> Cerrar Caja
+                </button>
+              )}
             </div>
           </div>
 
-          {/* NUEVO: Selector de fecha con flechas */}
+          {/* Selector de fecha */}
           <OEPDateFilter
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             totalOrders={filteredOrders.length}
           />
 
-          {/* NUEVO: Filtro por método de pago con montos */}
+          {/* Filtro por método de pago con montos */}
           <div className="mb-4">
             <PaymentFilter
               paymentFilter={paymentFilter}
@@ -426,7 +433,7 @@ export const OEPOrdersManager: React.FC = () => {
                         </div>
                       </div>
                       
-                      {/* NUEVO: Botones de ticket */}
+                      {/* Botones de ticket */}
                       <div className="mt-4 pt-3 border-t border-gray-100">
                         <OEPTicket order={order} />
                       </div>

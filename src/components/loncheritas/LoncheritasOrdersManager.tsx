@@ -1,9 +1,6 @@
 // ============================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// VERSIÓN COMPLETA CON:
-// - Selector de fecha con flechas
-// - Filtro de pago con montos
-// - Ticket por pedido (Imprimir + PDF)
+// VERSIÓN CON TOTAL DEL DÍA EN COLOR NARANJA
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -15,7 +12,7 @@ import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
 import { LoncheritasDateFilter } from './LoncheritasDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
-import LoncheritasTicket from './LoncheritasTicket'; // ← NUEVO
+import LoncheritasTicket from './LoncheritasTicket';
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
@@ -99,6 +96,12 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
   const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
 
+  // Calcular total del día
+  const todayTotal = useMemo(() =>
+    getTodayOrders().reduce((sum, o) => sum + o.total, 0),
+    [getTodayOrders]
+  );
+
   // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
     const startOfDay = new Date(selectedDate);
@@ -155,11 +158,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
 
     return filtered;
   }, [orders, searchTerm, selectedDate, paymentFilter]);
-
-  const todayTotal = useMemo(() =>
-    getTodayOrders().reduce((sum, o) => sum + o.total, 0),
-    [getTodayOrders]
-  );
 
   // ── Reportes ──────────────────────────────────────────────────
   const handleExcelHoy = useCallback(() => {
@@ -272,14 +270,18 @@ export const LoncheritasOrdersManager: React.FC = () => {
             title="🖨️ Ticket Resumen por Fechas - Loncheritas"
           />
 
-          {/* Header */}
+          {/* Header con emoji 🍱 y total del día en color naranja */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">🍱 Pedidos Loncheritas</h1>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <span>🍱</span> Pedidos Loncheritas
+              </h1>
               <p className="text-sm text-gray-600 mt-1">
-                {filteredOrders.length} pedidos · Total del día: S/ {todayTotal.toFixed(2)}
+                {filteredOrders.length} pedidos · Total del día: <span className="font-semibold text-orange-600">S/ {todayTotal.toFixed(2)}</span>
               </p>
             </div>
+            
+            {/* Botón de caja */}
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200 shadow-sm">
                 <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
@@ -287,14 +289,20 @@ export const LoncheritasOrdersManager: React.FC = () => {
                   Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
                 </span>
               </div>
-              {!cashRegister?.is_open
-                ? <button onClick={handleOpenCash} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all">💰 Abrir Caja</button>
-                : <button onClick={handleCloseCash} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all">🔒 Cerrar Caja</button>
-              }
+              
+              {!cashRegister?.is_open ? (
+                <button onClick={handleOpenCash} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2">
+                  <span>💰</span> Abrir Caja
+                </button>
+              ) : (
+                <button onClick={handleCloseCash} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2">
+                  <span>🔒</span> Cerrar Caja
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Selector de fecha con flechas */}
+          {/* Selector de fecha */}
           <LoncheritasDateFilter
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
@@ -361,7 +369,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
             </div>
           )}
 
-          {/* Lista de pedidos con tickets */}
+          {/* Lista de pedidos */}
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-12">
@@ -427,7 +435,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
                         </div>
                       </div>
                       
-                      {/* NUEVO: Botones de ticket */}
+                      {/* Botones de ticket */}
                       <div className="mt-4 pt-3 border-t border-gray-100">
                         <LoncheritasTicket order={order} />
                       </div>
