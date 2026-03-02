@@ -10,7 +10,7 @@ import OrderTicket from './OrderTicket';
 import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
-import { FullDayCashRegisterModal } from '../fullday/FullDayCashRegisterModal';
+import { CashRegisterModal } from '../sales/CashRegisterModal'; // CAMBIADO: Ahora importa CashRegisterModal
 import { SalesHistory } from '../sales/SalesHistory';
 import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
 import { PaymentMethodModal } from './PaymentMethodModal';
@@ -156,6 +156,7 @@ const OrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [todaySummary, setTodaySummary] = useState<any>(null); // NUEVO: estado para guardar el resumen del día
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -222,6 +223,17 @@ const OrdersManager: React.FC = () => {
       });
     }
   }, [regularOrders]);
+
+  // NUEVO: Cargar el resumen del día cuando se abre el modal de cierre
+  useEffect(() => {
+    const loadTodaySummary = async () => {
+      if (showCashModal && cashModalType === 'close') {
+        const summary = await getTodaySummary(regularOrders);
+        setTodaySummary(summary);
+      }
+    };
+    loadTodaySummary();
+  }, [showCashModal, cashModalType, regularOrders, getTodaySummary]);
 
   const sortOptions = useMemo(() => [
     { value: 'status-time',       label: '🔄 Estado + Tiempo' },
@@ -396,14 +408,27 @@ const OrdersManager: React.FC = () => {
   const handleExportTodayExcel= useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
   const handleExportAllExcel  = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
 
-  const handleOpenCashRegister  = useCallback(() => { setCashModalType('open');  setShowCashModal(true); }, []);
-  const handleCloseCashRegister = useCallback(() => { setCashModalType('close'); setShowCashModal(true); }, []);
+  const handleOpenCashRegister  = useCallback(async () => { 
+    setCashModalType('open');  
+    setTodaySummary(null); // Limpiar el resumen anterior
+    setShowCashModal(true); 
+  }, []);
+  
+  const handleCloseCashRegister = useCallback(async () => { 
+    setCashModalType('close'); 
+    // El resumen se cargará en el useEffect
+    setShowCashModal(true); 
+  }, []);
 
   const handleCashConfirm = useCallback(async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
     if (cashModalType === 'open') {
       const result = await openCashRegister(data.initialCash!);
-      if (result.success) { alert('✅ Caja abierta correctamente'); setShowCashModal(false); }
-      else alert('❌ Error al abrir caja: ' + result.error);
+      if (result.success) { 
+        alert('✅ Caja abierta correctamente'); 
+        setShowCashModal(false); 
+      } else {
+        alert('❌ Error al abrir caja: ' + result.error);
+      }
     } else {
       const result = await closeCashRegister(regularOrders, data.finalCash!, data.notes || '');
       if (result.success) {
@@ -523,10 +548,13 @@ const OrdersManager: React.FC = () => {
         </button>
       </div>
 
-      <FullDayCashRegisterModal
+      {/* MODAL DE CAJA - AHORA USA EL COMPONENTE CORRECTO CON todaySummary */}
+      <CashRegisterModal
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
+        cashRegister={cashRegister}
+        todaySummary={todaySummary} // Pasamos el resumen que cargamos en el useEffect
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
@@ -627,7 +655,7 @@ const OrdersManager: React.FC = () => {
           </div>
         ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-  `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`
+            No hay órdenes para el {selectedDate.toLocaleDateString('es-PE')}
           </div>
         ) : (
           <div className="overflow-x-auto">
