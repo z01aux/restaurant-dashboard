@@ -1,5 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Pencil, Download } from 'lucide-react';
+// ============================================
+// ARCHIVO: src/components/orders/OrdersManager.tsx
+// CON FILTRO POR ÁREA Y SELECTOR DE FECHA ESTILO FULLDAY
+// SIN TARJETAS DE ESTADÍSTICAS
+// ============================================
+
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,12 +16,122 @@ import OrderTicket from './OrderTicket';
 import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
-import { DailySummary } from '../../types/sales';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
-import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
 import { PaymentMethodModal } from './PaymentMethodModal';
 import { DateRangeModal } from './DateRangeModal';
+
+// ============================================
+// COMPONENTE DE SELECCIÓN DE FECHA (ESTILO FULLDAY)
+// ============================================
+const DateSelector: React.FC<{
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+  showOnlyToday: boolean;
+  onToggleShowOnlyToday: () => void;
+}> = ({ selectedDate, onDateChange, showOnlyToday, onToggleShowOnlyToday }) => {
+  
+  const handlePrevDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    onDateChange(newDate);
+  };
+
+  const handleNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    onDateChange(newDate);
+  };
+
+  const handleToday = () => {
+    onDateChange(new Date());
+  };
+
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear();
+  };
+
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Si showOnlyToday está activo, mostramos un selector simplificado
+  if (showOnlyToday) {
+    return (
+      <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2">
+        <div className="flex items-center space-x-2">
+          <Calendar size={18} className="text-gray-500" />
+          <span className="font-medium text-gray-700">Hoy: {formatDate(new Date())}</span>
+        </div>
+        <button
+          onClick={onToggleShowOnlyToday}
+          className="text-sm text-red-600 hover:text-red-800 font-medium"
+        >
+          Ver todas las fechas
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        
+        {/* Selector de fecha con flechas */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handlePrevDay}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Día anterior"
+          >
+            <ChevronLeft size={20} className="text-gray-600" />
+          </button>
+
+          <div className="flex items-center space-x-2 px-4 py-2 bg-red-50 rounded-lg border border-red-200">
+            <Calendar size={18} className="text-red-600" />
+            <span className="font-medium text-red-800">
+              {formatDate(selectedDate)}
+            </span>
+          </div>
+
+          <button
+            onClick={handleNextDay}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Día siguiente"
+            disabled={isToday(selectedDate)}
+          >
+            <ChevronRight size={20} className={`${isToday(selectedDate) ? 'text-gray-300' : 'text-gray-600'}`} />
+          </button>
+        </div>
+
+        {/* Botones de acción */}
+        <div className="flex items-center space-x-2">
+          {!isToday(selectedDate) && (
+            <button
+              onClick={handleToday}
+              className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+            >
+              Ver Hoy
+            </button>
+          )}
+          <button
+            onClick={onToggleShowOnlyToday}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+          >
+            Volver a "Solo Hoy"
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -156,6 +272,7 @@ const OrdersManager: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
+  const [showOnlyToday, setShowOnlyToday] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -165,7 +282,6 @@ const OrdersManager: React.FC = () => {
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [dailySummary, setDailySummary] = useState<DailySummary | undefined>(undefined);
 
   const { user } = useAuth();
   const {
@@ -173,6 +289,7 @@ const OrdersManager: React.FC = () => {
     loading,
     deleteOrder,
     updateOrderPayment,
+    exportOrdersToCSV,
     getTodayOrders,
     fetchOrders,
     getRegularOrders
@@ -234,17 +351,30 @@ const OrdersManager: React.FC = () => {
     { value: 'created-asc',       label: '📅 Más Antiguas' },
   ], []);
 
-  // Filtrar por fecha seleccionada
+  // Filtrar por fecha según el modo seleccionado
   const dateFilteredOrders = useMemo(() => {
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    return localOrders.filter(order => {
-      const orderDate = new Date(order.createdAt);
-      return orderDate >= startOfDay && orderDate <= endOfDay;
-    });
-  }, [localOrders, selectedDate]);
+    if (showOnlyToday) {
+      // Modo "Solo Hoy" - usa la función existente
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return localOrders.filter(order => {
+        const d = new Date(order.createdAt);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+      });
+    } else {
+      // Modo selector de fecha - filtrar por la fecha seleccionada
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      return localOrders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        return orderDate >= startOfDay && orderDate <= endOfDay;
+      });
+    }
+  }, [localOrders, showOnlyToday, selectedDate]);
 
   const filteredAndSortedOrders = useMemo(() => {
     if (!dateFilteredOrders.length) return [];
@@ -384,16 +514,6 @@ const OrdersManager: React.FC = () => {
     }
   }, [regularOrders, getTodaySummary, exporting]);
 
-  useEffect(() => {
-    const calculateSummary = async () => {
-      if (regularOrders.length > 0) {
-        const summary = await getTodaySummary(regularOrders);
-        setDailySummary(summary);
-      }
-    };
-    calculateSummary();
-  }, [regularOrders, getTodaySummary]);
-
   const handlePrintTicket = useCallback((startDate: Date, endDate: Date) => {
     const filtered = regularOrders.filter(o => {
       const d = new Date(o.createdAt); d.setHours(0, 0, 0, 0);
@@ -405,6 +525,8 @@ const OrdersManager: React.FC = () => {
     printResumenTicket(generateTicketSummary(filtered, startDate, endDate), startDate, endDate);
   }, [regularOrders]);
 
+  const handleExportTodayCSV  = useCallback(() => exportOrdersToCSV(getTodayOrders().filter(o => o.orderType !== 'fullday')), [getTodayOrders, exportOrdersToCSV]);
+  const handleExportAllCSV    = useCallback(() => exportOrdersToCSV(regularOrders), [regularOrders, exportOrdersToCSV]);
   const handleExportTodayExcel= useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
   const handleExportAllExcel  = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
 
@@ -433,6 +555,7 @@ const OrdersManager: React.FC = () => {
   }, [cashModalType, openCashRegister, closeCashRegister, regularOrders]);
 
   const handleToggleHistory = useCallback(() => setShowHistory(prev => !prev), []);
+  const handleToggleShowOnlyToday = useCallback(() => setShowOnlyToday(prev => !prev), []);
   const handleDateChange = useCallback((date: Date) => setSelectedDate(date), []);
 
   const handleClearFilters = useCallback(() => {
@@ -511,15 +634,22 @@ const OrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* SELECTOR DE FECHA */}
-      <FullDayDateFilter
+      {/* SELECTOR DE FECHA ESTILO FULLDAY */}
+      <DateSelector
         selectedDate={selectedDate}
         onDateChange={handleDateChange}
-        totalOrders={filteredAndSortedOrders.length}
+        showOnlyToday={showOnlyToday}
+        onToggleShowOnlyToday={handleToggleShowOnlyToday}
       />
 
-      {/* BOTONES DE ACCIÓN - SOLO EXCEL Y REPORTES */}
+      {/* BOTONES DE ACCIÓN */}
       <div className="flex flex-wrap gap-2">
+        <button onClick={handleExportTodayCSV} disabled={exporting} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1 disabled:opacity-50">
+          <Download size={16} /><span>CSV Hoy</span>
+        </button>
+        <button onClick={handleExportAllCSV} disabled={exporting} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1 disabled:opacity-50">
+          <Download size={16} /><span>CSV Todo</span>
+        </button>
         <button onClick={handleExportTodayExcel} disabled={exporting} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50">
           <Download size={16} /><span>Excel Hoy</span>
         </button>
@@ -540,7 +670,7 @@ const OrdersManager: React.FC = () => {
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
         cashRegister={cashRegister}
-        todaySummary={dailySummary}
+        todaySummary={undefined}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
@@ -641,7 +771,9 @@ const OrdersManager: React.FC = () => {
           </div>
         ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-  `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`
+            {showOnlyToday 
+              ? 'No hay órdenes regulares para hoy' 
+              : `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`}
           </div>
         ) : (
           <div className="overflow-x-auto">

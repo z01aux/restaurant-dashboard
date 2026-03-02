@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Printer, Calendar, Pencil } from 'lucide-react';
+import { Search, Download, Calendar, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,12 +9,12 @@ import { FullDayDateRangeModal } from './FullDayDateRangeModal';
 import { FullDayDateFilter } from './FullDayDateFilter';
 import { FullDayPaymentModal } from './FullDayPaymentModal';
 import FullDayTicket from './FullDayTicket';
-import { exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
+import { exportFullDayToCSV, exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
 import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
 import { FullDayOrder, FullDayPaymentMethod } from '../../types/fullday';
 
 export const FullDayOrdersManager: React.FC = () => {
-  const { orders, loading, updateOrderPayment } = useFullDayOrders();
+  const { orders, loading, getTodayOrders, updateOrderPayment } = useFullDayOrders();
   const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useFullDaySalesClosure();
   const { user } = useAuth();
 
@@ -24,6 +24,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Estado para modal de edición de pago
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -49,6 +50,21 @@ export const FullDayOrdersManager: React.FC = () => {
   }, [orders, searchTerm, selectedDate]);
 
   // ── Exportaciones ────────────────────────────────────────────
+  const handleExportTodayCSV = useCallback(() => {
+    if (exporting) return;
+    setExporting(true);
+    try { exportFullDayToCSV(getTodayOrders(), 'fullday_hoy'); } finally { setExporting(false); }
+  }, [getTodayOrders, exporting]);
+
+  const handleExportAllCSV = useCallback(() => {
+    if (exporting) return;
+    setExporting(true);
+    try { exportFullDayToCSV(orders, 'fullday_todos'); } finally { setExporting(false); }
+  }, [orders, exporting]);
+
+  const handleExportTodayExcel = () => exportFullDayToExcel(getTodayOrders(), 'today');
+  const handleExportAllExcel  = () => exportFullDayToExcel(orders, 'all');
+
   const handleExportSummary = async (startDate: Date, endDate: Date) => {
     const s = new Date(startDate); s.setHours(0,0,0,0);
     const e = new Date(endDate);   e.setHours(23,59,59,999);
@@ -141,11 +157,25 @@ export const FullDayOrdersManager: React.FC = () => {
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-2 mb-6">
+            <button onClick={handleExportTodayCSV} disabled={exporting}
+              className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+              <Download size={16} className="mr-1" /> CSV Hoy
+            </button>
+            <button onClick={handleExportAllCSV} disabled={exporting}
+              className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+              <Download size={16} className="mr-1" /> CSV Todo
+            </button>
+            <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center">
+              <FileSpreadsheet size={16} className="mr-1" /> Excel Hoy
+            </button>
+            <button onClick={handleExportAllExcel} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center">
+              <FileSpreadsheet size={16} className="mr-1" /> Excel Todo
+            </button>
             <button onClick={() => setShowDateRangeModal(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center">
               <Calendar size={16} className="mr-1" /> Reporte por Fechas
             </button>
             <button onClick={() => handleExportSummary(selectedDate, selectedDate)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center">
-              <Printer size={16} className="mr-1" /> Imprimir Resumen
+              <Printer size={16} className="mr-1" /> Ticket Resumen
             </button>
           </div>
 

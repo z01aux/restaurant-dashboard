@@ -3,14 +3,11 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Printer, Calendar, Pencil } from 'lucide-react';
+import { Search, Download, Calendar, Printer, Pencil } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
-import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
-import { LoncheritasDateRangeModal } from './LoncheritasDateRangeModal';
-import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 
@@ -23,7 +20,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
-  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<LoncheritasOrder | null>(null);
 
@@ -51,21 +47,32 @@ export const LoncheritasOrdersManager: React.FC = () => {
     [getTodayOrders]
   );
 
-  // ── Exportar Excel ───────────────────────────────────────
-  const handleExportExcel = useCallback(async (startDate: Date, endDate: Date) => {
-    console.log('Exportando Loncheritas a Excel:', startDate, endDate);
-    alert('Función de exportación a Excel en desarrollo para Loncheritas');
-    // TODO: Implementar exportación a Excel para Loncheritas
-  }, []);
-
-  // ── Imprimir Resumen ─────────────────────────────────────
-  const handlePrintSummary = useCallback((startDate: Date, endDate: Date) => {
-    const s = new Date(startDate); s.setHours(0,0,0,0);
-    const e = new Date(endDate);   e.setHours(23,59,59,999);
-    const filtered = orders.filter(o => { const d = new Date(o.created_at); return d >= s && d <= e; });
-    if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
-    printFullDayResumenTicket(generateFullDayTicketSummary(filtered as any), startDate, endDate);
-  }, [orders]);
+  // ── Exportar CSV simple ────────────────────────────────────
+  const handleExportCSV = useCallback(() => {
+    const rows = filteredOrders.map(o => [
+      o.order_number,
+      new Date(o.created_at).toLocaleDateString('es-ES'),
+      new Date(o.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      o.student_name,
+      o.grade,
+      o.section,
+      o.guardian_name,
+      o.phone || '',
+      o.items.map(i => `${i.quantity}x ${i.name}`).join(' | '),
+      o.total.toFixed(2),
+      o.payment_method || 'NO APLICA',
+      o.status
+    ]);
+    const header = ['N° Orden','Fecha','Hora','Alumno','Grado','Sección','Apoderado','Teléfono','Productos','Total','Pago','Estado'];
+    const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `loncheritas_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredOrders]);
 
   // ── Caja ─────────────────────────────────────────────────────
   const handleOpenCash  = () => { setCashModalType('open');  setShowCashModal(true); };
@@ -111,6 +118,9 @@ export const LoncheritasOrdersManager: React.FC = () => {
     return map[method || ''] || 'bg-gray-100 text-gray-800';
   };
 
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -127,16 +137,8 @@ export const LoncheritasOrdersManager: React.FC = () => {
             isOpen={showCashModal}
             onClose={() => setShowCashModal(false)}
             type={cashModalType}
-            cashRegister={cashRegister}
-            orders={orders}
             onConfirm={handleCashConfirm}
             loading={salesLoading}
-          />
-          <LoncheritasDateRangeModal
-            isOpen={showDateRangeModal}
-            onClose={() => setShowDateRangeModal(false)}
-            onConfirmTicket={handlePrintSummary}
-            onConfirmExcel={handleExportExcel}
           />
 
           {/* Header */}
@@ -159,19 +161,39 @@ export const LoncheritasOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Filtro de fecha */}
-          <FullDayDateFilter
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            totalOrders={filteredOrders.length}
-          />
+          {/* Selector de fecha */}
+          <div className="bg-orange-50 rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center space-x-3">
+              <Calendar size={20} className="text-orange-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-900 capitalize">{formatDate(selectedDate)}</p>
+                <p className="text-xs text-gray-500">{filteredOrders.length} pedidos</p>
+              </div>
+            </div>
+            <input
+              type="date"
+              value={selectedDate.toISOString().split('T')[0]}
+              onChange={(e) => setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
+              className="px-3 py-2 border border-orange-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-2 mb-6">
-            <button onClick={() => setShowDateRangeModal(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center">
-              <Calendar size={16} className="mr-1" /> Reporte por Fechas
+            <button onClick={handleExportCSV}
+              className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center">
+              <Download size={16} className="mr-1" /> Exportar CSV
             </button>
-            <button onClick={() => handlePrintSummary(selectedDate, selectedDate)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center">
+            <button onClick={() => {
+              const text = filteredOrders.map(o =>
+                `${o.order_number} | ${o.student_name} | ${o.grade} ${o.section} | S/${o.total.toFixed(2)} | ${o.payment_method || 'NO APLICA'}`
+              ).join('\n');
+              const win = window.open('', '_blank');
+              if (win) {
+                win.document.write(`<pre style="font-family:monospace;font-size:12px;padding:20px">LONCHERITAS - ${formatDate(selectedDate)}\n${'─'.repeat(60)}\n${text}\n${'─'.repeat(60)}\nTOTAL: S/ ${filteredOrders.reduce((s,o) => s+o.total,0).toFixed(2)}</pre>`);
+                win.print();
+              }
+            }} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center">
               <Printer size={16} className="mr-1" /> Imprimir Resumen
             </button>
           </div>
