@@ -1,8 +1,8 @@
 // ============================================
-// ARCHIVO: src/components/sales/CashRegisterModal.tsx (MODIFICADO - IGUAL A FULLDAY)
+// ARCHIVO: src/components/sales/CashRegisterModal.tsx (CORREGIDO)
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { DailySummary } from '../../types/sales';
 
@@ -68,11 +68,11 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
-        {/* Header - IGUAL A FULLDAY */}
+        {/* Header - CORREGIDO: ya no dice FullDay */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              {type === 'open' ? 'Abrir Caja' : 'Cerrar Caja'}
+              {type === 'open' ? 'Abrir Caja - Órdenes' : 'Cerrar Caja - Órdenes'}
             </h2>
             <p className="text-gray-600 text-sm mt-1">
               {type === 'open'
