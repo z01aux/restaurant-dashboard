@@ -1,22 +1,22 @@
 // ============================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// CON FILTRO DE PAGO QUE MUESTRA MONTOS TOTALES EN SOLES
-// VERSIÓN COMPLETA Y FUNCIONAL
+// VERSIÓN COMPLETA CON SELECTOR DE FECHA CON FLECHAS
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Calendar, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
+import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react'; // ← Eliminado Calendar
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
+import { LoncheritasDateFilter } from './LoncheritasDateFilter'; // ← NUEVO
 import { PaymentFilter } from '../ui/PaymentFilter';
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
 
-// ─── Modal de rango de fechas (inline) ────────────────────────
+// ─── Modal de rango de fechas ────────────────────────────────
 const getTodayString = (): string => {
   const now = new Date();
   const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
@@ -64,10 +64,7 @@ const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConf
           </div>
         </div>
         <div className="flex space-x-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-          >
+          <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
             Cancelar
           </button>
           <button
@@ -123,7 +120,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // FILTROS - incluye paymentFilter
+  // FILTROS
   const filteredOrders = useMemo(() => {
     let filtered = orders;
 
@@ -239,9 +236,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
     return map[method || ''] || 'bg-gray-100 text-gray-800';
   };
 
-  const formatDateLabel = (date: Date) =>
-    date.toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -296,24 +290,14 @@ export const LoncheritasOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Selector de fecha actual */}
-          <div className="bg-orange-50 rounded-xl p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center space-x-3">
-              <Calendar size={20} className="text-orange-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-900 capitalize">{formatDateLabel(selectedDate)}</p>
-                <p className="text-xs text-gray-500">{filteredOrders.length} pedidos</p>
-              </div>
-            </div>
-            <input
-              type="date"
-              value={selectedDate.toISOString().split('T')[0]}
-              onChange={(e) => setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
-              className="px-3 py-2 border border-orange-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
+          {/* NUEVO: Selector de fecha con flechas */}
+          <LoncheritasDateFilter
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            totalOrders={filteredOrders.length}
+          />
 
-          {/* FILTRO POR MÉTODO DE PAGO CON MONTOS EN SOLES */}
+          {/* Filtro por método de pago con montos */}
           <div className="mb-4">
             <PaymentFilter
               paymentFilter={paymentFilter}
