@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// VERSIÓN CORREGIDA - Eliminado setShowHistory no usado
+// VERSIÓN LIMPIA - Sin historial, solo botón de caja estilo Loncheritas/OEP
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -9,7 +9,6 @@ import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
 import { useAuth } from '../../hooks/useAuth';
 import { FullDayCashRegisterModal } from '../sales_fullday/FullDayCashRegisterModal';
-import { FullDaySalesHistory } from '../sales_fullday/FullDaySalesHistory';
 import { FullDayDateRangeModal } from './FullDayDateRangeModal';
 import { FullDayDateFilter } from './FullDayDateFilter';
 import { FullDayPaymentModal } from './FullDayPaymentModal';
@@ -21,13 +20,12 @@ import { FullDayOrder, FullDayPaymentMethod } from '../../types/fullday';
 
 export const FullDayOrdersManager: React.FC = () => {
   const { orders, loading, getTodayOrders, updateOrderPayment } = useFullDayOrders();
-  const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useFullDaySalesClosure();
+  const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister } = useFullDaySalesClosure(); // ← Eliminado 'closures'
   const { user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [paymentFilter, setPaymentFilter] = useState('');
-  const [showHistory, setShowHistory] = useState(false); // ← Se mantiene pero no se usa setter
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
