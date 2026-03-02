@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Pencil, Download } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -536,8 +536,6 @@ const OrdersManager: React.FC = () => {
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
-        cashRegister={cashRegister}
-        todaySummary={undefined}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
