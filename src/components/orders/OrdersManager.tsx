@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download } from 'lucide-react';
+import { Search, Pencil, Printer, Calendar } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,9 +10,10 @@ import OrderTicket from './OrderTicket';
 import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
-import { FullDayCashRegisterModal } from '../fullday/FullDayCashRegisterModal';
+import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
 import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
+import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
 import { PaymentMethodModal } from './PaymentMethodModal';
 import { DateRangeModal } from './DateRangeModal';
 
@@ -171,7 +172,6 @@ const OrdersManager: React.FC = () => {
     loading,
     deleteOrder,
     updateOrderPayment,
-    exportOrdersToCSV,
     getTodayOrders,
     fetchOrders,
     getRegularOrders
@@ -394,10 +394,21 @@ const OrdersManager: React.FC = () => {
     printResumenTicket(generateTicketSummary(filtered, startDate, endDate), startDate, endDate);
   }, [regularOrders]);
 
-  const handleExportTodayCSV  = useCallback(() => exportOrdersToCSV(getTodayOrders().filter(o => o.orderType !== 'fullday')), [getTodayOrders, exportOrdersToCSV]);
-  const handleExportAllCSV    = useCallback(() => exportOrdersToCSV(regularOrders), [regularOrders, exportOrdersToCSV]);
   const handleExportTodayExcel= useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
   const handleExportAllExcel  = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
+
+  const handlePrintSummary = useCallback((startDate: Date, endDate: Date) => {
+    const s = new Date(startDate); s.setHours(0,0,0,0);
+    const e = new Date(endDate);   e.setHours(23,59,59,999);
+    const filtered = regularOrders.filter(o => { const d = new Date(o.createdAt); return d >= s && d <= e; });
+    if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
+    const mapped = filtered.map(o => ({
+      total: o.total,
+      payment_method: o.paymentMethod,
+      items: o.items.map(i => ({ name: i.menuItem.name, quantity: i.quantity, price: i.menuItem.price }))
+    }));
+    printResumenTicket(generateTicketSummary(filtered), startDate, endDate);
+  }, [regularOrders]);
 
   const handleOpenCashRegister  = useCallback(() => { setCashModalType('open');  setShowCashModal(true); }, []);
   const handleCloseCashRegister = useCallback(() => { setCashModalType('close'); setShowCashModal(true); }, []);
@@ -475,7 +486,7 @@ const OrdersManager: React.FC = () => {
         isOpen={showDateRangeModal}
         onClose={() => setShowDateRangeModal(false)}
         onConfirmExcel={handleExportExcel}
-        onConfirmTicket={handlePrintTicket}
+        onConfirmTicket={handlePrintSummary}
       />
 
       {/* HEADER */}
@@ -511,31 +522,29 @@ const OrdersManager: React.FC = () => {
 
       {/* BOTONES DE ACCIÓN */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExportTodayCSV} disabled={exporting} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>CSV Hoy</span>
-        </button>
-        <button onClick={handleExportAllCSV} disabled={exporting} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>CSV Todo</span>
-        </button>
         <button onClick={handleExportTodayExcel} disabled={exporting} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>Excel Hoy</span>
+          <span>Excel Hoy</span>
         </button>
         <button onClick={handleExportAllExcel} disabled={exporting} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>Excel Todo</span>
+          <span>Excel Todo</span>
         </button>
         <button onClick={() => setShowDateRangeModal(true)} disabled={exporting} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>Reportes por Fechas</span>
-          {exporting && <div className="ml-2 animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
+          <Calendar size={16} /><span>Reporte por Fechas</span>
+        </button>
+        <button onClick={() => handlePrintSummary(selectedDate, selectedDate)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
+          <Printer size={16} /><span>Imprimir Resumen</span>
         </button>
         <button onClick={() => { window.location.hash = '#reception'; }} className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm hover:from-red-600 hover:to-amber-600 flex items-center space-x-1" disabled={exporting}>
           <span>➕</span><span>Nueva Orden</span>
         </button>
       </div>
 
-      <FullDayCashRegisterModal
+      <CashRegisterModal
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
+        cashRegister={cashRegister}
+        todaySummary={getTodaySummary()}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />

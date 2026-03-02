@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, Download, Printer } from 'lucide-react';
 
-interface OEPDateRangeModalPropsV2 {
+interface LoncheritasDateRangeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirmExcel: (startDate: Date, endDate: Date) => void;
@@ -30,7 +30,7 @@ const getTodayString = (): string => {
   return `${year}-${month}-${day}`;
 };
 
-export const OEPDateRangeModal: React.FC<OEPDateRangeModalPropsV2> = ({
+export const LoncheritasDateRangeModal: React.FC<LoncheritasDateRangeModalProps> = ({
   isOpen,
   onClose,
   onConfirmExcel,
@@ -157,11 +157,11 @@ export const OEPDateRangeModal: React.FC<OEPDateRangeModalPropsV2> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-4 text-white">
+        <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-4 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Calendar size={20} />
-              <h2 className="text-lg font-bold">Reporte OEP</h2>
+              <h2 className="text-lg font-bold">Reporte Loncheritas</h2>
             </div>
             <button 
               onClick={onClose} 
@@ -220,7 +220,7 @@ export const OEPDateRangeModal: React.FC<OEPDateRangeModalPropsV2> = ({
                   setStartDate(e.target.value);
                   setError(null);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               />
             </div>
 
@@ -235,7 +235,7 @@ export const OEPDateRangeModal: React.FC<OEPDateRangeModalPropsV2> = ({
                   setEndDate(e.target.value);
                   setError(null);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               />
             </div>
           </div>
@@ -273,7 +273,7 @@ export const OEPDateRangeModal: React.FC<OEPDateRangeModalPropsV2> = ({
             <button
               type="button"
               onClick={handleExcel}
-              className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
+              className="px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
             >
               <Download size={18} />
               <span>Excel</span>

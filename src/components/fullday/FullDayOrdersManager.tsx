@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Download, Calendar, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
+import { Search, Printer, Calendar, Pencil } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,7 +9,7 @@ import { FullDayDateRangeModal } from './FullDayDateRangeModal';
 import { FullDayDateFilter } from './FullDayDateFilter';
 import { FullDayPaymentModal } from './FullDayPaymentModal';
 import FullDayTicket from './FullDayTicket';
-import { exportFullDayToCSV, exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
+import { exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
 import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
 import { FullDayOrder, FullDayPaymentMethod } from '../../types/fullday';
 
@@ -50,21 +50,6 @@ export const FullDayOrdersManager: React.FC = () => {
   }, [orders, searchTerm, selectedDate]);
 
   // ── Exportaciones ────────────────────────────────────────────
-  const handleExportTodayCSV = useCallback(() => {
-    if (exporting) return;
-    setExporting(true);
-    try { exportFullDayToCSV(getTodayOrders(), 'fullday_hoy'); } finally { setExporting(false); }
-  }, [getTodayOrders, exporting]);
-
-  const handleExportAllCSV = useCallback(() => {
-    if (exporting) return;
-    setExporting(true);
-    try { exportFullDayToCSV(orders, 'fullday_todos'); } finally { setExporting(false); }
-  }, [orders, exporting]);
-
-  const handleExportTodayExcel = () => exportFullDayToExcel(getTodayOrders(), 'today');
-  const handleExportAllExcel  = () => exportFullDayToExcel(orders, 'all');
-
   const handleExportSummary = async (startDate: Date, endDate: Date) => {
     const s = new Date(startDate); s.setHours(0,0,0,0);
     const e = new Date(endDate);   e.setHours(23,59,59,999);
@@ -157,25 +142,11 @@ export const FullDayOrdersManager: React.FC = () => {
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-2 mb-6">
-            <button onClick={handleExportTodayCSV} disabled={exporting}
-              className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-              <Download size={16} className="mr-1" /> CSV Hoy
-            </button>
-            <button onClick={handleExportAllCSV} disabled={exporting}
-              className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-              <Download size={16} className="mr-1" /> CSV Todo
-            </button>
-            <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center">
-              <FileSpreadsheet size={16} className="mr-1" /> Excel Hoy
-            </button>
-            <button onClick={handleExportAllExcel} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center">
-              <FileSpreadsheet size={16} className="mr-1" /> Excel Todo
-            </button>
             <button onClick={() => setShowDateRangeModal(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center">
               <Calendar size={16} className="mr-1" /> Reporte por Fechas
             </button>
             <button onClick={() => handleExportSummary(selectedDate, selectedDate)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center">
-              <Printer size={16} className="mr-1" /> Ticket Resumen
+              <Printer size={16} className="mr-1" /> Imprimir Resumen
             </button>
           </div>
 
@@ -316,3 +287,195 @@ export const FullDayOrdersManager: React.FC = () => {
     </div>
   );
 };
+
+----------------------------------------
+
+ARCHIVO: REVISION 01/src/components/fullday/FullDayPaymentModal.tsx
+Tamaño: 6.98 KB
+Tipo: application/typescript+jsx
+Contenido:
+----------------------------------------
+// ============================================
+// ARCHIVO: src/components/fullday/FullDayPaymentModal.tsx
+// Modal para cambiar método de pago en FullDay
+// ============================================
+
+import React, { useState, useEffect } from 'react';
+import { X, CreditCard, DollarSign, Smartphone, Minus } from 'lucide-react';
+import { FullDayOrder } from '../../types/fullday';
+
+interface FullDayPaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  order: FullDayOrder | null;
+  onSave: (orderId: string, paymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null) => Promise<void>;
+}
+
+export const FullDayPaymentModal: React.FC<FullDayPaymentModalProps> = ({
+  isOpen,
+  onClose,
+  order,
+  onSave
+}) => {
+  const [selectedMethod, setSelectedMethod] = useState<'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (order) {
+      setSelectedMethod(order.payment_method);
+    }
+  }, [order]);
+
+  if (!isOpen || !order) return null;
+
+  const handleSave = async () => {
+    if (selectedMethod === order.payment_method) {
+      onClose();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSave(order.id, selectedMethod);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const paymentOptions = [
+    { value: 'EFECTIVO', label: 'Efectivo', icon: DollarSign, color: 'green' },
+    { value: 'YAPE/PLIN', label: 'Yape/Plin', icon: Smartphone, color: 'purple' },
+    { value: 'TARJETA', label: 'Tarjeta', icon: CreditCard, color: 'blue' },
+    { value: 'none', label: 'No Aplica', icon: Minus, color: 'gray' }
+  ];
+
+  const handleSelectMethod = (value: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'none') => {
+    if (value === 'none') {
+      setSelectedMethod(null);
+    } else {
+      setSelectedMethod(value);
+    }
+  };
+
+  const isSelected = (value: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'none') => {
+    if (value === 'none') {
+      return selectedMethod === null;
+    }
+    return selectedMethod === value;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
+      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-4 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CreditCard size={20} />
+              <h2 className="text-lg font-bold">Cambiar Método de Pago</h2>
+            </div>
+            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors" disabled={saving}>
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-600">Pedido:</span>
+              <span className="font-semibold text-gray-900">{order.order_number}</span>
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-600">Alumno:</span>
+              <span className="font-semibold text-gray-900">{order.student_name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Monto:</span>
+              <span className="font-bold text-purple-600">S/ {order.total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <span className="text-sm font-medium text-gray-700">Método actual:</span>
+            <div className="mt-1 p-3 bg-gray-100 rounded-lg flex items-center space-x-2">
+              {order.payment_method === 'EFECTIVO' && <DollarSign size={18} className="text-green-600" />}
+              {order.payment_method === 'YAPE/PLIN' && <Smartphone size={18} className="text-purple-600" />}
+              {order.payment_method === 'TARJETA' && <CreditCard size={18} className="text-blue-600" />}
+              {!order.payment_method && <Minus size={18} className="text-gray-600" />}
+              <span className="font-medium">{order.payment_method || 'NO APLICA'}</span>
+            </div>
+          </div>
+
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Nuevo método de pago:
+          </label>
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {paymentOptions.map((option) => {
+              const Icon = option.icon;
+              const selected = isSelected(option.value as any);
+              
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleSelectMethod(option.value as any)}
+                  disabled={saving}
+                  className={`
+                    p-4 rounded-xl border-2 transition-all flex flex-col items-center space-y-2
+                    ${selected 
+                      ? `border-${option.color}-500 bg-${option.color}-50` 
+                      : 'border-gray-200 hover:border-gray-300 bg-gray-50'
+                    }
+                    ${saving ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
+                >
+                  <Icon size={24} className={`text-${option.color}-600`} />
+                  <span className={`text-sm font-medium text-${option.color}-800`}>
+                    {option.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || selectedMethod === order.payment_method}
+              className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-3 rounded-lg hover:shadow-md transition-all duration-300 disabled:opacity-50 flex items-center justify-center space-x-2 font-semibold"
+            >
+              {saving ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Guardando...</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard size={18} />
+                  <span>Actualizar Pago</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+----------------------------------------
+
+ARCHIVO: REVISION 01/src/components/fullday/FullDayPaymentSummary.tsx
+Tamaño: 4.34 KB
+Tipo: application/typescript+jsx
+Contenido:

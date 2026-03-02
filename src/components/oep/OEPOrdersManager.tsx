@@ -3,13 +3,15 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Pencil, Download } from 'lucide-react';
+import { Search, Pencil, Printer, Calendar } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
 import { OEPPaymentModal } from './OEPPaymentModal';
-import { FullDayCashRegisterModal } from '../fullday/FullDayCashRegisterModal';
+import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
+import { OEPDateRangeModal } from './OEPDateRangeModal';
+import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
 import { OEPOrder } from '../../types/oep';
 
 export const OEPOrdersManager: React.FC = () => {
@@ -23,6 +25,7 @@ export const OEPOrdersManager: React.FC = () => {
     const [selectedOrder, setSelectedOrder] = useState<OEPOrder | null>(null);
     const [showCashModal, setShowCashModal] = useState(false);
     const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
+    const [showDateRangeModal, setShowDateRangeModal] = useState(false);
 
     const filteredOrders = useMemo(() => {
         const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
@@ -80,30 +83,14 @@ export const OEPOrdersManager: React.FC = () => {
         }
     };
 
-    // ── Exportar CSV ─────────────────────────────────────────
-    const handleExportCSV = useCallback(() => {
-        const rows = filteredOrders.map(o => [
-            o.order_number,
-            new Date(o.created_at).toLocaleDateString('es-ES'),
-            new Date(o.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-            o.customer_name,
-            o.phone || '',
-            o.address || '',
-            o.items.map((i: any) => `${i.quantity}x ${i.name}`).join(' | '),
-            o.total.toFixed(2),
-            o.payment_method || 'NO APLICA',
-            o.status
-        ]);
-        const header = ['N° Orden','Fecha','Hora','Cliente','Teléfono','Dirección','Productos','Total','Pago','Estado'];
-        const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `oep_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }, [filteredOrders]);
+    // ── Imprimir Resumen ─────────────────────────────────────
+    const handlePrintSummary = useCallback((startDate: Date, endDate: Date) => {
+        const s = new Date(startDate); s.setHours(0,0,0,0);
+        const e = new Date(endDate);   e.setHours(23,59,59,999);
+        const filtered = orders.filter(o => { const d = new Date(o.created_at); return d >= s && d <= e; });
+        if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
+        printFullDayResumenTicket(generateFullDayTicketSummary(filtered as any), startDate, endDate);
+    }, [orders]);
 
     const getPaymentColor = (method?: string | null) => {
         const map: Record<string, string> = {
@@ -126,12 +113,19 @@ export const OEPOrdersManager: React.FC = () => {
                         order={selectedOrder}
                         onSave={handleSavePaymentMethod}
                     />
-                    <FullDayCashRegisterModal
+                    <OEPCashRegisterModal
                         isOpen={showCashModal}
                         onClose={() => setShowCashModal(false)}
                         type={cashModalType}
+                        cashRegister={cashRegister}
+                        orders={orders}
                         onConfirm={handleCashConfirm}
                         loading={salesLoading}
+                    />
+                    <OEPDateRangeModal
+                        isOpen={showDateRangeModal}
+                        onClose={() => setShowDateRangeModal(false)}
+                        onConfirmTicket={handlePrintSummary}
                     />
 
                     {/* Header */}
@@ -159,11 +153,13 @@ export const OEPOrdersManager: React.FC = () => {
                         totalOrders={filteredOrders.length}
                     />
 
-                    {/* Exportar */}
+                    {/* Botones de acción */}
                     <div className="flex flex-wrap gap-2 mb-6">
-                        <button onClick={handleExportCSV}
-                            className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center">
-                            <Download size={16} className="mr-1" /> Exportar CSV
+                        <button onClick={() => setShowDateRangeModal(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center">
+                            <Calendar size={16} className="mr-1" /> Reporte por Fechas
+                        </button>
+                        <button onClick={() => handlePrintSummary(selectedDate, selectedDate)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center">
+                            <Printer size={16} className="mr-1" /> Imprimir Resumen
                         </button>
                     </div>
 
