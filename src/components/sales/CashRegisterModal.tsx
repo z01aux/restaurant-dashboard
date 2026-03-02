@@ -1,5 +1,4 @@
-// ============================================
-// ARCHIVO: src/components/sales/CashRegisterModal.tsx (CORREGIDO)
+// ARCHIVO: src/components/sales/CashRegisterModal.tsx
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -293,4 +292,3 @@ export const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     </div>
   );
 };
-
