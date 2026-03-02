@@ -523,10 +523,12 @@ const OrdersManager: React.FC = () => {
         </button>
       </div>
 
-      <FullDayCashRegisterModal
+      <CashRegisterModal
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
+        cashRegister={cashRegister}
+        todaySummary={todaySummary}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
