@@ -1,6 +1,7 @@
 // ============================================
-// ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx (ACTUALIZADO)
-// CON FILTRO DE PAGO NO INTRUSIVO - VERSIÓN DE PRUEBA
+// ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
+// CON FILTRO DE PAGO QUE MUESTRA MONTOS TOTALES EN SOLES
+// VERSIÓN COMPLETA Y FUNCIONAL
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -10,7 +11,7 @@ import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosu
 import { useAuth } from '../../hooks/useAuth';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
-import { PaymentFilter } from '../ui/PaymentFilter'; // <-- NUEVO COMPONENTE
+import { PaymentFilter } from '../ui/PaymentFilter';
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
@@ -19,7 +20,7 @@ import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from 
 const getTodayString = (): string => {
   const now = new Date();
   const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
-  return `${peruDate.getFullYear()}-${String(peruDate.getMonth()+1).padStart(2,'0')}-${String(peruDate.getDate()).padStart(2,'0')}`;
+  return `${peruDate.getFullYear()}-${String(peruDate.getMonth() + 1).padStart(2, '0')}-${String(peruDate.getDate()).padStart(2, '0')}`;
 };
 
 const createPeruDate = (dateStr: string): Date => {
@@ -45,17 +46,28 @@ const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConf
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+            />
           </div>
         </div>
         <div className="flex space-x-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+          >
             Cancelar
           </button>
           <button
@@ -78,7 +90,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [paymentFilter, setPaymentFilter] = useState(''); // <-- NUEVO: estado para filtro de pago
+  const [paymentFilter, setPaymentFilter] = useState('');
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -86,40 +98,50 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
   const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
 
-  // Calcular totales por método de pago para el día seleccionado
+  // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
-    const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
-    
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
     const dayOrders = orders.filter(o => {
       const d = new Date(o.created_at);
       return d >= startOfDay && d <= endOfDay;
     });
 
     return {
-      efectivo: dayOrders.filter(o => o.payment_method === 'EFECTIVO').length,
-      yape: dayOrders.filter(o => o.payment_method === 'YAPE/PLIN').length,
-      tarjeta: dayOrders.filter(o => o.payment_method === 'TARJETA').length,
+      efectivo: dayOrders
+        .filter(o => o.payment_method === 'EFECTIVO')
+        .reduce((sum, o) => sum + o.total, 0),
+      yape: dayOrders
+        .filter(o => o.payment_method === 'YAPE/PLIN')
+        .reduce((sum, o) => sum + o.total, 0),
+      tarjeta: dayOrders
+        .filter(o => o.payment_method === 'TARJETA')
+        .reduce((sum, o) => sum + o.total, 0),
     };
   }, [orders, selectedDate]);
 
-  // FILTROS MEJORADOS - incluye paymentFilter
+  // FILTROS - incluye paymentFilter
   const filteredOrders = useMemo(() => {
     let filtered = orders;
-    
+
     // Filtro por fecha
-    const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
     filtered = filtered.filter(o => {
       const d = new Date(o.created_at);
       return d >= startOfDay && d <= endOfDay;
     });
-    
-    // NUEVO: Filtro por método de pago
+
+    // Filtro por método de pago
     if (paymentFilter) {
       filtered = filtered.filter(o => o.payment_method === paymentFilter);
     }
-    
+
     // Filtro por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -129,7 +151,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         o.order_number?.toLowerCase().includes(term)
       );
     }
-    
+
     return filtered;
   }, [orders, searchTerm, selectedDate, paymentFilter]);
 
@@ -148,26 +170,44 @@ export const LoncheritasOrdersManager: React.FC = () => {
   }, [orders]);
 
   const handleTicketResumen = useCallback((startDate: Date, endDate: Date) => {
-    const s = new Date(startDate); s.setHours(0,0,0,0);
-    const e = new Date(endDate);   e.setHours(23,59,59,999);
-    const filtered = orders.filter(o => { const d = new Date(o.created_at); return d >= s && d <= e; });
-    if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
+    const s = new Date(startDate);
+    s.setHours(0, 0, 0, 0);
+    const e = new Date(endDate);
+    e.setHours(23, 59, 59, 999);
+    const filtered = orders.filter(o => {
+      const d = new Date(o.created_at);
+      return d >= s && d <= e;
+    });
+    if (!filtered.length) {
+      alert('No hay pedidos en el rango seleccionado');
+      return;
+    }
     printLoncheritasResumenTicket(generateLoncheritasTicketSummary(filtered), startDate, endDate);
   }, [orders]);
 
   // ── Caja ─────────────────────────────────────────────────────
-  const handleOpenCash  = () => { setCashModalType('open');  setShowCashModal(true); };
-  const handleCloseCash = () => { setCashModalType('close'); setShowCashModal(true); };
+  const handleOpenCash = () => {
+    setCashModalType('open');
+    setShowCashModal(true);
+  };
+  const handleCloseCash = () => {
+    setCashModalType('close');
+    setShowCashModal(true);
+  };
 
   const handleCashConfirm = async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
     if (cashModalType === 'open') {
       const r = await openCashRegister(data.initialCash!);
-      if (r.success) { alert('✅ Caja Loncheritas abierta correctamente'); setShowCashModal(false); }
-      else alert('❌ ' + r.error);
+      if (r.success) {
+        alert('✅ Caja Loncheritas abierta correctamente');
+        setShowCashModal(false);
+      } else alert('❌ ' + r.error);
     } else {
       const r = await closeCashRegister(data.finalCash!, data.notes || '');
-      if (r.success) { alert('✅ Caja Loncheritas cerrada correctamente'); setShowCashModal(false); }
-      else alert('❌ ' + r.error);
+      if (r.success) {
+        alert('✅ Caja Loncheritas cerrada correctamente');
+        setShowCashModal(false);
+      } else alert('❌ ' + r.error);
     }
   };
 
@@ -192,9 +232,9 @@ export const LoncheritasOrdersManager: React.FC = () => {
 
   const getPaymentColor = (method?: string | null) => {
     const map: Record<string, string> = {
-      'EFECTIVO':  'bg-green-100 text-green-800',
+      'EFECTIVO': 'bg-green-100 text-green-800',
       'YAPE/PLIN': 'bg-purple-100 text-purple-800',
-      'TARJETA':   'bg-blue-100 text-blue-800',
+      'TARJETA': 'bg-blue-100 text-blue-800',
     };
     return map[method || ''] || 'bg-gray-100 text-gray-800';
   };
@@ -250,13 +290,13 @@ export const LoncheritasOrdersManager: React.FC = () => {
                 </span>
               </div>
               {!cashRegister?.is_open
-                ? <button onClick={handleOpenCash}  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all">💰 Abrir Caja</button>
-                : <button onClick={handleCloseCash} className="px-4 py-2 bg-red-500   hover:bg-red-600   text-white text-sm font-semibold rounded-lg shadow-sm transition-all">🔒 Cerrar Caja</button>
+                ? <button onClick={handleOpenCash} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all">💰 Abrir Caja</button>
+                : <button onClick={handleCloseCash} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all">🔒 Cerrar Caja</button>
               }
             </div>
           </div>
 
-          {/* Selector de fecha actual (mejorado) */}
+          {/* Selector de fecha actual */}
           <div className="bg-orange-50 rounded-xl p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
               <Calendar size={20} className="text-orange-500" />
@@ -273,7 +313,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
             />
           </div>
 
-          {/* NUEVO: Filtro por método de pago (NO INTRUSIVO) */}
+          {/* FILTRO POR MÉTODO DE PAGO CON MONTOS EN SOLES */}
           <div className="mb-4">
             <PaymentFilter
               paymentFilter={paymentFilter}
@@ -281,7 +321,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
               totalEfectivo={paymentTotals.efectivo}
               totalYape={paymentTotals.yape}
               totalTarjeta={paymentTotals.tarjeta}
-              showCounts={true}
+              showAmounts={true}
             />
           </div>
 
@@ -305,7 +345,10 @@ export const LoncheritasOrdersManager: React.FC = () => {
           <div className="mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por alumno, apoderado o número de orden..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               />
@@ -318,7 +361,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
               <span className="text-sm text-blue-700">
                 <span className="font-semibold">Filtro activo:</span> Mostrando solo pedidos en {
                   paymentFilter === 'EFECTIVO' ? '💵 Efectivo' :
-                  paymentFilter === 'YAPE/PLIN' ? '📱 Yape/Plin' : '💳 Tarjeta'
+                    paymentFilter === 'YAPE/PLIN' ? '📱 Yape/Plin' : '💳 Tarjeta'
                 }
               </span>
               <button
