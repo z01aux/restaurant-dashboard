@@ -1,4 +1,3 @@
-// ============================================================
 // ARCHIVO: src/hooks/useOEPSalesClosure.ts
 // Hook para caja y cierres del módulo OEP
 // ============================================================
@@ -28,7 +27,7 @@ export const useOEPSalesClosure = () => {
                 .from('current_cash_register_oep')
                 .select('*')
                 .eq('id', 1)
-                .single();
+                .maybeSingle();
 
             if (error) throw error;
             setCashRegister(data);
@@ -60,16 +59,26 @@ export const useOEPSalesClosure = () => {
 
         try {
             setLoading(true);
+
+            const { data: current, error: checkError } = await supabase
+                .from('current_cash_register_oep')
+                .select('is_open')
+                .eq('id', 1)
+                .maybeSingle();
+
+            if (checkError) throw checkError;
+            if (current?.is_open) return { success: false, error: 'La caja OEP ya está abierta' };
+
             const { error } = await supabase
                 .from('current_cash_register_oep')
-                .update({
+                .upsert({
+                    id: 1,
                     is_open: true,
                     opened_at: new Date().toISOString(),
                     opened_by: currentUser.id,
                     initial_cash: initialCash,
                     current_cash: initialCash,
-                })
-                .eq('id', 1);
+                });
 
             if (error) throw error;
             await loadCashRegisterStatus();
@@ -91,7 +100,7 @@ export const useOEPSalesClosure = () => {
                 .from('current_cash_register_oep')
                 .select('*')
                 .eq('id', 1)
-                .single();
+                .maybeSingle();
 
             if (currentError) throw currentError;
             if (!current?.is_open) return { success: false, error: 'La caja no está abierta' };
@@ -217,3 +226,4 @@ export const useOEPSalesClosure = () => {
         loadClosures
     };
 };
+----------------------------------------
