@@ -1,11 +1,11 @@
 // ============================================
-// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
+// ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx (CORREGIDO)
 // VERSIÓN COMPLETA CON FILTRO DE PAGO POR MONTOS
-// (Mantiene todas las funcionalidades existentes)
+// (Importación de Download añadida)
 // ============================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Calendar, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
+import { Search, Calendar, Printer, FileSpreadsheet, Pencil, Download } from 'lucide-react'; // ← AÑADIDO Download
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -14,7 +14,7 @@ import { FullDaySalesHistory } from '../sales_fullday/FullDaySalesHistory';
 import { FullDayDateRangeModal } from './FullDayDateRangeModal';
 import { FullDayDateFilter } from './FullDayDateFilter';
 import { FullDayPaymentModal } from './FullDayPaymentModal';
-import { PaymentFilter } from '../ui/PaymentFilter'; // ← NUEVO
+import { PaymentFilter } from '../ui/PaymentFilter';
 import FullDayTicket from './FullDayTicket';
 import { exportFullDayToCSV, exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
 import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
@@ -27,7 +27,7 @@ export const FullDayOrdersManager: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [paymentFilter, setPaymentFilter] = useState(''); // ← NUEVO
+  const [paymentFilter, setPaymentFilter] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
@@ -36,7 +36,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<FullDayOrder | null>(null);
 
-  // Calcular MONTOS TOTALES por método de pago para el día seleccionado ← NUEVO
+  // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
     const startOfDay = new Date(selectedDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -61,7 +61,7 @@ export const FullDayOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // FILTROS - incluye paymentFilter ← MODIFICADO
+  // FILTROS - incluye paymentFilter
   const filteredOrders = useMemo(() => {
     let filtered = orders;
 
@@ -75,7 +75,7 @@ export const FullDayOrdersManager: React.FC = () => {
       return d >= startOfDay && d <= endOfDay;
     });
 
-    // NUEVO: Filtro por método de pago
+    // Filtro por método de pago
     if (paymentFilter) {
       filtered = filtered.filter(o => o.payment_method === paymentFilter);
     }
@@ -167,7 +167,7 @@ export const FullDayOrdersManager: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
 
-          {/* Modales (sin cambios) */}
+          {/* Modales */}
           <FullDayPaymentModal
             isOpen={showPaymentModal}
             onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
@@ -189,7 +189,7 @@ export const FullDayOrdersManager: React.FC = () => {
             onConfirm={handleExportByDateRange}
           />
 
-          {/* Header (sin cambios) */}
+          {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Pedidos FullDay</h1>
@@ -210,7 +210,7 @@ export const FullDayOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Selector de fecha (ya existente) */}
+          {/* Selector de fecha */}
           <FullDayDateFilter selectedDate={selectedDate} onDateChange={setSelectedDate} totalOrders={filteredOrders.length} />
           {showHistory && <FullDaySalesHistory closures={closures} />}
 
@@ -226,7 +226,7 @@ export const FullDayOrdersManager: React.FC = () => {
             />
           </div>
 
-          {/* Botones de acción (sin cambios) */}
+          {/* Botones de acción - AHORA CON Download IMPORTADO */}
           <div className="flex flex-wrap gap-2 mb-6">
             <button onClick={handleExportTodayCSV} disabled={exporting}
               className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
@@ -250,7 +250,7 @@ export const FullDayOrdersManager: React.FC = () => {
             </button>
           </div>
 
-          {/* Búsqueda (sin cambios) */}
+          {/* Búsqueda */}
           <div className="mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -261,7 +261,7 @@ export const FullDayOrdersManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Indicador de filtro activo (NUEVO) */}
+          {/* Indicador de filtro activo */}
           {paymentFilter && (
             <div className="mb-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
               <span className="text-sm text-blue-700">
@@ -279,7 +279,7 @@ export const FullDayOrdersManager: React.FC = () => {
             </div>
           )}
 
-          {/* Lista de pedidos (sin cambios estructurales) */}
+          {/* Lista de pedidos */}
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-12">
@@ -350,7 +350,7 @@ export const FullDayOrdersManager: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Botones de ticket (ya existentes) */}
+                      {/* Botones de ticket */}
                       <div className="mt-4 pt-3 border-t border-gray-100">
                         <FullDayTicket order={order} />
                       </div>
