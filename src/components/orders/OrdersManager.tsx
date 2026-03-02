@@ -1,4 +1,3 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Pencil, Download } from 'lucide-react';
 import { Order } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
@@ -10,6 +9,7 @@ import OrderTicket from './OrderTicket';
 import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
+import { DailySummary } from '../../types/sales';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
 import { FullDayDateFilter } from '../fullday/FullDayDateFilter';
@@ -164,6 +164,7 @@ const OrdersManager: React.FC = () => {
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [dailySummary, setDailySummary] = useState<DailySummary | undefined>(undefined);
 
   const { user } = useAuth();
   const {
@@ -382,6 +383,16 @@ const OrdersManager: React.FC = () => {
     }
   }, [regularOrders, getTodaySummary, exporting]);
 
+  useEffect(() => {
+    const calculateSummary = async () => {
+      if (regularOrders.length > 0) {
+        const summary = await getTodaySummary(regularOrders);
+        setDailySummary(summary);
+      }
+    };
+    calculateSummary();
+  }, [regularOrders, getTodaySummary]);
+
   const handlePrintTicket = useCallback((startDate: Date, endDate: Date) => {
     const filtered = regularOrders.filter(o => {
       const d = new Date(o.createdAt); d.setHours(0, 0, 0, 0);
@@ -528,7 +539,7 @@ const OrdersManager: React.FC = () => {
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
         cashRegister={cashRegister}
-        todaySummary={getTodaySummary}
+        todaySummary={dailySummary}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
