@@ -1,10 +1,9 @@
-// ============================================================
+// ================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CON TABLA ESTILO "ÓRDENES" (FLUIDA Y OPTIMIZADA)
-// ============================================================
+// ================================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Printer, FileSpreadsheet, Pencil, Download } from 'lucide-react';
+import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
