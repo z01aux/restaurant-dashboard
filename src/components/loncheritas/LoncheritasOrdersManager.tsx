@@ -1,19 +1,18 @@
 // ============================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// VERSIÓN COMPLETA CON PREVIEW AL HOVER
+// VERSIÓN CORREGIDA - Eliminados imports y variables no usados
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react';
+import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react'; // ← Eliminado Download
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
 import { usePagination } from '../../hooks/usePagination';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
-import { LoncheritasDateFilter } from './LoncheritasDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
-import { LoncheritasOrderPreview } from './LoncheritasOrderPreview'; // ← IMPORTADO
+import { LoncheritasOrderPreview } from './LoncheritasOrderPreview';
 import LoncheritasTicket from './LoncheritasTicket';
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
@@ -286,14 +285,14 @@ const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConf
 export const LoncheritasOrdersManager: React.FC = () => {
   const { orders, loading, getTodayOrders, updateOrderPayment } = useLoncheritasOrders();
   const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useLoncheritasSalesClosure();
-  const { user } = useAuth();
+  // const { user } = useAuth(); // ← Comentado porque no se usa
 
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentSort, setCurrentSort] = useState('status-time');
-  const [previewOrder, setPreviewOrder] = useState<LoncheritasOrder | null>(null); // ← NUEVO
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 }); // ← NUEVO
+  const [previewOrder, setPreviewOrder] = useState<LoncheritasOrder | null>(null);
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -418,7 +417,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
   // Calcular totalPages manualmente
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
 
-  // HANDLERS PARA PREVIEW (NUEVOS)
+  // HANDLERS PARA PREVIEW
   const handleRowMouseEnter = useCallback((order: LoncheritasOrder, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setPreviewOrder(order);
@@ -540,7 +539,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
 
-      {/* PREVIEW - NUEVO */}
+      {/* PREVIEW */}
       {previewOrder && (
         <LoncheritasOrderPreview
           order={previewOrder}
