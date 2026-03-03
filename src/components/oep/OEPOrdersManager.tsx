@@ -1,6 +1,6 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CON LA MISMA ESTRUCTURA EXACTA QUE LA PESTAÑA ÓRDENES
+// VERSIÓN LIMPIA - Eliminados elementos no usados
 // ============================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -10,7 +10,6 @@ import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { usePagination } from '../../hooks/usePagination';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
-import { OEPDateFilter } from './OEPDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
 import { OrderPreview } from '../orders/OrderPreview';
 import OEPTicket from './OEPTicket';
@@ -134,7 +133,6 @@ const OEPOrderRow = React.memo(({
   onMouseEnter,
   onMouseLeave,
   onEditPayment,
-  user,
   getDisplayNumber,
   getPaymentColor,
   getPaymentText,
@@ -144,7 +142,6 @@ const OEPOrderRow = React.memo(({
   onMouseEnter: (e: React.MouseEvent) => void;
   onMouseLeave: () => void;
   onEditPayment: (order: OEPOrder) => void;
-  user: any;
   getDisplayNumber: (order: OEPOrder) => string;
   getPaymentColor: (method?: string | null) => string;
   getPaymentText: (method?: string | null) => string;
@@ -187,15 +184,13 @@ const OEPOrderRow = React.memo(({
             {getPaymentText(order.payment_method)}
           </span>
 
-          {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'employee') && (
-            <button
-              onClick={handleEditClick}
-              className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
-              title="Cambiar método de pago"
-            >
-              <Pencil size={14} />
-            </button>
-          )}
+          <button
+            onClick={handleEditClick}
+            className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
+            title="Cambiar método de pago"
+          >
+            <Pencil size={14} />
+          </button>
         </div>
       </td>
       <td className="px-4 sm:px-6 py-4">
@@ -292,7 +287,6 @@ export const OEPOrdersManager: React.FC = () => {
   const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useOEPSalesClosure();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [areaFilter, setAreaFilter] = useState<string>('');
   const [paymentFilter, setPaymentFilter] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentSort, setCurrentSort] = useState('status-time');
@@ -316,12 +310,6 @@ export const OEPOrdersManager: React.FC = () => {
       setIsInitialized(true);
     }
   }, [orders, isInitialized]);
-
-  // Calcular total del día
-  const todayTotal = useMemo(() =>
-    getTodayOrders().reduce((sum, o) => sum + o.total, 0),
-    [getTodayOrders]
-  );
 
   // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
@@ -777,7 +765,6 @@ export const OEPOrdersManager: React.FC = () => {
                     onMouseEnter={(e) => handleRowMouseEnter(order, e)}
                     onMouseLeave={handleRowMouseLeave}
                     onEditPayment={handleEditPayment}
-                    user={null}
                     getDisplayNumber={getDisplayNumber}
                     getPaymentColor={getPaymentColor}
                     getPaymentText={getPaymentText}
