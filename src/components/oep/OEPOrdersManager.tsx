@@ -1,13 +1,13 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CORREGIDA - Eliminada importación no usada
+// VERSIÓN CORREGIDA - Preview no interfiere con el contenido
 // ============================================================
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
-import { usePagination, isDesktopPagination } from '../../hooks/usePagination'; // ← Eliminado isMobilePagination
+import { usePagination, isDesktopPagination } from '../../hooks/usePagination';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
 import { OEPDateFilter } from './OEPDateFilter';
@@ -272,7 +272,6 @@ export const OEPOrdersManager: React.FC = () => {
         currentItems: pagination.currentItems
       };
     } else {
-      // Para móvil, usamos valores por defecto
       return {
         startIndex: 1,
         endIndex: pagination.loadedItems,
@@ -292,13 +291,13 @@ export const OEPOrdersManager: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
 
-          {/* PREVIEW */}
+          {/* PREVIEW - AHORA CON Z-INDEX CORREGIDO */}
           {previewOrder && (
             <OrderPreview
               order={previewOrder as any}
               isVisible={true}
               position={previewPosition}
-              shouldIgnoreEvents={true}
+              shouldIgnoreEvents={true} // Importante: true para que no interfiera con clicks
             />
           )}
 
