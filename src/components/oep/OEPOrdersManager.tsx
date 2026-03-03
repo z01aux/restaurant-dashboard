@@ -1,6 +1,6 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN FINAL - Eliminadas todas las variables no usadas
+// VERSIÓN SIN PREVIEW AL HOVER
 // ============================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -11,7 +11,6 @@ import { usePagination } from '../../hooks/usePagination';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
 import { PaymentFilter } from '../ui/PaymentFilter';
-import { OrderPreview } from '../orders/OrderPreview';
 import OEPTicket from './OEPTicket';
 import { OEPOrder } from '../../types/oep';
 import { exportOEPToExcel, exportOEPByDateRange } from '../../utils/oepExportUtils';
@@ -126,20 +125,16 @@ const DateSelector: React.FC<{
 };
 
 // ============================================
-// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (IGUAL QUE EN ÓRDENES)
+// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (SIN HOVER PREVIEW)
 // ============================================
 const OEPOrderRow = React.memo(({
   order,
-  onMouseEnter,
-  onMouseLeave,
   onEditPayment,
   getDisplayNumber,
   getPaymentColor,
   getPaymentText
 }: {
   order: OEPOrder;
-  onMouseEnter: (e: React.MouseEvent) => void;
-  onMouseLeave: () => void;
   onEditPayment: (order: OEPOrder) => void;
   getDisplayNumber: (order: OEPOrder) => string;
   getPaymentColor: (method?: string | null) => string;
@@ -154,11 +149,7 @@ const OEPOrderRow = React.memo(({
   };
 
   return (
-    <tr
-      className="hover:bg-gray-50 cursor-pointer group relative"
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
+    <tr className="hover:bg-gray-50 group relative">
       <td className="px-4 sm:px-6 py-4">
         <div className="flex items-center space-x-2 mb-1">
           <div className="text-sm font-medium text-blue-600">
@@ -288,8 +279,6 @@ export const OEPOrdersManager: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentSort, setCurrentSort] = useState('status-time');
-  const [previewOrder, setPreviewOrder] = useState<OEPOrder | null>(null);
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -408,17 +397,6 @@ export const OEPOrdersManager: React.FC = () => {
   // Calcular totalPages manualmente
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
 
-  // HANDLERS PARA PREVIEW (exactamente igual que en Órdenes)
-  const handleRowMouseEnter = useCallback((order: OEPOrder, event: React.MouseEvent) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    setPreviewOrder(order);
-    setPreviewPosition({ x: rect.left + rect.width / 2, y: rect.top });
-  }, []);
-
-  const handleRowMouseLeave = useCallback(() => {
-    setPreviewOrder(null);
-  }, []);
-
   // ── Reportes ──────────────────────────────────────────────────
   const handleExportTodayExcel = useCallback(() => {
     exportOEPToExcel(getTodayOrders(), 'today');
@@ -528,16 +506,6 @@ export const OEPOrdersManager: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-
-      {/* PREVIEW - exactamente igual que en Órdenes */}
-      {previewOrder && (
-        <OrderPreview
-          order={previewOrder as any}
-          isVisible={true}
-          position={previewPosition}
-          shouldIgnoreEvents={true}
-        />
-      )}
 
       {/* Modales */}
       <OEPPaymentModal
@@ -723,7 +691,7 @@ export const OEPOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* TABLA - EXACTAMENTE IGUAL QUE EN ÓRDENES */}
+      {/* TABLA - SIN HOVER PREVIEW */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {loading && !isInitialized ? (
           <div className="text-center py-12">
@@ -753,8 +721,6 @@ export const OEPOrdersManager: React.FC = () => {
                   <OEPOrderRow
                     key={order.id}
                     order={order}
-                    onMouseEnter={(e) => handleRowMouseEnter(order, e)}
-                    onMouseLeave={handleRowMouseLeave}
                     onEditPayment={handleEditPayment}
                     getDisplayNumber={getDisplayNumber}
                     getPaymentColor={getPaymentColor}
