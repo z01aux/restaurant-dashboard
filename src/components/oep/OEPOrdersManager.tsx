@@ -1,6 +1,6 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN LIMPIA - Eliminados elementos no usados
+// VERSIÓN FINAL - Eliminadas todas las variables no usadas
 // ============================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -135,8 +135,7 @@ const OEPOrderRow = React.memo(({
   onEditPayment,
   getDisplayNumber,
   getPaymentColor,
-  getPaymentText,
-  getAreaIcon
+  getPaymentText
 }: {
   order: OEPOrder;
   onMouseEnter: (e: React.MouseEvent) => void;
@@ -145,7 +144,6 @@ const OEPOrderRow = React.memo(({
   getDisplayNumber: (order: OEPOrder) => string;
   getPaymentColor: (method?: string | null) => string;
   getPaymentText: (method?: string | null) => string;
-  getAreaIcon: (type: string) => string;
 }) => {
   const displayNumber = getDisplayNumber(order);
 
@@ -175,7 +173,7 @@ const OEPOrderRow = React.memo(({
       <td className="px-4 sm:px-6 py-4">
         <div className="mb-1">
           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 items-center space-x-1">
-            <span>{getAreaIcon('oep')}</span>
+            <span>📦</span>
             <span>OEP</span>
           </span>
         </div>
@@ -300,7 +298,6 @@ export const OEPOrdersManager: React.FC = () => {
   const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
   const [showOnlyToday, setShowOnlyToday] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [exporting, setExporting] = useState(false);
   const [localOrders, setLocalOrders] = useState<OEPOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -514,10 +511,6 @@ export const OEPOrdersManager: React.FC = () => {
     return texts[method || ''] || 'NO APLICA';
   }, []);
 
-  const getAreaIcon = useCallback((type: string) => {
-    return '📦';
-  }, []);
-
   const sortOptions = useMemo(() => [
     { value: 'status-time',       label: '🔄 Estado + Tiempo' },
     { value: 'waiting-time',      label: '⏱️ Tiempo Espera' },
@@ -618,17 +611,16 @@ export const OEPOrdersManager: React.FC = () => {
 
       {/* BOTONES DE ACCIÓN (IGUAL QUE EN ÓRDENES) */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExportTodayExcel} disabled={exporting} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50">
+        <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
           <Download size={16} /><span>Excel Hoy</span>
         </button>
-        <button onClick={handleExportAllExcel} disabled={exporting} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1 disabled:opacity-50">
+        <button onClick={handleExportAllExcel} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
           <Download size={16} /><span>Excel Todo</span>
         </button>
-        <button onClick={() => setShowDateRangeExcel(true)} disabled={exporting} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1 disabled:opacity-50">
+        <button onClick={() => setShowDateRangeExcel(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1">
           <Download size={16} /><span>Reportes por Fechas</span>
-          {exporting && <div className="ml-2 animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
         </button>
-        <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1" disabled={exporting}>
+        <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
           <span>📋</span><span>Ticket Resumen</span>
         </button>
       </div>
@@ -644,7 +636,6 @@ export const OEPOrdersManager: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por cliente, teléfono..."
               className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
-              disabled={exporting}
             />
           </div>
         </div>
@@ -768,7 +759,6 @@ export const OEPOrdersManager: React.FC = () => {
                     getDisplayNumber={getDisplayNumber}
                     getPaymentColor={getPaymentColor}
                     getPaymentText={getPaymentText}
-                    getAreaIcon={getAreaIcon}
                   />
                 ))}
               </tbody>
@@ -785,12 +775,6 @@ export const OEPOrdersManager: React.FC = () => {
               <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}
             </div>
           </div>
-          {exporting && (
-            <div className="mt-2 text-xs text-blue-600 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
-              Generando reporte, por favor espera...
-            </div>
-          )}
         </div>
       )}
 
