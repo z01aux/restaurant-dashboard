@@ -1,17 +1,18 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
+// VERSIÓN CORREGIDA - TypeScript errors fixed
 // ============================================================
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
-import { usePagination } from '../../hooks/usePagination'; // ← NUEVO
+import { usePagination, isDesktopPagination, isMobilePagination } from '../../hooks/usePagination';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
 import { OEPDateFilter } from './OEPDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
-import { OrderPreview } from '../orders/OrderPreview'; // ← NUEVO (reutilizamos el mismo componente)
+import { OrderPreview } from '../orders/OrderPreview';
 import OEPTicket from './OEPTicket';
 import { OEPOrder } from '../../types/oep';
 import { exportOEPToExcel, exportOEPByDateRange } from '../../utils/oepExportUtils';
@@ -88,9 +89,9 @@ export const OEPOrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [paymentFilter, setPaymentFilter] = useState('');
-  const [itemsPerPage, setItemsPerPage] = useState(20); // ← NUEVO
-  const [previewOrder, setPreviewOrder] = useState<OEPOrder | null>(null); // ← NUEVO
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 }); // ← NUEVO
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [previewOrder, setPreviewOrder] = useState<OEPOrder | null>(null);
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -161,14 +162,14 @@ export const OEPOrdersManager: React.FC = () => {
     return filtered;
   }, [orders, searchTerm, selectedDate, paymentFilter]);
 
-  // PAGINACIÓN VIRTUAL - IGUAL QUE ÓRDENES
+  // PAGINACIÓN VIRTUAL
   const pagination = usePagination({
     items: filteredOrders,
     itemsPerPage,
     mobileBreakpoint: 768
   });
 
-  // HANDLERS PARA PREVIEW (IGUAL QUE ÓRDENES)
+  // HANDLERS PARA PREVIEW
   const handleRowMouseEnter = useCallback((order: OEPOrder, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setPreviewOrder(order);
@@ -258,15 +259,43 @@ export const OEPOrdersManager: React.FC = () => {
     return map[method || ''] || 'bg-gray-100 text-gray-800';
   };
 
+  // Función para determinar qué props de pagination usar
+  const getPaginationInfo = () => {
+    if (isDesktopPagination(pagination)) {
+      return {
+        startIndex: pagination.startIndex,
+        endIndex: pagination.endIndex,
+        totalPages: pagination.totalPages,
+        hasPrevPage: pagination.hasPrevPage,
+        hasNextPage: pagination.hasNextPage,
+        currentPage: pagination.currentPage,
+        currentItems: pagination.currentItems
+      };
+    } else {
+      // Para móvil, usamos valores por defecto
+      return {
+        startIndex: 1,
+        endIndex: pagination.loadedItems,
+        totalPages: Math.ceil(pagination.totalItems / itemsPerPage),
+        hasPrevPage: pagination.currentPage > 1,
+        hasNextPage: pagination.hasMoreItems,
+        currentPage: pagination.currentPage,
+        currentItems: pagination.currentItems
+      };
+    }
+  };
+
+  const paginationInfo = getPaginationInfo();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
 
-          {/* PREVIEW (IGUAL QUE ÓRDENES) */}
+          {/* PREVIEW */}
           {previewOrder && (
             <OrderPreview
-              order={previewOrder as any} // Convertimos temporalmente para reutilizar el componente
+              order={previewOrder as any}
               isVisible={true}
               position={previewPosition}
               shouldIgnoreEvents={true}
@@ -401,12 +430,12 @@ export const OEPOrdersManager: React.FC = () => {
             </div>
           )}
 
-          {/* INFO DE PAGINACIÓN (IGUAL QUE ÓRDENES) */}
+          {/* INFO DE PAGINACIÓN */}
           <div className="bg-white rounded-lg p-3 mb-3 text-xs text-gray-600 border border-gray-200">
-            Mostrando {pagination.startIndex || 1}-{pagination.endIndex || 0} de {filteredOrders.length} pedidos
+            Mostrando {paginationInfo.startIndex}-{paginationInfo.endIndex} de {filteredOrders.length} pedidos
           </div>
 
-          {/* TABLA ULTRA OPTIMIZADA CON VIRTUAL SCROLLING */}
+          {/* TABLA OPTIMIZADA */}
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -452,7 +481,7 @@ export const OEPOrdersManager: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {pagination.currentItems.map((order) => (
+                    {pagination.currentItems.map((order: OEPOrder) => (
                       <tr
                         key={order.id}
                         className="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -484,7 +513,7 @@ export const OEPOrdersManager: React.FC = () => {
                         {/* Productos */}
                         <td className="px-3 py-3">
                           <div className="text-xs text-gray-700 space-y-0.5">
-                            {order.items.slice(0, 2).map((item, idx) => (
+                            {order.items.slice(0, 2).map((item: any, idx: number) => (
                               <div key={idx}>
                                 <span className="font-semibold text-blue-600">{item.quantity}x</span>
                                 <span className="ml-1">{item.name}</span>
@@ -535,7 +564,7 @@ export const OEPOrdersManager: React.FC = () => {
             </div>
           )}
 
-          {/* CONTROLES DE PAGINACIÓN (IGUAL QUE ÓRDENES) */}
+          {/* CONTROLES DE PAGINACIÓN */}
           {filteredOrders.length > itemsPerPage && (
             <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -555,17 +584,17 @@ export const OEPOrdersManager: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={pagination.prevPage}
-                  disabled={!pagination.hasPrevPage}
+                  disabled={!paginationInfo.hasPrevPage}
                   className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50"
                 >
                   Anterior
                 </button>
                 <span className="text-sm text-gray-700">
-                  Página {pagination.currentPage} de {pagination.totalPages}
+                  Página {paginationInfo.currentPage} de {paginationInfo.totalPages}
                 </span>
                 <button
                   onClick={pagination.nextPage}
-                  disabled={!pagination.hasNextPage}
+                  disabled={!paginationInfo.hasNextPage}
                   className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50"
                 >
                   Siguiente
