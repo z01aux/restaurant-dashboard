@@ -1,10 +1,10 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// VERSIÓN CORREGIDA - Eliminados elementos no usados
+// VERSIÓN LIMPIA - Solo imports necesarios
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react';
+import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet } from 'lucide-react'; // ← Eliminado Printer
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
 import { usePagination } from '../../hooks/usePagination';
@@ -17,7 +17,7 @@ import { FullDayOrderPreview } from './FullDayOrderPreview';
 import FullDayTicket from './FullDayTicket';
 import { FullDayOrder, FullDayPaymentMethod } from '../../types/fullday';
 import { exportFullDayToCSV, exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
-import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
+// Eliminada importación no usada de generateFullDayTicketSummary y printFullDayResumenTicket
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (CON HOVER PREVIEW)
