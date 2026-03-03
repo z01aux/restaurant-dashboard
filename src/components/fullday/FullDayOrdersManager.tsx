@@ -7,7 +7,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
-import { useAuth } from '../../hooks/useAuth';
+// import { useAuth } from '../../hooks/useAuth'; // ← ELIMINADO - No se usa
 import { usePagination } from '../../hooks/usePagination';
 import { FullDayCashRegisterModal } from '../sales_fullday/FullDayCashRegisterModal';
 import { FullDayDateRangeModal } from './FullDayDateRangeModal';
@@ -112,75 +112,10 @@ const FullDayOrderRow = React.memo(({
   );
 });
 
-// ─── Modal de rango de fechas ────────────────────────────────
-const getTodayString = (): string => {
-  const now = new Date();
-  const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
-  return `${peruDate.getFullYear()}-${String(peruDate.getMonth() + 1).padStart(2, '0')}-${String(peruDate.getDate()).padStart(2, '0')}`;
-};
-
-const createPeruDate = (dateStr: string): Date => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day, 12, 0, 0);
-};
-
-interface DateRangeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (startDate: Date, endDate: Date) => void;
-  title: string;
-}
-
-// El componente se usa en el JSX, pero TypeScript no lo detecta correctamente
-const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConfirm, title }) => {
-  const [startDate, setStartDate] = useState(getTodayString());
-  const [endDate, setEndDate] = useState(getTodayString());
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">{title}</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-        </div>
-        <div className="flex space-x-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-            Cancelar
-          </button>
-          <button
-            onClick={() => { onConfirm(createPeruDate(startDate), createPeruDate(endDate)); onClose(); }}
-            className="flex-1 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-semibold"
-          >
-            Generar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ─── COMPONENTE PRINCIPAL ──────────────────────────────────────
 export const FullDayOrdersManager: React.FC = () => {
   const { orders, loading, getTodayOrders, updateOrderPayment } = useFullDayOrders();
   const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useFullDaySalesClosure();
-  // const { user } = useAuth(); // Comentado porque no se usa actualmente
 
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
@@ -193,7 +128,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<FullDayOrder | null>(null);
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
-  const [showDateRangeTicket, setShowDateRangeTicket] = useState(false); // Se usa en el botón
+  const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<FullDayOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
