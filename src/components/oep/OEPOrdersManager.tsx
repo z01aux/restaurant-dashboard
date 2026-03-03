@@ -1,10 +1,10 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CORREGIDA - Con la misma lógica que la pestaña Órdenes
+// VERSIÓN CORREGIDA - Con cálculo manual de totalPages
 // ============================================================
 
-import React, { useState, useMemo, useCallback } from 'react'; // ← Eliminado useEffect
-import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react'; // ← Eliminado Download
+import React, { useState, useMemo, useCallback } from 'react';
+import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { usePagination } from '../../hooks/usePagination';
@@ -265,6 +265,9 @@ export const OEPOrdersManager: React.FC = () => {
     itemsPerPage,
     mobileBreakpoint: 768
   });
+
+  // Calcular totalPages manualmente (ya que no está disponible en el hook)
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 
   // HANDLERS PARA PREVIEW (exactamente igual que en Órdenes)
   const handleRowMouseEnter = useCallback((order: OEPOrder, event: React.MouseEvent) => {
@@ -614,11 +617,11 @@ export const OEPOrdersManager: React.FC = () => {
                   Anterior
                 </button>
                 <span className="text-sm text-gray-700">
-                  Página {pagination.currentPage} de {pagination.totalPages}
+                  Página {pagination.currentPage} de {totalPages}
                 </span>
                 <button
                   onClick={pagination.nextPage}
-                  disabled={pagination.currentPage === pagination.totalPages}
+                  disabled={pagination.currentPage === totalPages}
                   className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50"
                 >
                   Siguiente
