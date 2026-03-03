@@ -1,16 +1,16 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CON FILTRO DE FECHA CON FLECHAS RESTAURADO
+// VERSIÓN CORREGIDA - Eliminados elementos no usados
 // ============================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react';
+import { Search, Pencil, Download, ChevronLeft, ChevronRight, Printer } from 'lucide-react'; // ← Eliminados Calendar y FileSpreadsheet
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { usePagination } from '../../hooks/usePagination';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
-import { OEPDateFilter } from './OEPDateFilter'; // ← RESTAURADO
+import { OEPDateFilter } from './OEPDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
 import { OEPOrderPreview } from './OEPOrderPreview';
 import OEPTicket from './OEPTicket';
@@ -200,7 +200,7 @@ export const OEPOrdersManager: React.FC = () => {
     }
   }, [orders, isInitialized]);
 
-  // Calcular total del día
+  // Calcular total del día (se usa en el header)
   const todayTotal = useMemo(() =>
     getTodayOrders().reduce((sum, o) => sum + o.total, 0),
     [getTodayOrders]
@@ -461,7 +461,7 @@ export const OEPOrdersManager: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Pedidos OEP</h2>
           <p className="text-sm text-gray-600 mt-1">
-            {filteredAndSortedOrders.length} pedidos encontrados
+            {filteredAndSortedOrders.length} pedidos · Total del día: <span className="font-semibold text-blue-600">S/ {todayTotal.toFixed(2)}</span>
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -477,7 +477,7 @@ export const OEPOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* FILTRO DE FECHA CON FLECHAS - RESTAURADO */}
+      {/* FILTRO DE FECHA CON FLECHAS */}
       <OEPDateFilter
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
