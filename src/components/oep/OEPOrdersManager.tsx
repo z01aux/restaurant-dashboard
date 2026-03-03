@@ -1,6 +1,6 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN SIN PREVIEW AL HOVER
+// VERSIÓN COMPLETA CON PREVIEW AL HOVER
 // ============================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -11,6 +11,7 @@ import { usePagination } from '../../hooks/usePagination';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
 import { PaymentFilter } from '../ui/PaymentFilter';
+import { OEPOrderPreview } from './OEPOrderPreview'; // ← IMPORTADO
 import OEPTicket from './OEPTicket';
 import { OEPOrder } from '../../types/oep';
 import { exportOEPToExcel, exportOEPByDateRange } from '../../utils/oepExportUtils';
@@ -125,16 +126,20 @@ const DateSelector: React.FC<{
 };
 
 // ============================================
-// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (SIN HOVER PREVIEW)
+// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (CON HOVER PREVIEW)
 // ============================================
 const OEPOrderRow = React.memo(({
   order,
+  onMouseEnter,
+  onMouseLeave,
   onEditPayment,
   getDisplayNumber,
   getPaymentColor,
   getPaymentText
 }: {
   order: OEPOrder;
+  onMouseEnter: (e: React.MouseEvent) => void;
+  onMouseLeave: () => void;
   onEditPayment: (order: OEPOrder) => void;
   getDisplayNumber: (order: OEPOrder) => string;
   getPaymentColor: (method?: string | null) => string;
@@ -149,7 +154,11 @@ const OEPOrderRow = React.memo(({
   };
 
   return (
-    <tr className="hover:bg-gray-50 group relative">
+    <tr
+      className="hover:bg-gray-50 cursor-pointer group relative"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       <td className="px-4 sm:px-6 py-4">
         <div className="flex items-center space-x-2 mb-1">
           <div className="text-sm font-medium text-blue-600">
@@ -279,6 +288,8 @@ export const OEPOrdersManager: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentSort, setCurrentSort] = useState('status-time');
+  const [previewOrder, setPreviewOrder] = useState<OEPOrder | null>(null); // ← NUEVO
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 }); // ← NUEVO
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -322,7 +333,7 @@ export const OEPOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // Filtrar por fecha según el modo seleccionado (IGUAL QUE EN ÓRDENES)
+  // Filtrar por fecha según el modo seleccionado
   const dateFilteredOrders = useMemo(() => {
     if (showOnlyToday) {
       const today = new Date();
@@ -345,7 +356,7 @@ export const OEPOrdersManager: React.FC = () => {
     }
   }, [localOrders, showOnlyToday, selectedDate]);
 
-  // FILTROS Y ORDENAMIENTO (IGUAL QUE EN ÓRDENES)
+  // FILTROS Y ORDENAMIENTO
   const filteredAndSortedOrders = useMemo(() => {
     if (!dateFilteredOrders.length) return [];
     let filtered = dateFilteredOrders;
@@ -387,7 +398,7 @@ export const OEPOrdersManager: React.FC = () => {
     return filtered;
   }, [dateFilteredOrders, searchTerm, paymentFilter, currentSort]);
 
-  // PAGINACIÓN (exactamente igual que en Órdenes)
+  // PAGINACIÓN
   const pagination = usePagination({
     items: filteredAndSortedOrders,
     itemsPerPage,
@@ -396,6 +407,17 @@ export const OEPOrdersManager: React.FC = () => {
 
   // Calcular totalPages manualmente
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
+
+  // HANDLERS PARA PREVIEW (NUEVOS)
+  const handleRowMouseEnter = useCallback((order: OEPOrder, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPreviewOrder(order);
+    setPreviewPosition({ x: rect.left + rect.width / 2, y: rect.top });
+  }, []);
+
+  const handleRowMouseLeave = useCallback(() => {
+    setPreviewOrder(null);
+  }, []);
 
   // ── Reportes ──────────────────────────────────────────────────
   const handleExportTodayExcel = useCallback(() => {
@@ -466,7 +488,7 @@ export const OEPOrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment]);
 
-  // Funciones auxiliares (igual que en Órdenes)
+  // Funciones auxiliares
   const getDisplayNumber = useCallback((order: OEPOrder) => {
     return order.order_number || `OEP-${order.id.slice(-8).toUpperCase()}`;
   }, []);
@@ -507,6 +529,16 @@ export const OEPOrdersManager: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
 
+      {/* PREVIEW - NUEVO */}
+      {previewOrder && (
+        <OEPOrderPreview
+          order={previewOrder}
+          isVisible={true}
+          position={previewPosition}
+          shouldIgnoreEvents={true}
+        />
+      )}
+
       {/* Modales */}
       <OEPPaymentModal
         isOpen={showPaymentModal}
@@ -536,7 +568,7 @@ export const OEPOrdersManager: React.FC = () => {
         title="🖨️ Ticket Resumen por Fechas - OEP"
       />
 
-      {/* HEADER (IGUAL QUE EN ÓRDENES) */}
+      {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Pedidos OEP</h2>
@@ -557,7 +589,7 @@ export const OEPOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* SELECTOR DE FECHA ESTILO ÓRDENES */}
+      {/* SELECTOR DE FECHA */}
       <DateSelector
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
@@ -577,7 +609,7 @@ export const OEPOrdersManager: React.FC = () => {
         />
       </div>
 
-      {/* BOTONES DE ACCIÓN (IGUAL QUE EN ÓRDENES) */}
+      {/* BOTONES DE ACCIÓN */}
       <div className="flex flex-wrap gap-2">
         <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
           <Download size={16} /><span>Excel Hoy</span>
@@ -593,7 +625,7 @@ export const OEPOrdersManager: React.FC = () => {
         </button>
       </div>
 
-      {/* FILTROS - Buscar (IGUAL QUE EN ÓRDENES) */}
+      {/* FILTROS - Buscar */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
@@ -608,7 +640,7 @@ export const OEPOrdersManager: React.FC = () => {
           </div>
         </div>
 
-        {/* Indicadores de filtros activos (IGUAL QUE EN ÓRDENES) */}
+        {/* Indicadores de filtros activos */}
         {hasActiveFilters && (
           <div className="mt-3 flex items-center justify-between">
             <div className="flex flex-wrap gap-2">
@@ -633,7 +665,7 @@ export const OEPOrdersManager: React.FC = () => {
         )}
       </div>
 
-      {/* CONTROLES DE PAGINACIÓN Y ORDENAMIENTO (IGUAL QUE EN ÓRDENES) */}
+      {/* CONTROLES DE PAGINACIÓN Y ORDENAMIENTO */}
       <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
           <div className="text-sm text-gray-600">
@@ -691,7 +723,7 @@ export const OEPOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* TABLA - SIN HOVER PREVIEW */}
+      {/* TABLA - CON HOVER PREVIEW */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {loading && !isInitialized ? (
           <div className="text-center py-12">
@@ -721,6 +753,8 @@ export const OEPOrdersManager: React.FC = () => {
                   <OEPOrderRow
                     key={order.id}
                     order={order}
+                    onMouseEnter={(e) => handleRowMouseEnter(order, e)}
+                    onMouseLeave={handleRowMouseLeave}
                     onEditPayment={handleEditPayment}
                     getDisplayNumber={getDisplayNumber}
                     getPaymentColor={getPaymentColor}
@@ -733,7 +767,7 @@ export const OEPOrdersManager: React.FC = () => {
         )}
       </div>
 
-      {/* INFO DE TOTALES (IGUAL QUE EN ÓRDENES) */}
+      {/* INFO DE TOTALES */}
       {filteredAndSortedOrders.length > 0 && (
         <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
           <div className="flex justify-between items-center">
