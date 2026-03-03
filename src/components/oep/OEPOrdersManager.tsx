@@ -1,14 +1,10 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CON LA MISMA LÓGICA QUE LA PESTAÑA ÓRDENES
-// - Misma estructura de tabla
-// - Mismo sistema de preview
-// - Misma paginación
-// - Mismos estilos
+// VERSIÓN CORREGIDA - Con la misma lógica que la pestaña Órdenes
 // ============================================================
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Printer, FileSpreadsheet, Pencil, Download } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react'; // ← Eliminado useEffect
+import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react'; // ← Eliminado Download
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { usePagination } from '../../hooks/usePagination';
@@ -582,7 +578,8 @@ export const OEPOrdersManager: React.FC = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <span className="font-semibold">Mostrando:</span>{' '}
-                  {pagination.startIndex || 1}-{pagination.endIndex || 0} de {filteredOrders.length} pedidos
+                  {((pagination.currentPage - 1) * itemsPerPage) + 1}-
+                  {Math.min(pagination.currentPage * itemsPerPage, filteredOrders.length)} de {filteredOrders.length} pedidos
                 </div>
                 <div>
                   <span className="font-semibold">Total mostrado:</span> S/ {filteredOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
@@ -611,7 +608,7 @@ export const OEPOrdersManager: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={pagination.prevPage}
-                  disabled={!pagination.hasPrevPage}
+                  disabled={pagination.currentPage === 1}
                   className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50"
                 >
                   Anterior
@@ -621,7 +618,7 @@ export const OEPOrdersManager: React.FC = () => {
                 </span>
                 <button
                   onClick={pagination.nextPage}
-                  disabled={!pagination.hasNextPage}
+                  disabled={pagination.currentPage === pagination.totalPages}
                   className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50"
                 >
                   Siguiente
