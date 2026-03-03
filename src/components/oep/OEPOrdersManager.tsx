@@ -1,13 +1,13 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CORREGIDA - TypeScript errors fixed
+// VERSIÓN CORREGIDA - Eliminada importación no usada
 // ============================================================
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
-import { usePagination, isDesktopPagination, isMobilePagination } from '../../hooks/usePagination';
+import { usePagination, isDesktopPagination } from '../../hooks/usePagination'; // ← Eliminado isMobilePagination
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
 import { OEPDateFilter } from './OEPDateFilter';
