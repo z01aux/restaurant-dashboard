@@ -1,123 +1,79 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN COMPLETA CON PREVIEW AL HOVER
+// VERSIÓN CON FILTRO DE FECHA CON FLECHAS RESTAURADO
 // ============================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { usePagination } from '../../hooks/usePagination';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
+import { OEPDateFilter } from './OEPDateFilter'; // ← RESTAURADO
 import { PaymentFilter } from '../ui/PaymentFilter';
-import { OEPOrderPreview } from './OEPOrderPreview'; // ← IMPORTADO
+import { OEPOrderPreview } from './OEPOrderPreview';
 import OEPTicket from './OEPTicket';
 import { OEPOrder } from '../../types/oep';
 import { exportOEPToExcel, exportOEPByDateRange } from '../../utils/oepExportUtils';
 import { generateOEPTicketSummary, printOEPResumenTicket } from '../../utils/oepTicketUtils';
 
-// ============================================
-// COMPONENTE DE SELECCIÓN DE FECHA (IGUAL QUE EN ÓRDENES)
-// ============================================
-const DateSelector: React.FC<{
-  selectedDate: Date;
-  onDateChange: (date: Date) => void;
-  showOnlyToday: boolean;
-  onToggleShowOnlyToday: () => void;
-}> = ({ selectedDate, onDateChange, showOnlyToday, onToggleShowOnlyToday }) => {
-  
-  const handlePrevDay = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() - 1);
-    onDateChange(newDate);
-  };
+// ─── Modal de rango de fechas ────────────────────────────────
+const getTodayString = (): string => {
+  const now = new Date();
+  const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+  return `${peruDate.getFullYear()}-${String(peruDate.getMonth() + 1).padStart(2, '0')}-${String(peruDate.getDate()).padStart(2, '0')}`;
+};
 
-  const handleNextDay = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + 1);
-    onDateChange(newDate);
-  };
+const createPeruDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+};
 
-  const handleToday = () => {
-    onDateChange(new Date());
-  };
+interface DateRangeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (startDate: Date, endDate: Date) => void;
+  title: string;
+}
 
-  const isToday = (date: Date): boolean => {
-    const today = new Date();
-    return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear();
-  };
-
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('es-PE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  if (showOnlyToday) {
-    return (
-      <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2">
-        <div className="flex items-center space-x-2">
-          <Calendar size={18} className="text-gray-500" />
-          <span className="font-medium text-gray-700">Hoy: {formatDate(new Date())}</span>
-        </div>
-        <button
-          onClick={onToggleShowOnlyToday}
-          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-        >
-          Ver todas las fechas
-        </button>
-      </div>
-    );
-  }
-
+const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConfirm, title }) => {
+  const [startDate, setStartDate] = useState(getTodayString());
+  const [endDate, setEndDate] = useState(getTodayString());
+  if (!isOpen) return null;
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-2">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handlePrevDay}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Día anterior"
-          >
-            <ChevronLeft size={20} className="text-gray-600" />
-          </button>
-
-          <div className="flex items-center space-x-2 px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
-            <Calendar size={18} className="text-blue-600" />
-            <span className="font-medium text-blue-800">
-              {formatDate(selectedDate)}
-            </span>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">{title}</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
           </div>
-
-          <button
-            onClick={handleNextDay}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Día siguiente"
-            disabled={isToday(selectedDate)}
-          >
-            <ChevronRight size={20} className={`${isToday(selectedDate) ? 'text-gray-300' : 'text-gray-600'}`} />
-          </button>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
-
-        <div className="flex items-center space-x-2">
-          {!isToday(selectedDate) && (
-            <button
-              onClick={handleToday}
-              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
-              Ver Hoy
-            </button>
-          )}
+        <div className="flex space-x-3 mt-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+            Cancelar
+          </button>
           <button
-            onClick={onToggleShowOnlyToday}
-            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+            onClick={() => { onConfirm(createPeruDate(startDate), createPeruDate(endDate)); onClose(); }}
+            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
           >
-            Volver a "Solo Hoy"
+            Generar
           </button>
         </div>
       </div>
@@ -216,69 +172,6 @@ const OEPOrderRow = React.memo(({
   );
 });
 
-// ─── Modal de rango de fechas ────────────────────────────────
-const getTodayString = (): string => {
-  const now = new Date();
-  const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
-  return `${peruDate.getFullYear()}-${String(peruDate.getMonth() + 1).padStart(2, '0')}-${String(peruDate.getDate()).padStart(2, '0')}`;
-};
-
-const createPeruDate = (dateStr: string): Date => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day, 12, 0, 0);
-};
-
-interface DateRangeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (startDate: Date, endDate: Date) => void;
-  title: string;
-}
-
-const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConfirm, title }) => {
-  const [startDate, setStartDate] = useState(getTodayString());
-  const [endDate, setEndDate] = useState(getTodayString());
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">{title}</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-        <div className="flex space-x-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-            Cancelar
-          </button>
-          <button
-            onClick={() => { onConfirm(createPeruDate(startDate), createPeruDate(endDate)); onClose(); }}
-            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
-          >
-            Generar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ─── COMPONENTE PRINCIPAL ──────────────────────────────────────
 export const OEPOrdersManager: React.FC = () => {
   const { orders, loading, getTodayOrders, updateOrderPayment } = useOEPOrders();
@@ -288,15 +181,14 @@ export const OEPOrdersManager: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentSort, setCurrentSort] = useState('status-time');
-  const [previewOrder, setPreviewOrder] = useState<OEPOrder | null>(null); // ← NUEVO
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 }); // ← NUEVO
+  const [previewOrder, setPreviewOrder] = useState<OEPOrder | null>(null);
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OEPOrder | null>(null);
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
   const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
-  const [showOnlyToday, setShowOnlyToday] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<OEPOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -307,6 +199,12 @@ export const OEPOrdersManager: React.FC = () => {
       setIsInitialized(true);
     }
   }, [orders, isInitialized]);
+
+  // Calcular total del día
+  const todayTotal = useMemo(() =>
+    getTodayOrders().reduce((sum, o) => sum + o.total, 0),
+    [getTodayOrders]
+  );
 
   // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
@@ -333,28 +231,18 @@ export const OEPOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // Filtrar por fecha según el modo seleccionado
+  // Filtrar por fecha (usando selectedDate)
   const dateFilteredOrders = useMemo(() => {
-    if (showOnlyToday) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return localOrders.filter(order => {
-        const d = new Date(order.created_at);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime() === today.getTime();
-      });
-    } else {
-      const startOfDay = new Date(selectedDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(selectedDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      return localOrders.filter(order => {
-        const orderDate = new Date(order.created_at);
-        return orderDate >= startOfDay && orderDate <= endOfDay;
-      });
-    }
-  }, [localOrders, showOnlyToday, selectedDate]);
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return localOrders.filter(order => {
+      const orderDate = new Date(order.created_at);
+      return orderDate >= startOfDay && orderDate <= endOfDay;
+    });
+  }, [localOrders, selectedDate]);
 
   // FILTROS Y ORDENAMIENTO
   const filteredAndSortedOrders = useMemo(() => {
@@ -408,7 +296,7 @@ export const OEPOrdersManager: React.FC = () => {
   // Calcular totalPages manualmente
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
 
-  // HANDLERS PARA PREVIEW (NUEVOS)
+  // HANDLERS PARA PREVIEW
   const handleRowMouseEnter = useCallback((order: OEPOrder, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setPreviewOrder(order);
@@ -420,11 +308,11 @@ export const OEPOrdersManager: React.FC = () => {
   }, []);
 
   // ── Reportes ──────────────────────────────────────────────────
-  const handleExportTodayExcel = useCallback(() => {
+  const handleExcelHoy = useCallback(() => {
     exportOEPToExcel(getTodayOrders(), 'today');
   }, [getTodayOrders]);
 
-  const handleExportAllExcel = useCallback(() => {
+  const handleExcelAll = useCallback(() => {
     exportOEPToExcel(orders, 'all');
   }, [orders]);
 
@@ -529,7 +417,7 @@ export const OEPOrdersManager: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
 
-      {/* PREVIEW - NUEVO */}
+      {/* PREVIEW */}
       {previewOrder && (
         <OEPOrderPreview
           order={previewOrder}
@@ -582,19 +470,18 @@ export const OEPOrdersManager: React.FC = () => {
             <span className="text-sm font-medium">Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}</span>
           </div>
           {!cashRegister?.is_open ? (
-            <button onClick={handleOpenCash} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors">Abrir Caja</button>
+            <button onClick={handleOpenCash} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors">💰 Abrir Caja</button>
           ) : (
-            <button onClick={handleCloseCash} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors">Cerrar Caja</button>
+            <button onClick={handleCloseCash} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors">🔒 Cerrar Caja</button>
           )}
         </div>
       </div>
 
-      {/* SELECTOR DE FECHA */}
-      <DateSelector
+      {/* FILTRO DE FECHA CON FLECHAS - RESTAURADO */}
+      <OEPDateFilter
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
-        showOnlyToday={showOnlyToday}
-        onToggleShowOnlyToday={() => setShowOnlyToday(!showOnlyToday)}
+        totalOrders={filteredAndSortedOrders.length}
       />
 
       {/* FILTRO POR MÉTODO DE PAGO CON MONTOS */}
@@ -611,17 +498,17 @@ export const OEPOrdersManager: React.FC = () => {
 
       {/* BOTONES DE ACCIÓN */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
+        <button onClick={handleExcelHoy} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
           <Download size={16} /><span>Excel Hoy</span>
         </button>
-        <button onClick={handleExportAllExcel} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
+        <button onClick={handleExcelAll} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
           <Download size={16} /><span>Excel Todo</span>
         </button>
         <button onClick={() => setShowDateRangeExcel(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1">
           <Download size={16} /><span>Reportes por Fechas</span>
         </button>
         <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
-          <span>📋</span><span>Ticket Resumen</span>
+          <Printer size={16} /><span>Ticket Resumen</span>
         </button>
       </div>
 
@@ -732,9 +619,7 @@ export const OEPOrdersManager: React.FC = () => {
           </div>
         ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            {showOnlyToday 
-              ? 'No hay pedidos OEP para hoy' 
-              : `No hay pedidos para el ${selectedDate.toLocaleDateString('es-PE')}`}
+            No hay pedidos para el {selectedDate.toLocaleDateString('es-PE')}
           </div>
         ) : (
           <div className="overflow-x-auto">
