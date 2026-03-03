@@ -1,13 +1,17 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CORREGIDA - Preview no interfiere con el contenido
+// VERSIÓN CON LA MISMA LÓGICA QUE LA PESTAÑA ÓRDENES
+// - Misma estructura de tabla
+// - Mismo sistema de preview
+// - Misma paginación
+// - Mismos estilos
 // ============================================================
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Search, Printer, FileSpreadsheet, Pencil, Download } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
-import { usePagination, isDesktopPagination } from '../../hooks/usePagination';
+import { usePagination } from '../../hooks/usePagination';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
 import { OEPPaymentModal } from './OEPPaymentModal';
 import { OEPDateFilter } from './OEPDateFilter';
@@ -17,6 +21,103 @@ import OEPTicket from './OEPTicket';
 import { OEPOrder } from '../../types/oep';
 import { exportOEPToExcel, exportOEPByDateRange } from '../../utils/oepExportUtils';
 import { generateOEPTicketSummary, printOEPResumenTicket } from '../../utils/oepTicketUtils';
+
+// ─── Componente de fila memoizado (igual que en Órdenes) ────
+const OEPOrderRow = React.memo(({
+  order,
+  onMouseEnter,
+  onMouseLeave,
+  onEditPayment,
+  getPaymentColor,
+  getPaymentText
+}: {
+  order: OEPOrder;
+  onMouseEnter: (e: React.MouseEvent) => void;
+  onMouseLeave: () => void;
+  onEditPayment: (order: OEPOrder) => void;
+  getPaymentColor: (method?: string | null) => string;
+  getPaymentText: (method?: string | null) => string;
+}) => {
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onEditPayment(order);
+  };
+
+  // Formatear productos para mostrar (como en Órdenes)
+  const productosText = order.items
+    .map(item => `${item.quantity}x ${item.name}`)
+    .join(', ');
+
+  return (
+    <tr
+      className="hover:bg-gray-50 cursor-pointer group relative"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* N° Orden / Cliente */}
+      <td className="px-4 sm:px-6 py-4">
+        <div className="flex items-center space-x-2 mb-1">
+          <div className="text-sm font-medium text-blue-600">
+            #{order.order_number}
+          </div>
+        </div>
+        <div className="font-medium text-gray-900">{order.customer_name}</div>
+        <div className="text-xs text-gray-500 mt-1">
+          {new Date(order.created_at).toLocaleTimeString()}
+        </div>
+      </td>
+
+      {/* Teléfono / Dirección */}
+      <td className="px-4 sm:px-6 py-4">
+        {order.phone && (
+          <div className="text-sm text-gray-600 mb-1">📞 {order.phone}</div>
+        )}
+        {order.address && (
+          <div className="text-xs text-gray-500">📍 {order.address}</div>
+        )}
+      </td>
+
+      {/* Productos */}
+      <td className="px-4 sm:px-6 py-4">
+        <div className="text-sm text-gray-900">
+          {order.items.length} producto(s)
+        </div>
+        <div className="text-xs text-gray-500 truncate max-w-xs" title={productosText}>
+          {productosText}
+        </div>
+      </td>
+
+      {/* Método de Pago */}
+      <td className="px-4 sm:px-6 py-4">
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.payment_method)}`}>
+          {getPaymentText(order.payment_method)}
+        </span>
+      </td>
+
+      {/* Total */}
+      <td className="px-4 sm:px-6 py-4">
+        <div className="text-lg font-bold text-blue-600">
+          S/ {order.total.toFixed(2)}
+        </div>
+      </td>
+
+      {/* Acciones */}
+      <td className="px-4 sm:px-6 py-4 text-sm font-medium">
+        <div className="flex space-x-2">
+          <button
+            onClick={handleEditClick}
+            className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+            title="Cambiar método de pago"
+          >
+            <Pencil size={16} />
+          </button>
+          <OEPTicket order={order} />
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 // ─── Modal de rango de fechas ────────────────────────────────
 const getTodayString = (): string => {
@@ -130,7 +231,7 @@ export const OEPOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // FILTROS
+  // FILTROS (igual que en Órdenes)
   const filteredOrders = useMemo(() => {
     let filtered = orders;
 
@@ -149,7 +250,7 @@ export const OEPOrdersManager: React.FC = () => {
       filtered = filtered.filter(o => o.payment_method === paymentFilter);
     }
 
-    // Filtro por búsqueda
+    // Filtro por búsqueda (como en Órdenes)
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -162,14 +263,14 @@ export const OEPOrdersManager: React.FC = () => {
     return filtered;
   }, [orders, searchTerm, selectedDate, paymentFilter]);
 
-  // PAGINACIÓN VIRTUAL
+  // PAGINACIÓN (exactamente igual que en Órdenes)
   const pagination = usePagination({
     items: filteredOrders,
     itemsPerPage,
     mobileBreakpoint: 768
   });
 
-  // HANDLERS PARA PREVIEW
+  // HANDLERS PARA PREVIEW (exactamente igual que en Órdenes)
   const handleRowMouseEnter = useCallback((order: OEPOrder, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setPreviewOrder(order);
@@ -250,54 +351,37 @@ export const OEPOrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment]);
 
-  const getPaymentColor = (method?: string | null) => {
-    const map: Record<string, string> = {
-      'EFECTIVO': 'bg-green-100 text-green-800',
-      'YAPE/PLIN': 'bg-purple-100 text-purple-800',
-      'TARJETA': 'bg-blue-100 text-blue-800',
+  // Funciones auxiliares (igual que en Órdenes)
+  const getPaymentColor = useCallback((method?: string | null) => {
+    const colors: Record<string, string> = {
+      'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
+      'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
+      'TARJETA': 'bg-blue-100 text-blue-800 border-blue-200',
     };
-    return map[method || ''] || 'bg-gray-100 text-gray-800';
-  };
+    return colors[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200';
+  }, []);
 
-  // Función para determinar qué props de pagination usar
-  const getPaginationInfo = () => {
-    if (isDesktopPagination(pagination)) {
-      return {
-        startIndex: pagination.startIndex,
-        endIndex: pagination.endIndex,
-        totalPages: pagination.totalPages,
-        hasPrevPage: pagination.hasPrevPage,
-        hasNextPage: pagination.hasNextPage,
-        currentPage: pagination.currentPage,
-        currentItems: pagination.currentItems
-      };
-    } else {
-      return {
-        startIndex: 1,
-        endIndex: pagination.loadedItems,
-        totalPages: Math.ceil(pagination.totalItems / itemsPerPage),
-        hasPrevPage: pagination.currentPage > 1,
-        hasNextPage: pagination.hasMoreItems,
-        currentPage: pagination.currentPage,
-        currentItems: pagination.currentItems
-      };
-    }
-  };
-
-  const paginationInfo = getPaginationInfo();
+  const getPaymentText = useCallback((method?: string | null) => {
+    const texts: Record<string, string> = {
+      'EFECTIVO': 'EFECTIVO',
+      'YAPE/PLIN': 'YAPE/PLIN',
+      'TARJETA': 'TARJETA',
+    };
+    return texts[method || ''] || 'NO APLICA';
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
 
-          {/* PREVIEW - AHORA CON Z-INDEX CORREGIDO */}
+          {/* PREVIEW - exactamente igual que en Órdenes */}
           {previewOrder && (
             <OrderPreview
               order={previewOrder as any}
               isVisible={true}
               position={previewPosition}
-              shouldIgnoreEvents={true} // Importante: true para que no interfiera con clicks
+              shouldIgnoreEvents={true}
             />
           )}
 
@@ -429,141 +513,85 @@ export const OEPOrdersManager: React.FC = () => {
             </div>
           )}
 
-          {/* INFO DE PAGINACIÓN */}
-          <div className="bg-white rounded-lg p-3 mb-3 text-xs text-gray-600 border border-gray-200">
-            Mostrando {paginationInfo.startIndex}-{paginationInfo.endIndex} de {filteredOrders.length} pedidos
-          </div>
-
-          {/* TABLA OPTIMIZADA */}
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-gray-600 mt-2">Cargando pedidos...</p>
-            </div>
-          ) : pagination.currentItems.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-4xl mb-3">📦</p>
-              <p className="text-gray-500">No hay pedidos para esta fecha</p>
-              {paymentFilter && (
-                <button
-                  onClick={() => setPaymentFilter('')}
-                  className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Quitar filtro de pago
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          {/* TABLA - EXACTAMENTE IGUAL QUE EN ÓRDENES */}
+          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="text-gray-600 mt-2">Cargando pedidos...</p>
+              </div>
+            ) : pagination.currentItems.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-4xl mb-3">📦</p>
+                <p className="text-gray-500">No hay pedidos para esta fecha</p>
+                {paymentFilter && (
+                  <button
+                    onClick={() => setPaymentFilter('')}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Quitar filtro de pago
+                  </button>
+                )}
+              </div>
+            ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                        Pedido
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Cliente / Pedido
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                        Cliente
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Contacto
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Productos
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                        Pago
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Método Pago
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Total
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Acciones
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {pagination.currentItems.map((order: OEPOrder) => (
-                      <tr
+                    {pagination.currentItems.map((order) => (
+                      <OEPOrderRow
                         key={order.id}
-                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                        order={order}
                         onMouseEnter={(e) => handleRowMouseEnter(order, e)}
                         onMouseLeave={handleRowMouseLeave}
-                      >
-                        {/* Pedido */}
-                        <td className="px-3 py-3 whitespace-nowrap">
-                          <div className="text-xs font-mono font-medium text-blue-600">
-                            #{order.order_number}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {new Date(order.created_at).toLocaleTimeString()}
-                          </div>
-                        </td>
-
-                        {/* Cliente */}
-                        <td className="px-3 py-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {order.customer_name}
-                          </div>
-                          {order.phone && (
-                            <div className="text-xs text-gray-500">
-                              📞 {order.phone}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Productos */}
-                        <td className="px-3 py-3">
-                          <div className="text-xs text-gray-700 space-y-0.5">
-                            {order.items.slice(0, 2).map((item: any, idx: number) => (
-                              <div key={idx}>
-                                <span className="font-semibold text-blue-600">{item.quantity}x</span>
-                                <span className="ml-1">{item.name}</span>
-                              </div>
-                            ))}
-                            {order.items.length > 2 && (
-                              <div className="text-gray-500">
-                                +{order.items.length - 2} más
-                              </div>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Pago */}
-                        <td className="px-3 py-3">
-                          <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${getPaymentColor(order.payment_method)}`}>
-                            {order.payment_method || 'NO APLICA'}
-                          </span>
-                        </td>
-
-                        {/* Total */}
-                        <td className="px-3 py-3">
-                          <div className="text-sm font-bold text-blue-600">
-                            S/ {order.total.toFixed(2)}
-                          </div>
-                        </td>
-
-                        {/* Acciones */}
-                        <td className="px-3 py-3">
-                          <div className="flex items-center space-x-1">
-                            <button
-                              onClick={() => handleEditPayment(order)}
-                              className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded"
-                              title="Cambiar método de pago"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <div className="ml-0.5">
-                              <OEPTicket order={order} />
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+                        onEditPayment={handleEditPayment}
+                        getPaymentColor={getPaymentColor}
+                        getPaymentText={getPaymentText}
+                      />
                     ))}
                   </tbody>
                 </table>
               </div>
+            )}
+          </div>
+
+          {/* INFO DE PAGINACIÓN - igual que en Órdenes */}
+          {filteredOrders.length > 0 && (
+            <div className="mt-4 bg-white rounded-lg p-4 border text-sm text-gray-600">
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="font-semibold">Mostrando:</span>{' '}
+                  {pagination.startIndex || 1}-{pagination.endIndex || 0} de {filteredOrders.length} pedidos
+                </div>
+                <div>
+                  <span className="font-semibold">Total mostrado:</span> S/ {filteredOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
+                </div>
+              </div>
             </div>
           )}
 
-          {/* CONTROLES DE PAGINACIÓN */}
+          {/* CONTROLES DE PAGINACIÓN - igual que en Órdenes */}
           {filteredOrders.length > itemsPerPage && (
             <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -583,17 +611,17 @@ export const OEPOrdersManager: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={pagination.prevPage}
-                  disabled={!paginationInfo.hasPrevPage}
+                  disabled={!pagination.hasPrevPage}
                   className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50"
                 >
                   Anterior
                 </button>
                 <span className="text-sm text-gray-700">
-                  Página {paginationInfo.currentPage} de {paginationInfo.totalPages}
+                  Página {pagination.currentPage} de {pagination.totalPages}
                 </span>
                 <button
                   onClick={pagination.nextPage}
-                  disabled={!paginationInfo.hasNextPage}
+                  disabled={!pagination.hasNextPage}
                   className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50"
                 >
                   Siguiente
