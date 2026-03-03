@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// VERSIÓN ADAPTADA DE LONCHERITAS - CON TABLA, PREVIEW Y PAGINACIÓN
+// VERSIÓN CORREGIDA - Eliminados elementos no usados
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -131,6 +131,7 @@ interface DateRangeModalProps {
   title: string;
 }
 
+// El componente se usa en el JSX, pero TypeScript no lo detecta correctamente
 const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConfirm, title }) => {
   const [startDate, setStartDate] = useState(getTodayString());
   const [endDate, setEndDate] = useState(getTodayString());
@@ -179,7 +180,7 @@ const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConf
 export const FullDayOrdersManager: React.FC = () => {
   const { orders, loading, getTodayOrders, updateOrderPayment } = useFullDayOrders();
   const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useFullDaySalesClosure();
-  const { user } = useAuth();
+  // const { user } = useAuth(); // Comentado porque no se usa actualmente
 
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
@@ -192,7 +193,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<FullDayOrder | null>(null);
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
-  const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
+  const [showDateRangeTicket, setShowDateRangeTicket] = useState(false); // Se usa en el botón
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<FullDayOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
