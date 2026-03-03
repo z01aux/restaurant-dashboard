@@ -1,130 +1,21 @@
-// ============================================
+// ================================================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// VERSIÓN CORREGIDA - Eliminado useAuth no usado
-// ============================================
+// ================================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
-// import { useAuth } from '../../hooks/useAuth'; ← ELIMINADO - No se usa
 import { usePagination } from '../../hooks/usePagination';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
+import { LoncheritasDateFilter } from './LoncheritasDateFilter'; // ← RESTAURADO
 import { PaymentFilter } from '../ui/PaymentFilter';
 import { LoncheritasOrderPreview } from './LoncheritasOrderPreview';
 import LoncheritasTicket from './LoncheritasTicket';
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
-
-// ============================================
-// COMPONENTE DE SELECCIÓN DE FECHA (IGUAL QUE EN ÓRDENES)
-// ============================================
-const DateSelector: React.FC<{
-  selectedDate: Date;
-  onDateChange: (date: Date) => void;
-  showOnlyToday: boolean;
-  onToggleShowOnlyToday: () => void;
-}> = ({ selectedDate, onDateChange, showOnlyToday, onToggleShowOnlyToday }) => {
-  
-  const handlePrevDay = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() - 1);
-    onDateChange(newDate);
-  };
-
-  const handleNextDay = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + 1);
-    onDateChange(newDate);
-  };
-
-  const handleToday = () => {
-    onDateChange(new Date());
-  };
-
-  const isToday = (date: Date): boolean => {
-    const today = new Date();
-    return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear();
-  };
-
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('es-PE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  if (showOnlyToday) {
-    return (
-      <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2">
-        <div className="flex items-center space-x-2">
-          <Calendar size={18} className="text-gray-500" />
-          <span className="font-medium text-gray-700">Hoy: {formatDate(new Date())}</span>
-        </div>
-        <button
-          onClick={onToggleShowOnlyToday}
-          className="text-sm text-orange-600 hover:text-orange-800 font-medium"
-        >
-          Ver todas las fechas
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-2">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handlePrevDay}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Día anterior"
-          >
-            <ChevronLeft size={20} className="text-gray-600" />
-          </button>
-
-          <div className="flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-lg border border-orange-200">
-            <Calendar size={18} className="text-orange-600" />
-            <span className="font-medium text-orange-800">
-              {formatDate(selectedDate)}
-            </span>
-          </div>
-
-          <button
-            onClick={handleNextDay}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Día siguiente"
-            disabled={isToday(selectedDate)}
-          >
-            <ChevronRight size={20} className={`${isToday(selectedDate) ? 'text-gray-300' : 'text-gray-600'}`} />
-          </button>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          {!isToday(selectedDate) && (
-            <button
-              onClick={handleToday}
-              className="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
-            >
-              Ver Hoy
-            </button>
-          )}
-          <button
-            onClick={onToggleShowOnlyToday}
-            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-          >
-            Volver a "Solo Hoy"
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (CON HOVER PREVIEW)
@@ -298,7 +189,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<LoncheritasOrder | null>(null);
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
   const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
-  const [showOnlyToday, setShowOnlyToday] = useState(true);
+  const [showOnlyToday, setShowOnlyToday] = useState(false); // ← CAMBIADO a false para usar el filtro de fecha
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<LoncheritasOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -341,28 +232,18 @@ export const LoncheritasOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // Filtrar por fecha según el modo seleccionado
+  // Filtrar por fecha (usando selectedDate)
   const dateFilteredOrders = useMemo(() => {
-    if (showOnlyToday) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return localOrders.filter(order => {
-        const d = new Date(order.created_at);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime() === today.getTime();
-      });
-    } else {
-      const startOfDay = new Date(selectedDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(selectedDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      return localOrders.filter(order => {
-        const orderDate = new Date(order.created_at);
-        return orderDate >= startOfDay && orderDate <= endOfDay;
-      });
-    }
-  }, [localOrders, showOnlyToday, selectedDate]);
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return localOrders.filter(order => {
+      const orderDate = new Date(order.created_at);
+      return orderDate >= startOfDay && orderDate <= endOfDay;
+    });
+  }, [localOrders, selectedDate]);
 
   // FILTROS Y ORDENAMIENTO
   const filteredAndSortedOrders = useMemo(() => {
@@ -598,12 +479,11 @@ export const LoncheritasOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* SELECTOR DE FECHA */}
-      <DateSelector
+      {/* FILTRO DE FECHA CON FLECHAS - RESTAURADO */}
+      <LoncheritasDateFilter
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
-        showOnlyToday={showOnlyToday}
-        onToggleShowOnlyToday={() => setShowOnlyToday(!showOnlyToday)}
+        totalOrders={filteredAndSortedOrders.length}
       />
 
       {/* FILTRO POR MÉTODO DE PAGO CON MONTOS */}
@@ -738,9 +618,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
           </div>
         ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            {showOnlyToday 
-              ? 'No hay pedidos de loncheritas para hoy' 
-              : `No hay pedidos para el ${selectedDate.toLocaleDateString('es-PE')}`}
+            No hay pedidos para el {selectedDate.toLocaleDateString('es-PE')}
           </div>
         ) : (
           <div className="overflow-x-auto">
