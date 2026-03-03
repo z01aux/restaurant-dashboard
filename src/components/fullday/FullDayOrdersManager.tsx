@@ -7,7 +7,6 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
-// import { useAuth } from '../../hooks/useAuth'; // ← ELIMINADO - No se usa
 import { usePagination } from '../../hooks/usePagination';
 import { FullDayCashRegisterModal } from '../sales_fullday/FullDayCashRegisterModal';
 import { FullDayDateRangeModal } from './FullDayDateRangeModal';
@@ -128,7 +127,6 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<FullDayOrder | null>(null);
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
-  const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<FullDayOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -266,22 +264,6 @@ export const FullDayOrdersManager: React.FC = () => {
 
   const handleExportByDateRange = useCallback((startDate: Date, endDate: Date) => {
     exportFullDayByDateRange(orders, startDate, endDate);
-  }, [orders]);
-
-  const handleTicketResumen = useCallback((startDate: Date, endDate: Date) => {
-    const s = new Date(startDate);
-    s.setHours(0, 0, 0, 0);
-    const e = new Date(endDate);
-    e.setHours(23, 59, 59, 999);
-    const filtered = orders.filter(o => {
-      const d = new Date(o.created_at);
-      return d >= s && d <= e;
-    });
-    if (!filtered.length) {
-      alert('No hay pedidos en el rango seleccionado');
-      return;
-    }
-    printFullDayResumenTicket(generateFullDayTicketSummary(filtered), startDate, endDate);
   }, [orders]);
 
   // ── Caja ─────────────────────────────────────────────────────
@@ -460,9 +442,6 @@ export const FullDayOrdersManager: React.FC = () => {
         </button>
         <button onClick={() => setShowDateRangeExcel(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1">
           <Calendar size={16} /><span>Reporte por Fechas</span>
-        </button>
-        <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
-          <Printer size={16} /><span>Ticket Resumen</span>
         </button>
       </div>
 
