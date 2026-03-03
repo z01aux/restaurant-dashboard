@@ -1,15 +1,16 @@
-// ================================================================
+// ============================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// ================================================================
+// VERSIÓN CORREGIDA - Eliminados elementos no usados
+// ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react';
+import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react'; // ← Eliminado Calendar
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { usePagination } from '../../hooks/usePagination';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
-import { LoncheritasDateFilter } from './LoncheritasDateFilter'; // ← RESTAURADO
+import { LoncheritasDateFilter } from './LoncheritasDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
 import { LoncheritasOrderPreview } from './LoncheritasOrderPreview';
 import LoncheritasTicket from './LoncheritasTicket';
@@ -189,7 +190,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<LoncheritasOrder | null>(null);
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
   const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
-  const [showOnlyToday, setShowOnlyToday] = useState(false); // ← CAMBIADO a false para usar el filtro de fecha
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<LoncheritasOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -479,7 +479,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* FILTRO DE FECHA CON FLECHAS - RESTAURADO */}
+      {/* FILTRO DE FECHA CON FLECHAS */}
       <LoncheritasDateFilter
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
