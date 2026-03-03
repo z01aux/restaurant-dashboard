@@ -1,21 +1,223 @@
 // ============================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// VERSIÓN CON TOTAL DEL DÍA EN COLOR NARANJA
+// VERSIÓN COMPLETA CON PREVIEW AL HOVER
 // ============================================
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
+import { usePagination } from '../../hooks/usePagination';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
 import { LoncheritasDateFilter } from './LoncheritasDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
+import { LoncheritasOrderPreview } from './LoncheritasOrderPreview'; // ← IMPORTADO
 import LoncheritasTicket from './LoncheritasTicket';
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
+
+// ============================================
+// COMPONENTE DE SELECCIÓN DE FECHA (IGUAL QUE EN ÓRDENES)
+// ============================================
+const DateSelector: React.FC<{
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+  showOnlyToday: boolean;
+  onToggleShowOnlyToday: () => void;
+}> = ({ selectedDate, onDateChange, showOnlyToday, onToggleShowOnlyToday }) => {
+  
+  const handlePrevDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    onDateChange(newDate);
+  };
+
+  const handleNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    onDateChange(newDate);
+  };
+
+  const handleToday = () => {
+    onDateChange(new Date());
+  };
+
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear();
+  };
+
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (showOnlyToday) {
+    return (
+      <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2">
+        <div className="flex items-center space-x-2">
+          <Calendar size={18} className="text-gray-500" />
+          <span className="font-medium text-gray-700">Hoy: {formatDate(new Date())}</span>
+        </div>
+        <button
+          onClick={onToggleShowOnlyToday}
+          className="text-sm text-orange-600 hover:text-orange-800 font-medium"
+        >
+          Ver todas las fechas
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handlePrevDay}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Día anterior"
+          >
+            <ChevronLeft size={20} className="text-gray-600" />
+          </button>
+
+          <div className="flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-lg border border-orange-200">
+            <Calendar size={18} className="text-orange-600" />
+            <span className="font-medium text-orange-800">
+              {formatDate(selectedDate)}
+            </span>
+          </div>
+
+          <button
+            onClick={handleNextDay}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Día siguiente"
+            disabled={isToday(selectedDate)}
+          >
+            <ChevronRight size={20} className={`${isToday(selectedDate) ? 'text-gray-300' : 'text-gray-600'}`} />
+          </button>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {!isToday(selectedDate) && (
+            <button
+              onClick={handleToday}
+              className="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
+            >
+              Ver Hoy
+            </button>
+          )}
+          <button
+            onClick={onToggleShowOnlyToday}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+          >
+            Volver a "Solo Hoy"
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (CON HOVER PREVIEW)
+// ============================================
+const LoncheritasOrderRow = React.memo(({
+  order,
+  onMouseEnter,
+  onMouseLeave,
+  onEditPayment,
+  getDisplayNumber,
+  getPaymentColor,
+  getPaymentText
+}: {
+  order: LoncheritasOrder;
+  onMouseEnter: (e: React.MouseEvent) => void;
+  onMouseLeave: () => void;
+  onEditPayment: (order: LoncheritasOrder) => void;
+  getDisplayNumber: (order: LoncheritasOrder) => string;
+  getPaymentColor: (method?: string | null) => string;
+  getPaymentText: (method?: string | null) => string;
+}) => {
+  const displayNumber = getDisplayNumber(order);
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onEditPayment(order);
+  };
+
+  return (
+    <tr
+      className="hover:bg-gray-50 cursor-pointer group relative"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <td className="px-4 sm:px-6 py-4">
+        <div className="flex items-center space-x-2 mb-1">
+          <div className="text-sm font-medium text-orange-600">
+            {displayNumber}
+          </div>
+        </div>
+        <div className="font-medium text-gray-900">{order.student_name}</div>
+        <div className="text-sm text-gray-600">{order.grade} - Sección {order.section}</div>
+        <div className="text-sm font-bold text-orange-600 mt-1">
+          S/ {order.total.toFixed(2)}
+        </div>
+      </td>
+      <td className="px-4 sm:px-6 py-4">
+        <div className="mb-1">
+          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800 items-center space-x-1">
+            <span>🍱</span>
+            <span>Loncheritas</span>
+          </span>
+        </div>
+        <div className="flex items-center space-x-2 mt-2">
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.payment_method)}`}>
+            {getPaymentText(order.payment_method)}
+          </span>
+
+          <button
+            onClick={handleEditClick}
+            className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
+            title="Cambiar método de pago"
+          >
+            <Pencil size={14} />
+          </button>
+        </div>
+      </td>
+      <td className="px-4 sm:px-6 py-4">
+        <div className="text-sm text-gray-900">
+          {new Date(order.created_at).toLocaleDateString()}
+        </div>
+        <div className="text-sm text-gray-500">
+          {new Date(order.created_at).toLocaleTimeString()}
+        </div>
+      </td>
+      <td className="px-4 sm:px-6 py-4">
+        <div className="text-sm text-gray-900">
+          {order.items.length} producto(s)
+        </div>
+        <div className="text-xs text-gray-500 truncate max-w-xs">
+          {order.items.map(item => item.name).join(', ')}
+        </div>
+      </td>
+      <td className="px-4 sm:px-6 py-4 text-sm font-medium">
+        <div className="flex space-x-2">
+          <LoncheritasTicket order={order} />
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 // ─── Modal de rango de fechas ────────────────────────────────
 const getTodayString = (): string => {
@@ -87,14 +289,28 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const { user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [paymentFilter, setPaymentFilter] = useState('');
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [currentSort, setCurrentSort] = useState('status-time');
+  const [previewOrder, setPreviewOrder] = useState<LoncheritasOrder | null>(null); // ← NUEVO
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 }); // ← NUEVO
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<LoncheritasOrder | null>(null);
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
   const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
+  const [showOnlyToday, setShowOnlyToday] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [localOrders, setLocalOrders] = useState<LoncheritasOrder[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    if (orders.length > 0 && !isInitialized) {
+      setLocalOrders(orders);
+      setIsInitialized(true);
+    }
+  }, [orders, isInitialized]);
 
   // Calcular total del día
   const todayTotal = useMemo(() =>
@@ -127,26 +343,35 @@ export const LoncheritasOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // FILTROS
-  const filteredOrders = useMemo(() => {
-    let filtered = orders;
-
-    // Filtro por fecha
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    filtered = filtered.filter(o => {
-      const d = new Date(o.created_at);
-      return d >= startOfDay && d <= endOfDay;
-    });
-
-    // Filtro por método de pago
-    if (paymentFilter) {
-      filtered = filtered.filter(o => o.payment_method === paymentFilter);
+  // Filtrar por fecha según el modo seleccionado
+  const dateFilteredOrders = useMemo(() => {
+    if (showOnlyToday) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return localOrders.filter(order => {
+        const d = new Date(order.created_at);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+      });
+    } else {
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      return localOrders.filter(order => {
+        const orderDate = new Date(order.created_at);
+        return orderDate >= startOfDay && orderDate <= endOfDay;
+      });
     }
+  }, [localOrders, showOnlyToday, selectedDate]);
 
-    // Filtro por búsqueda
+  // FILTROS Y ORDENAMIENTO
+  const filteredAndSortedOrders = useMemo(() => {
+    if (!dateFilteredOrders.length) return [];
+    let filtered = dateFilteredOrders;
+
+    // Filtrar por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -156,8 +381,53 @@ export const LoncheritasOrdersManager: React.FC = () => {
       );
     }
 
+    // Filtrar por método de pago
+    if (paymentFilter) {
+      filtered = filtered.filter(o => o.payment_method === paymentFilter);
+    }
+
+    // Ordenar
+    if (filtered.length > 1) {
+      filtered = [...filtered].sort((a, b) => {
+        switch (currentSort) {
+          case 'status-time': {
+            const so: Record<string, number> = { pending: 1, preparing: 2, ready: 3, delivered: 4, cancelled: 5 };
+            if (so[a.status] !== so[b.status]) return so[a.status] - so[b.status];
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          }
+          case 'waiting-time':
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case 'total-desc':      return b.total - a.total;
+          case 'created-desc':    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          case 'created-asc':     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          default: return 0;
+        }
+      });
+    }
+
     return filtered;
-  }, [orders, searchTerm, selectedDate, paymentFilter]);
+  }, [dateFilteredOrders, searchTerm, paymentFilter, currentSort]);
+
+  // PAGINACIÓN
+  const pagination = usePagination({
+    items: filteredAndSortedOrders,
+    itemsPerPage,
+    mobileBreakpoint: 768
+  });
+
+  // Calcular totalPages manualmente
+  const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
+
+  // HANDLERS PARA PREVIEW (NUEVOS)
+  const handleRowMouseEnter = useCallback((order: LoncheritasOrder, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPreviewOrder(order);
+    setPreviewPosition({ x: rect.left + rect.width / 2, y: rect.top });
+  }, []);
+
+  const handleRowMouseLeave = useCallback(() => {
+    setPreviewOrder(null);
+  }, []);
 
   // ── Reportes ──────────────────────────────────────────────────
   const handleExcelHoy = useCallback(() => {
@@ -229,267 +499,309 @@ export const LoncheritasOrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment]);
 
-  const getPaymentColor = (method?: string | null) => {
-    const map: Record<string, string> = {
-      'EFECTIVO': 'bg-green-100 text-green-800',
-      'YAPE/PLIN': 'bg-purple-100 text-purple-800',
-      'TARJETA': 'bg-blue-100 text-blue-800',
+  // Funciones auxiliares
+  const getDisplayNumber = useCallback((order: LoncheritasOrder) => {
+    return order.order_number || `LON-${order.id.slice(-8).toUpperCase()}`;
+  }, []);
+
+  const getPaymentColor = useCallback((method?: string | null) => {
+    const colors: Record<string, string> = {
+      'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
+      'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
+      'TARJETA': 'bg-blue-100 text-blue-800 border-blue-200',
     };
-    return map[method || ''] || 'bg-gray-100 text-gray-800';
-  };
+    return colors[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200';
+  }, []);
+
+  const getPaymentText = useCallback((method?: string | null) => {
+    const texts: Record<string, string> = {
+      'EFECTIVO': 'EFECTIVO',
+      'YAPE/PLIN': 'YAPE/PLIN',
+      'TARJETA': 'TARJETA',
+    };
+    return texts[method || ''] || 'NO APLICA';
+  }, []);
+
+  const sortOptions = useMemo(() => [
+    { value: 'status-time',       label: '🔄 Estado + Tiempo' },
+    { value: 'waiting-time',      label: '⏱️ Tiempo Espera' },
+    { value: 'total-desc',        label: '💰 Mayor Monto' },
+    { value: 'created-desc',      label: '📅 Más Recientes' },
+    { value: 'created-asc',       label: '📅 Más Antiguas' },
+  ], []);
+
+  const handleClearFilters = useCallback(() => {
+    setPaymentFilter('');
+    setSearchTerm('');
+  }, []);
+
+  const hasActiveFilters = paymentFilter !== '' || searchTerm !== '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
+    <div className="space-y-4 sm:space-y-6">
 
-          {/* Modales */}
-          <LoncheritasPaymentModal
-            isOpen={showPaymentModal}
-            onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
-            order={selectedOrder}
-            onSave={handleSavePaymentMethod}
-          />
-          <LoncheritasCashRegisterModal
-            isOpen={showCashModal}
-            onClose={() => setShowCashModal(false)}
-            type={cashModalType}
-            onConfirm={handleCashConfirm}
-            loading={salesLoading}
-          />
-          <DateRangeModal
-            isOpen={showDateRangeExcel}
-            onClose={() => setShowDateRangeExcel(false)}
-            onConfirm={handleExcelRango}
-            title="📊 Reporte Excel por Fechas - Loncheritas"
-          />
-          <DateRangeModal
-            isOpen={showDateRangeTicket}
-            onClose={() => setShowDateRangeTicket(false)}
-            onConfirm={handleTicketResumen}
-            title="🖨️ Ticket Resumen por Fechas - Loncheritas"
-          />
+      {/* PREVIEW - NUEVO */}
+      {previewOrder && (
+        <LoncheritasOrderPreview
+          order={previewOrder}
+          isVisible={true}
+          position={previewPosition}
+          shouldIgnoreEvents={true}
+        />
+      )}
 
-          {/* Header con emoji 🍱 y total del día en color naranja */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <span>🍱</span> Pedidos Loncheritas
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                {filteredOrders.length} pedidos · Total del día: <span className="font-semibold text-orange-600">S/ {todayTotal.toFixed(2)}</span>
-              </p>
-            </div>
-            
-            {/* Botón de caja */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                <span className="text-sm font-medium text-gray-700">
-                  Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}
-                </span>
-              </div>
-              
-              {!cashRegister?.is_open ? (
-                <button onClick={handleOpenCash} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2">
-                  <span>💰</span> Abrir Caja
-                </button>
-              ) : (
-                <button onClick={handleCloseCash} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2">
-                  <span>🔒</span> Cerrar Caja
-                </button>
-              )}
-            </div>
+      {/* Modales */}
+      <LoncheritasPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
+        order={selectedOrder}
+        onSave={handleSavePaymentMethod}
+      />
+      <LoncheritasCashRegisterModal
+        isOpen={showCashModal}
+        onClose={() => setShowCashModal(false)}
+        type={cashModalType}
+        onConfirm={handleCashConfirm}
+        loading={salesLoading}
+      />
+      <DateRangeModal
+        isOpen={showDateRangeExcel}
+        onClose={() => setShowDateRangeExcel(false)}
+        onConfirm={handleExcelRango}
+        title="📊 Reporte Excel por Fechas - Loncheritas"
+      />
+      <DateRangeModal
+        isOpen={showDateRangeTicket}
+        onClose={() => setShowDateRangeTicket(false)}
+        onConfirm={handleTicketResumen}
+        title="🖨️ Ticket Resumen por Fechas - Loncheritas"
+      />
+
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <span>🍱</span> Pedidos Loncheritas
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {filteredAndSortedOrders.length} pedidos · Total del día: <span className="font-semibold text-orange-600">S/ {todayTotal.toFixed(2)}</span>
+          </p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 shadow-sm border">
+            <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+            <span className="text-sm font-medium">Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}</span>
           </div>
-
-          {/* Selector de fecha */}
-          <LoncheritasDateFilter
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            totalOrders={filteredOrders.length}
-          />
-
-          {/* Filtro por método de pago con montos */}
-          <div className="mb-4">
-            <PaymentFilter
-              paymentFilter={paymentFilter}
-              setPaymentFilter={setPaymentFilter}
-              totalEfectivo={paymentTotals.efectivo}
-              totalYape={paymentTotals.yape}
-              totalTarjeta={paymentTotals.tarjeta}
-              showAmounts={true}
-            />
-          </div>
-
-          {/* Botones de reportes */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            <button onClick={handleExcelHoy}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition-colors">
-              <FileSpreadsheet size={16} /> Excel Hoy
-            </button>
-            <button onClick={() => setShowDateRangeExcel(true)}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition-colors">
-              <FileSpreadsheet size={16} /> Reporte por Fechas
-            </button>
-            <button onClick={() => setShowDateRangeTicket(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition-colors">
-              <Printer size={16} /> Ticket Resumen
-            </button>
-          </div>
-
-          {/* Búsqueda */}
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por alumno, apoderado o número de orden..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-          </div>
-
-          {/* Indicador de filtro activo */}
-          {paymentFilter && (
-            <div className="mb-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-              <span className="text-sm text-blue-700">
-                <span className="font-semibold">Filtro activo:</span> Mostrando solo pedidos en {
-                  paymentFilter === 'EFECTIVO' ? '💵 Efectivo' :
-                    paymentFilter === 'YAPE/PLIN' ? '📱 Yape/Plin' : '💳 Tarjeta'
-                }
-              </span>
-              <button
-                onClick={() => setPaymentFilter('')}
-                className="text-xs text-red-600 hover:text-red-800 font-medium"
-              >
-                Limpiar filtro
-              </button>
-            </div>
+          {!cashRegister?.is_open ? (
+            <button onClick={handleOpenCash} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors">💰 Abrir Caja</button>
+          ) : (
+            <button onClick={handleCloseCash} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors">🔒 Cerrar Caja</button>
           )}
-
-          {/* Lista de pedidos */}
-          <div className="space-y-4">
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
-                <p className="text-gray-600 mt-2">Cargando pedidos...</p>
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-4xl mb-3">🍱</p>
-                <p className="text-gray-500">No hay pedidos para esta fecha</p>
-                {paymentFilter && (
-                  <button
-                    onClick={() => setPaymentFilter('')}
-                    className="mt-2 text-sm text-orange-600 hover:text-orange-800 font-medium"
-                  >
-                    Quitar filtro de pago
-                  </button>
-                )}
-              </div>
-            ) : (
-              filteredOrders.map(order => (
-                <div key={order.id} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-orange-300 transition-all">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-xs font-mono bg-orange-100 text-orange-800 px-2 py-1 rounded">
-                          #{order.order_number}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(order.created_at).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                        <div>
-                          <div className="text-xs text-gray-500">Alumno</div>
-                          <div className="font-semibold text-gray-900">{order.student_name}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500">Grado y Sección</div>
-                          <div className="text-sm text-gray-700">{order.grade} - Sección {order.section}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500">Apoderado</div>
-                          <div className="text-sm text-gray-700">{order.guardian_name}</div>
-                        </div>
-                        {order.phone && (
-                          <div>
-                            <div className="text-xs text-gray-500">Teléfono</div>
-                            <div className="text-sm text-gray-700">{order.phone}</div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-3">
-                        <div className="text-xs text-gray-500 mb-2">Productos</div>
-                        <div className="flex flex-wrap gap-2">
-                          {order.items.map((item, i) => (
-                            <div key={i} className="bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 text-sm">
-                              <span className="font-semibold text-orange-600">{item.quantity}x</span>
-                              <span className="ml-1 text-gray-700">{item.name}</span>
-                              {item.notes && <span className="ml-1 text-xs text-gray-500 italic">({item.notes})</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Botones de ticket */}
-                      <div className="mt-4 pt-3 border-t border-gray-100">
-                        <LoncheritasTicket order={order} />
-                      </div>
-                    </div>
-
-                    <div className="text-right ml-4 min-w-[130px]">
-                      <div className="text-lg font-bold text-orange-600 mb-2">
-                        S/ {order.total.toFixed(2)}
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className={`text-xs px-2 py-1 rounded-full inline-block ${getPaymentColor(order.payment_method)}`}>
-                          {order.payment_method || 'NO APLICA'}
-                        </span>
-                        {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'employee') && (
-                          <button
-                            onClick={() => handleEditPayment(order)}
-                            className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
-                            title="Cambiar método de pago"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {order.notes && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <div className="text-xs text-gray-500">Notas:</div>
-                      <div className="text-sm text-gray-700 bg-yellow-50 p-2 rounded mt-1">{order.notes}</div>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Historial de cierres */}
-          {closures.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-sm font-bold text-gray-700 mb-3">Últimos cierres de caja</h3>
-              <div className="space-y-2">
-                {closures.slice(0, 5).map(c => (
-                  <div key={c.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-2 text-sm">
-                    <span className="font-mono text-gray-600">{c.closure_number}</span>
-                    <span className="text-gray-500">{new Date(c.closed_at).toLocaleDateString('es-ES')}</span>
-                    <span className="font-semibold text-orange-600">S/ {c.final_cash?.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
         </div>
       </div>
+
+      {/* SELECTOR DE FECHA */}
+      <DateSelector
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        showOnlyToday={showOnlyToday}
+        onToggleShowOnlyToday={() => setShowOnlyToday(!showOnlyToday)}
+      />
+
+      {/* FILTRO POR MÉTODO DE PAGO CON MONTOS */}
+      <div className="mb-4">
+        <PaymentFilter
+          paymentFilter={paymentFilter}
+          setPaymentFilter={setPaymentFilter}
+          totalEfectivo={paymentTotals.efectivo}
+          totalYape={paymentTotals.yape}
+          totalTarjeta={paymentTotals.tarjeta}
+          showAmounts={true}
+        />
+      </div>
+
+      {/* BOTONES DE ACCIÓN */}
+      <div className="flex flex-wrap gap-2">
+        <button onClick={handleExcelHoy} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
+          <FileSpreadsheet size={16} /><span>Excel Hoy</span>
+        </button>
+        <button onClick={() => setShowDateRangeExcel(true)} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
+          <FileSpreadsheet size={16} /><span>Reporte por Fechas</span>
+        </button>
+        <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
+          <Printer size={16} /><span>Ticket Resumen</span>
+        </button>
+      </div>
+
+      {/* FILTROS - Buscar */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por alumno, apoderado..."
+              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Indicadores de filtros activos */}
+        {hasActiveFilters && (
+          <div className="mt-3 flex items-center justify-between">
+            <div className="flex flex-wrap gap-2">
+              {paymentFilter && (
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPaymentColor(paymentFilter)}`}>
+                  {getPaymentText(paymentFilter)}
+                </span>
+              )}
+              {searchTerm && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  🔍 Búsqueda: "{searchTerm}"
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleClearFilters}
+              className="text-xs text-red-600 hover:text-red-800 font-medium"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* CONTROLES DE PAGINACIÓN Y ORDENAMIENTO */}
+      <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
+          <div className="text-sm text-gray-600">
+            Mostrando {((pagination.currentPage - 1) * itemsPerPage) + 1}-
+            {Math.min(pagination.currentPage * itemsPerPage, filteredAndSortedOrders.length)} de{' '}
+            <span className="font-semibold">{filteredAndSortedOrders.length}</span> pedidos
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            
+            <select
+              value={currentSort}
+              onChange={(e) => setCurrentSort(e.target.value)}
+              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+            >
+              {sortOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={pagination.prevPage}
+                disabled={pagination.currentPage === 1}
+                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              
+              <span className="px-3 py-1 text-sm">
+                {pagination.currentPage} / {totalPages}
+              </span>
+              
+              <button
+                onClick={pagination.nextPage}
+                disabled={pagination.currentPage === totalPages}
+                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* TABLA - CON HOVER PREVIEW */}
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        {loading && !isInitialized ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+            <p className="text-gray-600 mt-2">Cargando...</p>
+          </div>
+        ) : pagination.currentItems.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            {showOnlyToday 
+              ? 'No hay pedidos de loncheritas para hoy' 
+              : `No hay pedidos para el ${selectedDate.toLocaleDateString('es-PE')}`}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Alumno / Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Área / Pago</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productos</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {pagination.currentItems.map((order) => (
+                  <LoncheritasOrderRow
+                    key={order.id}
+                    order={order}
+                    onMouseEnter={(e) => handleRowMouseEnter(order, e)}
+                    onMouseLeave={handleRowMouseLeave}
+                    onEditPayment={handleEditPayment}
+                    getDisplayNumber={getDisplayNumber}
+                    getPaymentColor={getPaymentColor}
+                    getPaymentText={getPaymentText}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* INFO DE TOTALES */}
+      {filteredAndSortedOrders.length > 0 && (
+        <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Historial de cierres */}
+      {closures.length > 0 && (
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <h3 className="text-sm font-bold text-gray-700 mb-3">Últimos cierres de caja</h3>
+          <div className="space-y-2">
+            {closures.slice(0, 5).map(c => (
+              <div key={c.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-2 text-sm">
+                <span className="font-mono text-gray-600">{c.closure_number}</span>
+                <span className="text-gray-500">{new Date(c.closed_at).toLocaleDateString('es-ES')}</span>
+                <span className="font-semibold text-orange-600">S/ {c.final_cash?.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
