@@ -1,10 +1,10 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CON TOTAL DEL DÍA EN COLOR AZUL
+// VERSIÓN CON TABLA ESTILO "ÓRDENES" (FLUIDA Y OPTIMIZADA)
 // ============================================================
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
+import { Search, Printer, FileSpreadsheet, Pencil, Download } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { OEPCashRegisterModal } from '../sales_oep/OEPCashRegisterModal';
@@ -270,7 +270,7 @@ export const OEPOrdersManager: React.FC = () => {
             title="🖨️ Ticket Resumen por Fechas - OEP"
           />
 
-          {/* Header con emoji 📦 y total del día en color azul */}
+          {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -369,104 +369,136 @@ export const OEPOrdersManager: React.FC = () => {
             </div>
           )}
 
-          {/* Lista de pedidos */}
-          <div className="space-y-4">
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="text-gray-600 mt-2">Cargando pedidos...</p>
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-4xl mb-3">📦</p>
-                <p className="text-gray-500">No hay pedidos para esta fecha</p>
-                {paymentFilter && (
-                  <button
-                    onClick={() => setPaymentFilter('')}
-                    className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Quitar filtro de pago
-                  </button>
-                )}
-              </div>
-            ) : (
-              filteredOrders.map(order => (
-                <div key={order.id} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-blue-300 transition-all">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-xs font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                          #{order.order_number}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(order.created_at).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                        <div>
-                          <div className="text-xs text-gray-500">Cliente</div>
-                          <div className="font-semibold text-gray-900">{order.customer_name}</div>
-                        </div>
-                        {order.phone && (
-                          <div>
-                            <div className="text-xs text-gray-500">Teléfono</div>
-                            <div className="text-sm text-gray-700">{order.phone}</div>
-                          </div>
-                        )}
-                        {order.address && (
-                          <div className="md:col-span-2">
-                            <div className="text-xs text-gray-500">Dirección</div>
-                            <div className="text-sm text-gray-700">{order.address}</div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-3">
-                        <div className="text-xs text-gray-500 mb-2">Productos</div>
-                        <div className="flex flex-wrap gap-2">
-                          {order.items.map((item, i) => (
-                            <div key={i} className="bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 text-sm">
-                              <span className="font-semibold text-blue-600">{item.quantity}x</span>
-                              <span className="ml-1 text-gray-700">{item.name}</span>
-                              {item.notes && <span className="ml-1 text-xs text-gray-500 italic">({item.notes})</span>}
+          {/* TABLA ESTILO "ÓRDENES" - FLUIDA Y OPTIMIZADA */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="text-gray-600 mt-2">Cargando pedidos...</p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-4xl mb-3">📦</p>
+              <p className="text-gray-500">No hay pedidos para esta fecha</p>
+              {paymentFilter && (
+                <button
+                  onClick={() => setPaymentFilter('')}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Quitar filtro de pago
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Pedido / Cliente
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Productos
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Método de Pago
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                        {/* Columna 1: Pedido / Cliente */}
+                        <td className="px-4 py-4">
+                          <div className="flex items-start">
+                            <div>
+                              <div className="text-sm font-mono font-medium text-blue-600">
+                                #{order.order_number}
+                              </div>
+                              <div className="text-sm font-semibold text-gray-900 mt-1">
+                                {order.customer_name}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {new Date(order.created_at).toLocaleTimeString()}
+                              </div>
+                              {order.phone && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  📞 {order.phone}
+                                </div>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Botones de ticket */}
-                      <div className="mt-4 pt-3 border-t border-gray-100">
-                        <OEPTicket order={order} />
-                      </div>
-                    </div>
+                          </div>
+                        </td>
 
-                    <div className="text-right ml-4 min-w-[130px]">
-                      <div className="text-lg font-bold text-blue-600 mb-2">
-                        S/ {order.total.toFixed(2)}
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className={`text-xs px-2 py-1 rounded-full inline-block ${getPaymentColor(order.payment_method)}`}>
-                          {order.payment_method || 'NO APLICA'}
-                        </span>
-                        <button
-                          onClick={() => handleEditPayment(order)}
-                          className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
-                          title="Cambiar método de pago"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  {order.notes && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <div className="text-xs text-gray-500">Notas:</div>
-                      <div className="text-sm text-gray-700 bg-yellow-50 p-2 rounded mt-1">{order.notes}</div>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+                        {/* Columna 2: Productos */}
+                        <td className="px-4 py-4">
+                          <div className="space-y-1">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="text-sm text-gray-700">
+                                <span className="font-semibold text-blue-600">{item.quantity}x</span>
+                                <span className="ml-1">{item.name}</span>
+                                {item.notes && (
+                                  <span className="ml-1 text-xs text-gray-500 italic">
+                                    ({item.notes})
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          {order.address && (
+                            <div className="mt-2 text-xs text-gray-500 border-t border-gray-100 pt-1">
+                              📍 {order.address}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Columna 3: Método de Pago */}
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentColor(order.payment_method)}`}>
+                            {order.payment_method || 'NO APLICA'}
+                          </span>
+                          {order.notes && (
+                            <div className="mt-2 text-xs text-gray-500 italic">
+                              📝 {order.notes}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Columna 4: Total */}
+                        <td className="px-4 py-4">
+                          <div className="text-lg font-bold text-blue-600">
+                            S/ {order.total.toFixed(2)}
+                          </div>
+                        </td>
+
+                        {/* Columna 5: Acciones */}
+                        <td className="px-4 py-4">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleEditPayment(order)}
+                              className="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Cambiar método de pago"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <div className="ml-1">
+                              <OEPTicket order={order} />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Historial de cierres */}
           {closures.length > 0 && (
