@@ -119,7 +119,7 @@ const FullDayOrderRow = React.memo(({
           {order.items.map(item => item.name).join(', ')}
         </div>
       </td>
-      <td className="px-4 sm:px-6 py-4 text-sm font-medium">
+      <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
         <div ref={actionsRef} className="flex space-x-2">
           <FullDayTicket order={order} />
           {isAdmin && (
@@ -652,3 +652,4 @@ export const FullDayOrdersManager: React.FC = () => {
     </div>
   );
 };
+
