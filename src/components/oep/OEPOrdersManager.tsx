@@ -163,7 +163,7 @@ const OEPOrderRow = React.memo(({
           {order.items.map(item => item.name).join(', ')}
         </div>
       </td>
-      <td className="px-4 sm:px-6 py-4 text-sm font-medium">
+      <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
         <div className="flex space-x-2">
           <OEPTicket order={order} />
         </div>
@@ -682,3 +682,4 @@ export const OEPOrdersManager: React.FC = () => {
     </div>
   );
 };
+
