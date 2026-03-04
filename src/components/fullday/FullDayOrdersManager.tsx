@@ -1,8 +1,9 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
+// VERSIÓN CON PREVIEW DESACTIVADO EN ZONA DE ACCIONES (CORREGIDO)
 // ============================================
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'; 
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
@@ -43,7 +44,7 @@ const FullDayOrderRow = React.memo(({
   isAdmin: boolean;
 }) => {
   const displayNumber = getDisplayNumber(order);
-  const actionsRef = useRef<HTMLDivElement>(null); // ← Referencia para el área de acciones
+  const actionsRef = useRef<HTMLDivElement>(null); // Referencia para el área de acciones
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -122,7 +123,7 @@ const FullDayOrderRow = React.memo(({
         </div>
       </td>
       <td className="px-4 sm:px-6 py-4 text-sm font-medium">
-        <div ref={actionsRef} className="flex space-x-2"> {/* ← Referencia aquí */}
+        <div ref={actionsRef} className="flex space-x-2"> {/* Referencia aquí */}
           <FullDayTicket order={order} />
           {isAdmin && (
             <button
