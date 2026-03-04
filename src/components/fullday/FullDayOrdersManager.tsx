@@ -1,7 +1,6 @@
-// ============================================
+// ========================================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// VERSIÓN CON PREVIEW DESACTIVADO EN ZONA DE ACCIONES (CORREGIDO)
-// ============================================
+// ========================================================
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2 } from 'lucide-react';
@@ -44,7 +43,7 @@ const FullDayOrderRow = React.memo(({
   isAdmin: boolean;
 }) => {
   const displayNumber = getDisplayNumber(order);
-  const actionsRef = useRef<HTMLDivElement>(null); // Referencia para el área de acciones
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -58,9 +57,7 @@ const FullDayOrderRow = React.memo(({
     onDelete(order.id, displayNumber);
   };
 
-  // Manejador personalizado para mouse enter que ignora si viene de acciones
   const handleRowMouseEnter = (e: React.MouseEvent) => {
-    // Si el mouse está sobre el área de acciones, no activar preview
     if (actionsRef.current && actionsRef.current.contains(e.target as Node)) {
       return;
     }
@@ -123,7 +120,7 @@ const FullDayOrderRow = React.memo(({
         </div>
       </td>
       <td className="px-4 sm:px-6 py-4 text-sm font-medium">
-        <div ref={actionsRef} className="flex space-x-2"> {/* Referencia aquí */}
+        <div ref={actionsRef} className="flex space-x-2">
           <FullDayTicket order={order} />
           {isAdmin && (
             <button
@@ -169,7 +166,6 @@ export const FullDayOrdersManager: React.FC = () => {
     }
   }, [orders, isInitialized]);
 
-  // Ocultar notificación después de 3 segundos
   useEffect(() => {
     if (deletedOrder) {
       const timer = setTimeout(() => {
@@ -179,13 +175,11 @@ export const FullDayOrdersManager: React.FC = () => {
     }
   }, [deletedOrder]);
 
-  // Calcular total del día
   const todayTotal = useMemo(() =>
     getTodayOrders().reduce((sum, o) => sum + o.total, 0),
     [getTodayOrders]
   );
 
-  // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
     const startOfDay = new Date(selectedDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -210,7 +204,6 @@ export const FullDayOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // Filtrar por fecha
   const dateFilteredOrders = useMemo(() => {
     const startOfDay = new Date(selectedDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -223,12 +216,10 @@ export const FullDayOrdersManager: React.FC = () => {
     });
   }, [localOrders, selectedDate]);
 
-  // FILTROS Y ORDENAMIENTO
   const filteredAndSortedOrders = useMemo(() => {
     if (!dateFilteredOrders.length) return [];
     let filtered = dateFilteredOrders;
 
-    // Filtrar por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -238,12 +229,10 @@ export const FullDayOrdersManager: React.FC = () => {
       );
     }
 
-    // Filtrar por método de pago
     if (paymentFilter) {
       filtered = filtered.filter(o => o.payment_method === paymentFilter);
     }
 
-    // Ordenar
     if (filtered.length > 1) {
       filtered = [...filtered].sort((a, b) => {
         switch (currentSort) {
@@ -265,17 +254,14 @@ export const FullDayOrdersManager: React.FC = () => {
     return filtered;
   }, [dateFilteredOrders, searchTerm, paymentFilter, currentSort]);
 
-  // PAGINACIÓN
   const pagination = usePagination({
     items: filteredAndSortedOrders,
     itemsPerPage,
     mobileBreakpoint: 768
   });
 
-  // Calcular totalPages manualmente
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
 
-  // HANDLERS PARA PREVIEW
   const handleRowMouseEnter = useCallback((order: FullDayOrder, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setPreviewOrder(order);
@@ -286,10 +272,8 @@ export const FullDayOrdersManager: React.FC = () => {
     setPreviewOrder(null);
   }, []);
 
-  // ── Eliminar pedido ───────────────────────────────────────────
   const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
     if (window.confirm(`¿Estás seguro de eliminar el pedido ${orderNumber}?`)) {
-      // Eliminar optimistamente de la UI
       setLocalOrders(prev => prev.filter(o => o.id !== orderId));
       
       const result = await deleteOrder(orderId);
@@ -297,13 +281,11 @@ export const FullDayOrdersManager: React.FC = () => {
         setDeletedOrder({ id: orderId, number: orderNumber });
       } else {
         alert('❌ Error al eliminar el pedido: ' + result.error);
-        // Recargar para restaurar el pedido
         setLocalOrders(orders);
       }
     }
   }, [deleteOrder, orders]);
 
-  // ── Reportes ──────────────────────────────────────────────────
   const handleExportTodayCSV = useCallback(() => {
     exportFullDayToCSV(getTodayOrders(), 'fullday_hoy');
   }, [getTodayOrders]);
@@ -324,7 +306,6 @@ export const FullDayOrdersManager: React.FC = () => {
     exportFullDayByDateRange(orders, startDate, endDate);
   }, [orders]);
 
-  // ── Caja ─────────────────────────────────────────────────────
   const handleOpenCash = () => {
     setCashModalType('open');
     setShowCashModal(true);
@@ -350,7 +331,6 @@ export const FullDayOrdersManager: React.FC = () => {
     }
   };
 
-  // ── Pago ─────────────────────────────────────────────────────
   const handleEditPayment = useCallback((order: FullDayOrder) => {
     setSelectedOrder(order);
     setShowPaymentModal(true);
@@ -369,7 +349,6 @@ export const FullDayOrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment]);
 
-  // Funciones auxiliares
   const getDisplayNumber = useCallback((order: FullDayOrder) => {
     return order.order_number || `FD-${order.id.slice(-8).toUpperCase()}`;
   }, []);
@@ -406,31 +385,28 @@ export const FullDayOrdersManager: React.FC = () => {
   }, []);
 
   const hasActiveFilters = paymentFilter !== '' || searchTerm !== '';
-
-  // Determinar si el usuario es admin
   const isAdmin = user?.role === 'admin';
 
   return (
     <div className="space-y-4 sm:space-y-6">
 
-      {/* NOTIFICACIÓN DE PEDIDO ELIMINADO */}
       {deletedOrder && (
         <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full">
           <span>Pedido {deletedOrder.number} eliminado correctamente</span>
         </div>
       )}
 
-      {/* PREVIEW */}
+      {/* shouldIgnoreEvents={true} */}
       {previewOrder && (
         <FullDayOrderPreview
           order={previewOrder}
           isVisible={true}
           position={previewPosition}
-          shouldIgnoreEvents={true}
+          shouldIgnoreEvents={true} 
         />
       )}
 
-      {/* Modales */}
+      {/* Modal */}
       <FullDayPaymentModal
         isOpen={showPaymentModal}
         onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
@@ -475,14 +451,12 @@ export const FullDayOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* FILTRO DE FECHA CON FLECHAS */}
       <FullDayDateFilter
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         totalOrders={filteredAndSortedOrders.length}
       />
 
-      {/* FILTRO POR MÉTODO DE PAGO CON MONTOS */}
       <div className="mb-4">
         <PaymentFilter
           paymentFilter={paymentFilter}
@@ -494,7 +468,6 @@ export const FullDayOrdersManager: React.FC = () => {
         />
       </div>
 
-      {/* BOTONES DE ACCIÓN */}
       <div className="flex flex-wrap gap-2">
         <button onClick={handleExportTodayCSV} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1">
           <FileSpreadsheet size={16} /><span>CSV Hoy</span>
@@ -513,7 +486,6 @@ export const FullDayOrdersManager: React.FC = () => {
         </button>
       </div>
 
-      {/* FILTROS - Buscar */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
@@ -528,7 +500,6 @@ export const FullDayOrdersManager: React.FC = () => {
           </div>
         </div>
 
-        {/* Indicadores de filtros activos */}
         {hasActiveFilters && (
           <div className="mt-3 flex items-center justify-between">
             <div className="flex flex-wrap gap-2">
@@ -553,7 +524,6 @@ export const FullDayOrdersManager: React.FC = () => {
         )}
       </div>
 
-      {/* CONTROLES DE PAGINACIÓN Y ORDENAMIENTO */}
       <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
           <div className="text-sm text-gray-600">
@@ -611,7 +581,6 @@ export const FullDayOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* TABLA - CON HOVER PREVIEW Y BOTÓN ELIMINAR */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {loading && !isInitialized ? (
           <div className="text-center py-12">
@@ -655,7 +624,6 @@ export const FullDayOrdersManager: React.FC = () => {
         )}
       </div>
 
-      {/* INFO DE TOTALES */}
       {filteredAndSortedOrders.length > 0 && (
         <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
           <div className="flex justify-between items-center">
@@ -666,7 +634,6 @@ export const FullDayOrdersManager: React.FC = () => {
         </div>
       )}
 
-      {/* Historial de cierres */}
       {closures && closures.length > 0 && (
         <div className="mt-8 pt-6 border-t border-gray-200">
           <h3 className="text-sm font-bold text-gray-700 mb-3">Últimos cierres de caja</h3>
