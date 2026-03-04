@@ -1,9 +1,7 @@
-// ============================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// VERSIÓN CON PREVIEW DESACTIVADO EN ZONA DE ACCIONES
-// ============================================
+// ✅ FIX: Agregado botón "Excel Todo"
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'; // ← Añadido useRef
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
@@ -44,7 +42,7 @@ const LoncheritasOrderRow = React.memo(({
   isAdmin: boolean;
 }) => {
   const displayNumber = getDisplayNumber(order);
-  const actionsRef = useRef<HTMLDivElement>(null); // ← Referencia para el área de acciones
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -58,12 +56,8 @@ const LoncheritasOrderRow = React.memo(({
     onDelete(order.id, displayNumber);
   };
 
-  // Manejador personalizado para mouse enter que ignora si viene de acciones
   const handleRowMouseEnter = (e: React.MouseEvent) => {
-    // Si el mouse está sobre el área de acciones, no activar preview
-    if (actionsRef.current && actionsRef.current.contains(e.target as Node)) {
-      return;
-    }
+    if (actionsRef.current && actionsRef.current.contains(e.target as Node)) return;
     onMouseEnter(e);
   };
 
@@ -75,28 +69,22 @@ const LoncheritasOrderRow = React.memo(({
     >
       <td className="px-4 sm:px-6 py-4">
         <div className="flex items-center space-x-2 mb-1">
-          <div className="text-sm font-medium text-orange-600">
-            {displayNumber}
-          </div>
+          <div className="text-sm font-medium text-orange-600">{displayNumber}</div>
         </div>
         <div className="font-medium text-gray-900">{order.student_name}</div>
         <div className="text-sm text-gray-600">{order.grade} - Sección {order.section}</div>
-        <div className="text-sm font-bold text-orange-600 mt-1">
-          S/ {order.total.toFixed(2)}
-        </div>
+        <div className="text-sm font-bold text-orange-600 mt-1">S/ {order.total.toFixed(2)}</div>
       </td>
       <td className="px-4 sm:px-6 py-4">
         <div className="mb-1">
           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800 items-center space-x-1">
-            <span>🍱</span>
-            <span>Loncheritas</span>
+            <span>🍱</span><span>Loncheritas</span>
           </span>
         </div>
         <div className="flex items-center space-x-2 mt-2">
           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.payment_method)}`}>
             {getPaymentText(order.payment_method)}
           </span>
-
           <button
             onClick={handleEditClick}
             className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
@@ -107,23 +95,18 @@ const LoncheritasOrderRow = React.memo(({
         </div>
       </td>
       <td className="px-4 sm:px-6 py-4">
-        <div className="text-sm text-gray-900">
-          {new Date(order.created_at).toLocaleDateString()}
-        </div>
-        <div className="text-sm text-gray-500">
-          {new Date(order.created_at).toLocaleTimeString()}
-        </div>
+        <div className="text-sm text-gray-900">{new Date(order.created_at).toLocaleDateString()}</div>
+        <div className="text-sm text-gray-500">{new Date(order.created_at).toLocaleTimeString()}</div>
       </td>
       <td className="px-4 sm:px-6 py-4">
-        <div className="text-sm text-gray-900">
-          {order.items.length} producto(s)
-        </div>
+        <div className="text-sm text-gray-900">{order.items.length} producto(s)</div>
         <div className="text-xs text-gray-500 truncate max-w-xs">
           {order.items.map(item => item.name).join(', ')}
         </div>
       </td>
+      {/* ✅ onMouseEnter={onMouseLeave} oculta el preview al entrar a Acciones */}
       <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
-        <div ref={actionsRef} className="flex space-x-2"> {/* ← Referencia aquí */}
+        <div ref={actionsRef} className="flex space-x-2">
           <LoncheritasTicket order={order} />
           {isAdmin && (
             <button
@@ -205,7 +188,7 @@ const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConf
 
 // ─── COMPONENTE PRINCIPAL ──────────────────────────────────────
 export const LoncheritasOrdersManager: React.FC = () => {
-  const { orders, loading, getTodayOrders, updateOrderPayment, deleteOrder } = useLoncheritasOrders(); // ← Añadido deleteOrder
+  const { orders, loading, getTodayOrders, updateOrderPayment, deleteOrder } = useLoncheritasOrders();
   const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useLoncheritasSalesClosure();
   const { user } = useAuth();
 
@@ -224,7 +207,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<LoncheritasOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null); // ← Para notificación
+  const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
 
   useEffect(() => {
     if (orders.length > 0 && !isInitialized) {
@@ -233,66 +216,44 @@ export const LoncheritasOrdersManager: React.FC = () => {
     }
   }, [orders, isInitialized]);
 
-  // Ocultar notificación después de 3 segundos
   useEffect(() => {
     if (deletedOrder) {
-      const timer = setTimeout(() => {
-        setDeletedOrder(null);
-      }, 3000);
+      const timer = setTimeout(() => setDeletedOrder(null), 3000);
       return () => clearTimeout(timer);
     }
   }, [deletedOrder]);
 
-  // Calcular total del día
   const todayTotal = useMemo(() =>
     getTodayOrders().reduce((sum, o) => sum + o.total, 0),
     [getTodayOrders]
   );
 
-  // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const dayOrders = orders.filter(o => {
+    const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
+    const dayOrders  = orders.filter(o => {
       const d = new Date(o.created_at);
       return d >= startOfDay && d <= endOfDay;
     });
-
     return {
-      efectivo: dayOrders
-        .filter(o => o.payment_method === 'EFECTIVO')
-        .reduce((sum, o) => sum + o.total, 0),
-      yape: dayOrders
-        .filter(o => o.payment_method === 'YAPE/PLIN')
-        .reduce((sum, o) => sum + o.total, 0),
-      tarjeta: dayOrders
-        .filter(o => o.payment_method === 'TARJETA')
-        .reduce((sum, o) => sum + o.total, 0),
+      efectivo: dayOrders.filter(o => o.payment_method === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0),
+      yape:     dayOrders.filter(o => o.payment_method === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0),
+      tarjeta:  dayOrders.filter(o => o.payment_method === 'TARJETA').reduce((sum, o) => sum + o.total, 0),
     };
   }, [orders, selectedDate]);
 
-  // Filtrar por fecha
   const dateFilteredOrders = useMemo(() => {
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    
+    const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
     return localOrders.filter(order => {
       const orderDate = new Date(order.created_at);
       return orderDate >= startOfDay && orderDate <= endOfDay;
     });
   }, [localOrders, selectedDate]);
 
-  // FILTROS Y ORDENAMIENTO
   const filteredAndSortedOrders = useMemo(() => {
     if (!dateFilteredOrders.length) return [];
     let filtered = dateFilteredOrders;
-
-    // Filtrar por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -301,13 +262,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         o.order_number?.toLowerCase().includes(term)
       );
     }
-
-    // Filtrar por método de pago
-    if (paymentFilter) {
-      filtered = filtered.filter(o => o.payment_method === paymentFilter);
-    }
-
-    // Ordenar
+    if (paymentFilter) filtered = filtered.filter(o => o.payment_method === paymentFilter);
     if (filtered.length > 1) {
       filtered = [...filtered].sort((a, b) => {
         switch (currentSort) {
@@ -316,109 +271,82 @@ export const LoncheritasOrdersManager: React.FC = () => {
             if (so[a.status] !== so[b.status]) return so[a.status] - so[b.status];
             return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           }
-          case 'waiting-time':
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          case 'total-desc':      return b.total - a.total;
-          case 'created-desc':    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          case 'created-asc':     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case 'waiting-time': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case 'total-desc':   return b.total - a.total;
+          case 'created-desc': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          case 'created-asc':  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           default: return 0;
         }
       });
     }
-
     return filtered;
   }, [dateFilteredOrders, searchTerm, paymentFilter, currentSort]);
 
-  // PAGINACIÓN
-  const pagination = usePagination({
-    items: filteredAndSortedOrders,
-    itemsPerPage,
-    mobileBreakpoint: 768
-  });
-
-  // Calcular totalPages manualmente
+  const pagination = usePagination({ items: filteredAndSortedOrders, itemsPerPage, mobileBreakpoint: 768 });
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
 
-  // HANDLERS PARA PREVIEW
   const handleRowMouseEnter = useCallback((order: LoncheritasOrder, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setPreviewOrder(order);
     setPreviewPosition({ x: rect.left + rect.width / 2, y: rect.top });
   }, []);
 
-  const handleRowMouseLeave = useCallback(() => {
-    setPreviewOrder(null);
-  }, []);
+  const handleRowMouseLeave = useCallback(() => setPreviewOrder(null), []);
 
-  // ── Eliminar pedido ───────────────────────────────────────────
   const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
     if (window.confirm(`¿Estás seguro de eliminar el pedido ${orderNumber}?`)) {
-      // Eliminar optimistamente de la UI
       setLocalOrders(prev => prev.filter(o => o.id !== orderId));
-      
       const result = await deleteOrder(orderId);
       if (result.success) {
         setDeletedOrder({ id: orderId, number: orderNumber });
       } else {
         alert('❌ Error al eliminar el pedido: ' + result.error);
-        // Recargar para restaurar el pedido
         setLocalOrders(orders);
       }
     }
   }, [deleteOrder, orders]);
 
-  // ── Reportes ──────────────────────────────────────────────────
+  // ── Reportes ─────────────────────────────────────────────────
   const handleExcelHoy = useCallback(() => {
     exportLoncheritasToExcel(getTodayOrders(), 'today');
   }, [getTodayOrders]);
+
+  // ✅ NUEVO: Excel Todo (todos los pedidos cargados)
+  const handleExcelTodo = useCallback(() => {
+    exportLoncheritasToExcel(orders, 'all');
+  }, [orders]);
 
   const handleExcelRango = useCallback((startDate: Date, endDate: Date) => {
     exportLoncheritasByDateRange(orders, startDate, endDate);
   }, [orders]);
 
   const handleTicketResumen = useCallback((startDate: Date, endDate: Date) => {
-    const s = new Date(startDate);
-    s.setHours(0, 0, 0, 0);
-    const e = new Date(endDate);
-    e.setHours(23, 59, 59, 999);
+    const s = new Date(startDate); s.setHours(0, 0, 0, 0);
+    const e = new Date(endDate);   e.setHours(23, 59, 59, 999);
     const filtered = orders.filter(o => {
       const d = new Date(o.created_at);
       return d >= s && d <= e;
     });
-    if (!filtered.length) {
-      alert('No hay pedidos en el rango seleccionado');
-      return;
-    }
+    if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
     printLoncheritasResumenTicket(generateLoncheritasTicketSummary(filtered), startDate, endDate);
   }, [orders]);
 
   // ── Caja ─────────────────────────────────────────────────────
-  const handleOpenCash = () => {
-    setCashModalType('open');
-    setShowCashModal(true);
-  };
-  const handleCloseCash = () => {
-    setCashModalType('close');
-    setShowCashModal(true);
-  };
+  const handleOpenCash  = () => { setCashModalType('open');  setShowCashModal(true); };
+  const handleCloseCash = () => { setCashModalType('close'); setShowCashModal(true); };
 
   const handleCashConfirm = async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
     if (cashModalType === 'open') {
       const r = await openCashRegister(data.initialCash!);
-      if (r.success) {
-        alert('✅ Caja Loncheritas abierta correctamente');
-        setShowCashModal(false);
-      } else alert('❌ ' + r.error);
+      if (r.success) { alert('✅ Caja Loncheritas abierta correctamente'); setShowCashModal(false); }
+      else alert('❌ ' + r.error);
     } else {
       const r = await closeCashRegister(data.finalCash!, data.notes || '');
-      if (r.success) {
-        alert('✅ Caja Loncheritas cerrada correctamente');
-        setShowCashModal(false);
-      } else alert('❌ ' + r.error);
+      if (r.success) { alert('✅ Caja Loncheritas cerrada correctamente'); setShowCashModal(false); }
+      else alert('❌ ' + r.error);
     }
   };
 
-  // ── Pago ─────────────────────────────────────────────────────
   const handleEditPayment = useCallback((order: LoncheritasOrder) => {
     setSelectedOrder(order);
     setShowPaymentModal(true);
@@ -437,58 +365,40 @@ export const LoncheritasOrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment]);
 
-  // Funciones auxiliares
-  const getDisplayNumber = useCallback((order: LoncheritasOrder) => {
-    return order.order_number || `LON-${order.id.slice(-8).toUpperCase()}`;
-  }, []);
+  const getDisplayNumber = useCallback((order: LoncheritasOrder) =>
+    order.order_number || `LON-${order.id.slice(-8).toUpperCase()}`, []);
 
-  const getPaymentColor = useCallback((method?: string | null) => {
-    const colors: Record<string, string> = {
-      'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
-      'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
-      'TARJETA': 'bg-blue-100 text-blue-800 border-blue-200',
-    };
-    return colors[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200';
-  }, []);
+  const getPaymentColor = useCallback((method?: string | null) => ({
+    'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
+    'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
+    'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
+  }[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200'), []);
 
-  const getPaymentText = useCallback((method?: string | null) => {
-    const texts: Record<string, string> = {
-      'EFECTIVO': 'EFECTIVO',
-      'YAPE/PLIN': 'YAPE/PLIN',
-      'TARJETA': 'TARJETA',
-    };
-    return texts[method || ''] || 'NO APLICA';
-  }, []);
+  const getPaymentText = useCallback((method?: string | null) => ({
+    'EFECTIVO': 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', 'TARJETA': 'TARJETA',
+  }[method || ''] || 'NO APLICA'), []);
 
   const sortOptions = useMemo(() => [
-    { value: 'status-time',       label: '🔄 Estado + Tiempo' },
-    { value: 'waiting-time',      label: '⏱️ Tiempo Espera' },
-    { value: 'total-desc',        label: '💰 Mayor Monto' },
-    { value: 'created-desc',      label: '📅 Más Recientes' },
-    { value: 'created-asc',       label: '📅 Más Antiguas' },
+    { value: 'status-time',  label: '🔄 Estado + Tiempo' },
+    { value: 'waiting-time', label: '⏱️ Tiempo Espera' },
+    { value: 'total-desc',   label: '💰 Mayor Monto' },
+    { value: 'created-desc', label: '📅 Más Recientes' },
+    { value: 'created-asc',  label: '📅 Más Antiguas' },
   ], []);
 
-  const handleClearFilters = useCallback(() => {
-    setPaymentFilter('');
-    setSearchTerm('');
-  }, []);
-
+  const handleClearFilters = useCallback(() => { setPaymentFilter(''); setSearchTerm(''); }, []);
   const hasActiveFilters = paymentFilter !== '' || searchTerm !== '';
-
-  // Determinar si el usuario es admin
   const isAdmin = user?.role === 'admin';
 
   return (
     <div className="space-y-4 sm:space-y-6">
 
-      {/* NOTIFICACIÓN DE PEDIDO ELIMINADO */}
       {deletedOrder && (
         <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full">
           <span>Pedido {deletedOrder.number} eliminado correctamente</span>
         </div>
       )}
 
-      {/* PREVIEW */}
       {previewOrder && (
         <LoncheritasOrderPreview
           order={previewOrder}
@@ -498,7 +408,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
         />
       )}
 
-      {/* Modales */}
       <LoncheritasPaymentModal
         isOpen={showPaymentModal}
         onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
@@ -509,6 +418,8 @@ export const LoncheritasOrdersManager: React.FC = () => {
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
+        cashRegister={cashRegister}
+        orders={orders}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
@@ -532,7 +443,8 @@ export const LoncheritasOrdersManager: React.FC = () => {
             <span>🍱</span> Pedidos Loncheritas
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            {filteredAndSortedOrders.length} pedidos · Total del día: <span className="font-semibold text-orange-600">S/ {todayTotal.toFixed(2)}</span>
+            {filteredAndSortedOrders.length} pedidos · Total del día:{' '}
+            <span className="font-semibold text-orange-600">S/ {todayTotal.toFixed(2)}</span>
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -548,14 +460,12 @@ export const LoncheritasOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* FILTRO DE FECHA CON FLECHAS */}
       <LoncheritasDateFilter
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         totalOrders={filteredAndSortedOrders.length}
       />
 
-      {/* FILTRO POR MÉTODO DE PAGO CON MONTOS */}
       <div className="mb-4">
         <PaymentFilter
           paymentFilter={paymentFilter}
@@ -567,12 +477,15 @@ export const LoncheritasOrdersManager: React.FC = () => {
         />
       </div>
 
-      {/* BOTONES DE ACCIÓN */}
+      {/* ✅ BOTONES: Excel Hoy + Excel Todo (nuevo) + Reporte por Fechas + Ticket Resumen */}
       <div className="flex flex-wrap gap-2">
         <button onClick={handleExcelHoy} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
           <FileSpreadsheet size={16} /><span>Excel Hoy</span>
         </button>
-        <button onClick={() => setShowDateRangeExcel(true)} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
+        <button onClick={handleExcelTodo} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
+          <FileSpreadsheet size={16} /><span>Excel Todo</span>
+        </button>
+        <button onClick={() => setShowDateRangeExcel(true)} className="bg-emerald-800 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-900 flex items-center space-x-1">
           <FileSpreadsheet size={16} /><span>Reporte por Fechas</span>
         </button>
         <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
@@ -580,7 +493,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         </button>
       </div>
 
-      {/* FILTROS - Buscar */}
+      {/* FILTROS */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
@@ -594,8 +507,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
             />
           </div>
         </div>
-
-        {/* Indicadores de filtros activos */}
         {hasActiveFilters && (
           <div className="mt-3 flex items-center justify-between">
             <div className="flex flex-wrap gap-2">
@@ -610,17 +521,14 @@ export const LoncheritasOrdersManager: React.FC = () => {
                 </span>
               )}
             </div>
-            <button
-              onClick={handleClearFilters}
-              className="text-xs text-red-600 hover:text-red-800 font-medium"
-            >
+            <button onClick={handleClearFilters} className="text-xs text-red-600 hover:text-red-800 font-medium">
               Limpiar filtros
             </button>
           </div>
         )}
       </div>
 
-      {/* CONTROLES DE PAGINACIÓN Y ORDENAMIENTO */}
+      {/* PAGINACIÓN */}
       <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
           <div className="text-sm text-gray-600">
@@ -628,31 +536,26 @@ export const LoncheritasOrdersManager: React.FC = () => {
             {Math.min(pagination.currentPage * itemsPerPage, filteredAndSortedOrders.length)} de{' '}
             <span className="font-semibold">{filteredAndSortedOrders.length}</span> pedidos
           </div>
-          
           <div className="flex items-center space-x-4">
             <select
               value={itemsPerPage}
               onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 text-sm"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
               <option value={50}>50</option>
               <option value={100}>100</option>
             </select>
-            
             <select
               value={currentSort}
               onChange={(e) => setCurrentSort(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 text-sm"
             >
               {sortOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
-            
             <div className="flex items-center space-x-1">
               <button
                 onClick={pagination.prevPage}
@@ -661,11 +564,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
               >
                 <ChevronLeft size={16} />
               </button>
-              
-              <span className="px-3 py-1 text-sm">
-                {pagination.currentPage} / {totalPages}
-              </span>
-              
+              <span className="px-3 py-1 text-sm">{pagination.currentPage} / {totalPages}</span>
               <button
                 onClick={pagination.nextPage}
                 disabled={pagination.currentPage === totalPages}
@@ -678,7 +577,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* TABLA - CON HOVER PREVIEW Y BOTÓN ELIMINAR */}
+      {/* TABLA */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {loading && !isInitialized ? (
           <div className="text-center py-12">
@@ -722,7 +621,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
         )}
       </div>
 
-      {/* INFO DE TOTALES */}
       {filteredAndSortedOrders.length > 0 && (
         <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
           <div className="flex justify-between items-center">
@@ -733,8 +631,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         </div>
       )}
 
-      {/* Historial de cierres */}
-      {closures.length > 0 && (
+      {closures && closures.length > 0 && (
         <div className="mt-8 pt-6 border-t border-gray-200">
           <h3 className="text-sm font-bold text-gray-700 mb-3">Últimos cierres de caja</h3>
           <div className="space-y-2">
@@ -752,5 +649,3 @@ export const LoncheritasOrdersManager: React.FC = () => {
     </div>
   );
 };
-
-
