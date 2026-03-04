@@ -1,5 +1,4 @@
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// ✅ FIX: Agregado botón "Excel Todo"
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2 } from 'lucide-react';
@@ -418,8 +417,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
         isOpen={showCashModal}
         onClose={() => setShowCashModal(false)}
         type={cashModalType}
-        cashRegister={cashRegister}
-        orders={orders}
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
