@@ -1,7 +1,6 @@
 // ============================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrderPreview.tsx
-// Componente para vista previa de pedidos Loncheritas al hacer hover
-// (Equivalente a OrderPreview de la pestaña Órdenes)
+// VERSIÓN CORREGIDA - Con pointer-events-none
 // ============================================
 
 import React from 'react';
