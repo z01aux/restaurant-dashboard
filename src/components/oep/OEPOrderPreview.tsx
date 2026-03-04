@@ -1,7 +1,6 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPOrderPreview.tsx
-// Componente para vista previa de pedidos OEP al hacer hover
-// (Equivalente a OrderPreview de la pestaña Órdenes)
+// VERSIÓN CORREGIDA - Con pointer-events-none
 // ============================================================
 
 import React from 'react';
