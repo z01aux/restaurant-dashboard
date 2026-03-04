@@ -1,7 +1,5 @@
-// ============================================================
 // ARCHIVO: src/components/oep/OEPOrderPreview.tsx
-// VERSIÓN CORREGIDA - Con pointer-events-none
-// ============================================================
+// ✅ FIX: Lista completa de productos sin scrollbar interno
 
 import React from 'react';
 import { OEPOrder } from '../../types/oep';
@@ -14,9 +12,9 @@ interface OEPOrderPreviewProps {
   shouldIgnoreEvents?: boolean;
 }
 
-export const OEPOrderPreview: React.FC<OEPOrderPreviewProps> = ({ 
-  order, 
-  isVisible, 
+export const OEPOrderPreview: React.FC<OEPOrderPreviewProps> = ({
+  order,
+  isVisible,
   position,
   shouldIgnoreEvents = false
 }) => {
@@ -30,7 +28,6 @@ export const OEPOrderPreview: React.FC<OEPOrderPreviewProps> = ({
     const now = new Date();
     const diffMs = now.getTime() - createdAt.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
     if (diffMins < 1) return 'Hace un momento';
     if (diffMins === 1) return 'Hace 1 minuto';
     return `Hace ${diffMins} minutos`;
@@ -45,38 +42,32 @@ export const OEPOrderPreview: React.FC<OEPOrderPreviewProps> = ({
     return paymentMethod ? paymentMap[paymentMethod] : 'NO APLICA';
   };
 
-  const getSourceText = () => {
-    return '📦 OEP';
-  };
-
-  const viewportWidth = window.innerWidth;
+  const viewportWidth  = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  const previewWidth = 384;
-  const previewHeight = 400;
+  const previewWidth   = 384;
+  const margin         = 20;
 
   let adjustedX = position.x + 10;
   let adjustedY = position.y;
 
-  if (adjustedX + previewWidth > viewportWidth - 20) {
+  if (adjustedX + previewWidth > viewportWidth - margin) {
     adjustedX = position.x - previewWidth - 10;
   }
+  if (adjustedY < margin) adjustedY = margin;
 
-  if (adjustedY + previewHeight > viewportHeight - 20) {
-    adjustedY = viewportHeight - previewHeight - 20;
-  }
-
-  if (adjustedY < 20) {
-    adjustedY = 20;
-  }
+  const maxHeight = viewportHeight - adjustedY - margin;
 
   return (
-    <div 
-      className={`fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl max-w-sm w-full p-4 animate-in fade-in-0 zoom-in-95 ${
+    <div
+      className={`fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl w-96 p-4 animate-in fade-in-0 zoom-in-95 ${
         shouldIgnoreEvents ? 'pointer-events-none' : ''
       }`}
       style={{
-        left: `${adjustedX}px`,
-        top: `${adjustedY}px`,
+        left:      `${adjustedX}px`,
+        top:       `${adjustedY}px`,
+        maxHeight: `${maxHeight}px`,
+        overflowY: 'auto',
+        overflowX: 'hidden',
       }}
     >
       {/* Header */}
@@ -100,9 +91,7 @@ export const OEPOrderPreview: React.FC<OEPOrderPreviewProps> = ({
             <CreditCard size={12} />
             <span className="font-semibold">{getPaymentText(order.payment_method)}</span>
           </div>
-          <div className="text-xs text-gray-500">
-            {getSourceText()}
-          </div>
+          <div className="text-xs text-gray-500">📦 OEP</div>
         </div>
       </div>
 
@@ -126,10 +115,10 @@ export const OEPOrderPreview: React.FC<OEPOrderPreviewProps> = ({
         )}
       </div>
 
-      {/* Items del pedido */}
+      {/* ✅ Lista completa de productos — sin max-h ni overflow interno */}
       <div className="mb-3">
         <h4 className="font-medium text-gray-900 text-sm mb-2">Productos del pedido:</h4>
-        <div className="space-y-1 max-h-32 overflow-y-auto">
+        <div className="space-y-1">
           {order.items.map((item, index) => (
             <div key={index} className="flex justify-between items-start text-sm">
               <div className="flex-1">
@@ -162,15 +151,10 @@ export const OEPOrderPreview: React.FC<OEPOrderPreviewProps> = ({
       </div>
 
       {/* Flecha indicadora */}
-      {adjustedX < position.x && (
-        <div 
-          className="absolute w-4 h-4 bg-white border-r border-t border-gray-200 transform rotate-45 -right-2 top-1/2 -translate-y-1/2"
-        />
-      )}
-      {adjustedX >= position.x && (
-        <div 
-          className="absolute w-4 h-4 bg-white border-l border-t border-gray-200 transform rotate-45 -left-2 top-1/2 -translate-y-1/2"
-        />
+      {adjustedX < position.x ? (
+        <div className="absolute w-4 h-4 bg-white border-r border-t border-gray-200 transform rotate-45 -right-2 top-6" />
+      ) : (
+        <div className="absolute w-4 h-4 bg-white border-l border-t border-gray-200 transform rotate-45 -left-2 top-6" />
       )}
     </div>
   );
