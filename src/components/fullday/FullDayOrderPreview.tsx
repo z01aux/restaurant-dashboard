@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrderPreview.tsx
-// Componente para vista previa de pedidos FullDay al hacer hover
+// VERSIÓN CORREGIDA - Con pointer-events-none
 // ============================================
 
 import React from 'react';
