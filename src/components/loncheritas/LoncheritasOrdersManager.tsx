@@ -1,12 +1,13 @@
 // ============================================
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// VERSIÓN CORREGIDA - Eliminados elementos no usados
+// VERSIÓN CON PREVIEW DESACTIVADO EN ZONA DE ACCIONES
 // ============================================
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet } from 'lucide-react'; // ← Eliminado Calendar
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'; // ← Añadido useRef
+import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
+import { useAuth } from '../../hooks/useAuth';
 import { usePagination } from '../../hooks/usePagination';
 import { LoncheritasCashRegisterModal } from './LoncheritasCashRegisterModal';
 import { LoncheritasPaymentModal } from './LoncheritasPaymentModal';
@@ -19,26 +20,31 @@ import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../ut
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
 
 // ============================================
-// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (CON HOVER PREVIEW)
+// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
 // ============================================
 const LoncheritasOrderRow = React.memo(({
   order,
   onMouseEnter,
   onMouseLeave,
   onEditPayment,
+  onDelete,
   getDisplayNumber,
   getPaymentColor,
-  getPaymentText
+  getPaymentText,
+  isAdmin
 }: {
   order: LoncheritasOrder;
   onMouseEnter: (e: React.MouseEvent) => void;
   onMouseLeave: () => void;
   onEditPayment: (order: LoncheritasOrder) => void;
+  onDelete: (orderId: string, orderNumber: string) => void;
   getDisplayNumber: (order: LoncheritasOrder) => string;
   getPaymentColor: (method?: string | null) => string;
   getPaymentText: (method?: string | null) => string;
+  isAdmin: boolean;
 }) => {
   const displayNumber = getDisplayNumber(order);
+  const actionsRef = useRef<HTMLDivElement>(null); // ← Referencia para el área de acciones
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -46,10 +52,25 @@ const LoncheritasOrderRow = React.memo(({
     onEditPayment(order);
   };
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onDelete(order.id, displayNumber);
+  };
+
+  // Manejador personalizado para mouse enter que ignora si viene de acciones
+  const handleRowMouseEnter = (e: React.MouseEvent) => {
+    // Si el mouse está sobre el área de acciones, no activar preview
+    if (actionsRef.current && actionsRef.current.contains(e.target as Node)) {
+      return;
+    }
+    onMouseEnter(e);
+  };
+
   return (
     <tr
       className="hover:bg-gray-50 cursor-pointer group relative"
-      onMouseEnter={onMouseEnter}
+      onMouseEnter={handleRowMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       <td className="px-4 sm:px-6 py-4">
@@ -102,8 +123,17 @@ const LoncheritasOrderRow = React.memo(({
         </div>
       </td>
       <td className="px-4 sm:px-6 py-4 text-sm font-medium">
-        <div className="flex space-x-2">
+        <div ref={actionsRef} className="flex space-x-2"> {/* ← Referencia aquí */}
           <LoncheritasTicket order={order} />
+          {isAdmin && (
+            <button
+              onClick={handleDeleteClick}
+              className="text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+              title="Eliminar pedido"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -175,8 +205,9 @@ const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConf
 
 // ─── COMPONENTE PRINCIPAL ──────────────────────────────────────
 export const LoncheritasOrdersManager: React.FC = () => {
-  const { orders, loading, getTodayOrders, updateOrderPayment } = useLoncheritasOrders();
+  const { orders, loading, getTodayOrders, updateOrderPayment, deleteOrder } = useLoncheritasOrders(); // ← Añadido deleteOrder
   const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useLoncheritasSalesClosure();
+  const { user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
@@ -193,6 +224,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<LoncheritasOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null); // ← Para notificación
 
   useEffect(() => {
     if (orders.length > 0 && !isInitialized) {
@@ -200,6 +232,16 @@ export const LoncheritasOrdersManager: React.FC = () => {
       setIsInitialized(true);
     }
   }, [orders, isInitialized]);
+
+  // Ocultar notificación después de 3 segundos
+  useEffect(() => {
+    if (deletedOrder) {
+      const timer = setTimeout(() => {
+        setDeletedOrder(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [deletedOrder]);
 
   // Calcular total del día
   const todayTotal = useMemo(() =>
@@ -232,7 +274,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // Filtrar por fecha (usando selectedDate)
+  // Filtrar por fecha
   const dateFilteredOrders = useMemo(() => {
     const startOfDay = new Date(selectedDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -307,6 +349,23 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const handleRowMouseLeave = useCallback(() => {
     setPreviewOrder(null);
   }, []);
+
+  // ── Eliminar pedido ───────────────────────────────────────────
+  const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
+    if (window.confirm(`¿Estás seguro de eliminar el pedido ${orderNumber}?`)) {
+      // Eliminar optimistamente de la UI
+      setLocalOrders(prev => prev.filter(o => o.id !== orderId));
+      
+      const result = await deleteOrder(orderId);
+      if (result.success) {
+        setDeletedOrder({ id: orderId, number: orderNumber });
+      } else {
+        alert('❌ Error al eliminar el pedido: ' + result.error);
+        // Recargar para restaurar el pedido
+        setLocalOrders(orders);
+      }
+    }
+  }, [deleteOrder, orders]);
 
   // ── Reportes ──────────────────────────────────────────────────
   const handleExcelHoy = useCallback(() => {
@@ -416,8 +475,18 @@ export const LoncheritasOrdersManager: React.FC = () => {
 
   const hasActiveFilters = paymentFilter !== '' || searchTerm !== '';
 
+  // Determinar si el usuario es admin
+  const isAdmin = user?.role === 'admin';
+
   return (
     <div className="space-y-4 sm:space-y-6">
+
+      {/* NOTIFICACIÓN DE PEDIDO ELIMINADO */}
+      {deletedOrder && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full">
+          <span>Pedido {deletedOrder.number} eliminado correctamente</span>
+        </div>
+      )}
 
       {/* PREVIEW */}
       {previewOrder && (
@@ -609,7 +678,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* TABLA - CON HOVER PREVIEW */}
+      {/* TABLA - CON HOVER PREVIEW Y BOTÓN ELIMINAR */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {loading && !isInitialized ? (
           <div className="text-center py-12">
@@ -640,9 +709,11 @@ export const LoncheritasOrdersManager: React.FC = () => {
                     onMouseEnter={(e) => handleRowMouseEnter(order, e)}
                     onMouseLeave={handleRowMouseLeave}
                     onEditPayment={handleEditPayment}
+                    onDelete={handleDeleteOrder}
                     getDisplayNumber={getDisplayNumber}
                     getPaymentColor={getPaymentColor}
                     getPaymentText={getPaymentText}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </tbody>
