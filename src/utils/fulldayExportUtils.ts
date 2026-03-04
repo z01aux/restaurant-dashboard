@@ -66,7 +66,7 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
   URL.revokeObjectURL(url);
 };
 
-// --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA ---
+// --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA (CORREGIDA) ---
 const listFullDayItemsByMainCategory = (order: FullDayOrder): { 
   entradas: string; 
   fondos: string; 
@@ -86,24 +86,30 @@ const listFullDayItemsByMainCategory = (order: FullDayOrder): {
       const category = item.category ? item.category.toLowerCase() : null;
       
       if (category) {
-        if (category.includes('entrada')) {
+        // Palabras clave para identificar el tipo de categoría
+        if (category.includes('entrada') || category.includes('ensalada') || category.includes('sopa')) {
           result.entradas.push(itemDisplay);
           return;
         }
-        if (category.includes('fondo') || category.includes('plato')) {
+        if (category.includes('fondo') || category.includes('principal') || category.includes('plato')) {
           result.fondos.push(itemDisplay);
           return;
         }
-        if (category.includes('bebida')) {
+        if (category.includes('bebida') || category.includes('gaseosa') || category.includes('jugo') || 
+            category.includes('café') || category.includes('infusión') || category.includes('te') || 
+            category.includes('mate') || category.includes('agua')) {
           result.bebidas.push(itemDisplay);
           return;
         }
+        // Si no coincide con las keywords anteriores, pero tiene categoría, lo dejamos como fondo por defecto.
+        result.fondos.push(itemDisplay);
+        return;
       }
 
-      // --- PRIORIDAD 2: Si no hay categoría, usar palabras clave en el nombre (RESPALDO) ---
+      // --- PRIORIDAD 2: Si no hay categoría, usar palabras clave en el nombre (RESPALDO MEJORADO) ---
       const itemName = item.name.toLowerCase();
       
-      // Bebidas
+      // Bebidas (Lista más completa)
       if (itemName.includes('gaseosa') || 
           itemName.includes('inca kola') || 
           itemName.includes('coca cola') ||
@@ -113,7 +119,13 @@ const listFullDayItemsByMainCategory = (order: FullDayOrder): {
           itemName.includes('jugo') ||
           itemName.includes('chicha') ||
           itemName.includes('maracuya') ||
-          itemName.includes('limonada')) {
+          itemName.includes('limonada') ||
+          itemName.includes('café') ||      // <--- AGREGADO
+          itemName.includes('infusión') ||  // <--- AGREGADO
+          itemName.includes('te') ||        // <--- AGREGADO
+          itemName.includes('mate') ||      // <--- AGREGADO
+          itemName.includes('capuchino') || // <--- AGREGADO
+          itemName.includes('expresso')) {  // <--- AGREGADO
         result.bebidas.push(itemDisplay);
         return;
       }
@@ -124,7 +136,8 @@ const listFullDayItemsByMainCategory = (order: FullDayOrder): {
           itemName.includes('sopa') ||
           itemName.includes('caldo') ||
           itemName.includes('causa') ||
-          itemName.includes('papa a la huancaina')) {
+          itemName.includes('papa a la huancaina') ||
+          itemName.includes('tamal')) {
         result.entradas.push(itemDisplay);
         return;
       }
