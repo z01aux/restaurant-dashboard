@@ -1,8 +1,6 @@
-// ============================================
+//=================================================
 // ARCHIVO: src/components/orders/OrdersManager.tsx
-// CON FILTRO POR ÁREA Y SELECTOR DE FECHA ESTILO FULLDAY
-// SIN TARJETAS DE ESTADÍSTICAS
-// ============================================
+// ================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -62,7 +60,6 @@ const DateSelector: React.FC<{
     });
   };
 
-  // Si showOnlyToday está activo, mostramos un selector simplificado
   if (showOnlyToday) {
     return (
       <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2">
@@ -239,7 +236,9 @@ const OrderRow = React.memo(({
           {order.items.map((item: any) => item.menuItem.name).join(', ')}
         </div>
       </td>
-      <td className="px-4 sm:px-6 py-4 text-sm font-medium">
+
+      {/* ✅ FIX: onMouseEnter={onMouseLeave} oculta el preview al entrar a la celda de Acciones */}
+      <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
         <div className="flex space-x-2">
           <OrderTicket order={order} />
           {user?.role === 'admin' && (
@@ -262,7 +261,7 @@ const OrderRow = React.memo(({
 // ============================================
 const OrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [areaFilter, setAreaFilter] = useState<string>(''); // '' = todas, 'phone', 'walk-in', 'delivery'
+  const [areaFilter, setAreaFilter] = useState<string>('');
   const [paymentFilter, setPaymentFilter] = useState<string>('');
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentSort, setCurrentSort] = useState('status-time');
@@ -351,10 +350,8 @@ const OrdersManager: React.FC = () => {
     { value: 'created-asc',       label: '📅 Más Antiguas' },
   ], []);
 
-  // Filtrar por fecha según el modo seleccionado
   const dateFilteredOrders = useMemo(() => {
     if (showOnlyToday) {
-      // Modo "Solo Hoy" - usa la función existente
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       return localOrders.filter(order => {
@@ -363,12 +360,10 @@ const OrdersManager: React.FC = () => {
         return d.getTime() === today.getTime();
       });
     } else {
-      // Modo selector de fecha - filtrar por la fecha seleccionada
       const startOfDay = new Date(selectedDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(selectedDate);
       endOfDay.setHours(23, 59, 59, 999);
-      
       return localOrders.filter(order => {
         const orderDate = new Date(order.createdAt);
         return orderDate >= startOfDay && orderDate <= endOfDay;
@@ -380,12 +375,10 @@ const OrdersManager: React.FC = () => {
     if (!dateFilteredOrders.length) return [];
     let filtered = dateFilteredOrders;
 
-    // Filtrar por área
     if (areaFilter) {
       filtered = filtered.filter(o => o.source.type === areaFilter);
     }
 
-    // Filtrar por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -396,12 +389,10 @@ const OrdersManager: React.FC = () => {
       );
     }
 
-    // Filtrar por método de pago
     if (paymentFilter) {
       filtered = filtered.filter(o => o.paymentMethod === paymentFilter);
     }
 
-    // Ordenar
     if (filtered.length > 1) {
       filtered = [...filtered].sort((a, b) => {
         switch (currentSort) {
@@ -441,13 +432,13 @@ const OrdersManager: React.FC = () => {
   const getNumberType   = useCallback((order: Order) => order.source.type === 'phone' ? 'kitchen' : 'order', []);
   const getSourceText   = useCallback((t: string) => ({ phone: 'Teléfono', 'walk-in': 'Presencial', delivery: 'Delivery' }[t] || t), []);
   const getAreaIcon     = useCallback((t: string) => ({ phone: '🍳', 'walk-in': '👤', delivery: '🚚' }[t] || '📋'), []);
-  
+
   const getPaymentColor = useCallback((m?: string) => ({
     'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
     'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
     'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
   }[m || ''] || 'bg-gray-100 text-gray-800 border-gray-200'), []);
-  
+
   const getPaymentText  = useCallback((m?: string) => ({ EFECTIVO: 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', TARJETA: 'TARJETA' }[m || ''] || 'NO APLICA'), []);
 
   const handleRowMouseEnter = useCallback((order: Order, event: React.MouseEvent) => {
@@ -455,6 +446,7 @@ const OrdersManager: React.FC = () => {
     setPreviewOrder(order);
     setPreviewPosition({ x: rect.left + rect.width / 2, y: rect.top });
   }, []);
+
   const handleRowMouseLeave = useCallback(() => setPreviewOrder(null), []);
 
   const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
@@ -525,10 +517,10 @@ const OrdersManager: React.FC = () => {
     printResumenTicket(generateTicketSummary(filtered, startDate, endDate), startDate, endDate);
   }, [regularOrders]);
 
-  const handleExportTodayCSV  = useCallback(() => exportOrdersToCSV(getTodayOrders().filter(o => o.orderType !== 'fullday')), [getTodayOrders, exportOrdersToCSV]);
-  const handleExportAllCSV    = useCallback(() => exportOrdersToCSV(regularOrders), [regularOrders, exportOrdersToCSV]);
-  const handleExportTodayExcel= useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
-  const handleExportAllExcel  = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
+  const handleExportTodayCSV   = useCallback(() => exportOrdersToCSV(getTodayOrders().filter(o => o.orderType !== 'fullday')), [getTodayOrders, exportOrdersToCSV]);
+  const handleExportAllCSV     = useCallback(() => exportOrdersToCSV(regularOrders), [regularOrders, exportOrdersToCSV]);
+  const handleExportTodayExcel = useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
+  const handleExportAllExcel   = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
 
   const handleOpenCashRegister  = useCallback(() => { setCashModalType('open');  setShowCashModal(true); }, []);
   const handleCloseCashRegister = useCallback(() => { setCashModalType('close'); setShowCashModal(true); }, []);
@@ -554,9 +546,9 @@ const OrdersManager: React.FC = () => {
     }
   }, [cashModalType, openCashRegister, closeCashRegister, regularOrders]);
 
-  const handleToggleHistory = useCallback(() => setShowHistory(prev => !prev), []);
-  const handleToggleShowOnlyToday = useCallback(() => setShowOnlyToday(prev => !prev), []);
-  const handleDateChange = useCallback((date: Date) => setSelectedDate(date), []);
+  const handleToggleHistory        = useCallback(() => setShowHistory(prev => !prev), []);
+  const handleToggleShowOnlyToday  = useCallback(() => setShowOnlyToday(prev => !prev), []);
+  const handleDateChange           = useCallback((date: Date) => setSelectedDate(date), []);
 
   const handleClearFilters = useCallback(() => {
     setAreaFilter('');
@@ -580,7 +572,6 @@ const OrdersManager: React.FC = () => {
     onLoadMore: pagination.loadMore,
   } : {};
 
-  // Determinar si hay filtros activos
   const hasActiveFilters = areaFilter !== '' || paymentFilter !== '' || searchTerm !== '';
 
   return (
@@ -634,7 +625,7 @@ const OrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* SELECTOR DE FECHA ESTILO FULLDAY */}
+      {/* SELECTOR DE FECHA */}
       <DateSelector
         selectedDate={selectedDate}
         onDateChange={handleDateChange}
@@ -677,10 +668,9 @@ const OrdersManager: React.FC = () => {
 
       {showHistory && <SalesHistory />}
 
-      {/* FILTROS - Buscar, Área, Método de Pago */}
+      {/* FILTROS */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
         <div className="flex flex-col sm:flex-row gap-3">
-          {/* Buscador */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -692,11 +682,9 @@ const OrdersManager: React.FC = () => {
               disabled={exporting}
             />
           </div>
-
-          {/* Selector de Área */}
-          <select 
-            value={areaFilter} 
-            onChange={(e) => setAreaFilter(e.target.value)} 
+          <select
+            value={areaFilter}
+            onChange={(e) => setAreaFilter(e.target.value)}
             className="px-3 py-2 border rounded-lg text-sm min-w-[140px]"
             disabled={exporting}
           >
@@ -705,11 +693,9 @@ const OrdersManager: React.FC = () => {
             <option value="walk-in">👤 Local</option>
             <option value="delivery">🚚 Delivery</option>
           </select>
-
-          {/* Selector de Método de Pago */}
-          <select 
-            value={paymentFilter} 
-            onChange={(e) => setPaymentFilter(e.target.value)} 
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value)}
             className="px-3 py-2 border rounded-lg text-sm min-w-[160px]"
             disabled={exporting}
           >
@@ -720,7 +706,6 @@ const OrdersManager: React.FC = () => {
           </select>
         </div>
 
-        {/* Indicadores de filtros activos */}
         {hasActiveFilters && (
           <div className="mt-3 flex items-center justify-between">
             <div className="flex flex-wrap gap-2">
@@ -771,8 +756,8 @@ const OrdersManager: React.FC = () => {
           </div>
         ) : pagination.currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            {showOnlyToday 
-              ? 'No hay órdenes regulares para hoy' 
+            {showOnlyToday
+              ? 'No hay órdenes regulares para hoy'
               : `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`}
           </div>
         ) : (
