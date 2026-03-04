@@ -1,13 +1,12 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// VERSIÓN CON BOTÓN ELIMINAR (SOLO ADMIN)
 // ============================================
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2 } from 'lucide-react'; // ← Añadido Trash2
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'; 
+import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
-import { useAuth } from '../../hooks/useAuth'; // ← IMPORTADO
+import { useAuth } from '../../hooks/useAuth';
 import { usePagination } from '../../hooks/usePagination';
 import { FullDayCashRegisterModal } from '../sales_fullday/FullDayCashRegisterModal';
 import { FullDayDateRangeModal } from './FullDayDateRangeModal';
@@ -20,7 +19,7 @@ import { FullDayOrder, FullDayPaymentMethod } from '../../types/fullday';
 import { exportFullDayToCSV, exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
 
 // ============================================
-// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (CON HOVER PREVIEW Y BOTÓN ELIMINAR)
+// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
 // ============================================
 const FullDayOrderRow = React.memo(({
   order,
@@ -44,6 +43,7 @@ const FullDayOrderRow = React.memo(({
   isAdmin: boolean;
 }) => {
   const displayNumber = getDisplayNumber(order);
+  const actionsRef = useRef<HTMLDivElement>(null); // ← Referencia para el área de acciones
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -57,10 +57,19 @@ const FullDayOrderRow = React.memo(({
     onDelete(order.id, displayNumber);
   };
 
+  // Manejador personalizado para mouse enter que ignora si viene de acciones
+  const handleRowMouseEnter = (e: React.MouseEvent) => {
+    // Si el mouse está sobre el área de acciones, no activar preview
+    if (actionsRef.current && actionsRef.current.contains(e.target as Node)) {
+      return;
+    }
+    onMouseEnter(e);
+  };
+
   return (
     <tr
       className="hover:bg-gray-50 cursor-pointer group relative"
-      onMouseEnter={onMouseEnter}
+      onMouseEnter={handleRowMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       <td className="px-4 sm:px-6 py-4">
@@ -113,7 +122,7 @@ const FullDayOrderRow = React.memo(({
         </div>
       </td>
       <td className="px-4 sm:px-6 py-4 text-sm font-medium">
-        <div className="flex space-x-2">
+        <div ref={actionsRef} className="flex space-x-2"> {/* ← Referencia aquí */}
           <FullDayTicket order={order} />
           {isAdmin && (
             <button
@@ -132,9 +141,9 @@ const FullDayOrderRow = React.memo(({
 
 // ─── COMPONENTE PRINCIPAL ──────────────────────────────────────
 export const FullDayOrdersManager: React.FC = () => {
-  const { orders, loading, getTodayOrders, updateOrderPayment, deleteOrder } = useFullDayOrders(); // ← Añadido deleteOrder
+  const { orders, loading, getTodayOrders, updateOrderPayment, deleteOrder } = useFullDayOrders();
   const { cashRegister, loading: salesLoading, openCashRegister, closeCashRegister, closures } = useFullDaySalesClosure();
-  const { user } = useAuth(); // ← USADO
+  const { user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
@@ -150,7 +159,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<FullDayOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null); // ← Para notificación
+  const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
 
   useEffect(() => {
     if (orders.length > 0 && !isInitialized) {
@@ -200,7 +209,7 @@ export const FullDayOrdersManager: React.FC = () => {
     };
   }, [orders, selectedDate]);
 
-  // Filtrar por fecha (usando selectedDate)
+  // Filtrar por fecha
   const dateFilteredOrders = useMemo(() => {
     const startOfDay = new Date(selectedDate);
     startOfDay.setHours(0, 0, 0, 0);
