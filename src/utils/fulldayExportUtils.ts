@@ -5,6 +5,7 @@
 import * as XLSX from 'xlsx';
 import { FullDayOrder } from '../types/fullday';
 import { formatDateForDisplay, formatTimeForDisplay, getStartOfDay, getEndOfDay } from './dateUtils';
+import { supabase } from '../lib/supabase'; // <-- IMPORTANTE: Añadir esta importación
 
 export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => {
   if (orders.length === 0) {
@@ -67,84 +68,116 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
 };
 
 // --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA (CORREGIDA) ---
-const listFullDayItemsByMainCategory = (order: FullDayOrder): { 
+const listFullDayItemsByMainCategory = async (order: FullDayOrder): Promise<{ 
   entradas: string; 
   fondos: string; 
   bebidas: string;
-} => {
+}> => {
   const result = {
       entradas: [] as string[],
       fondos: [] as string[],
       bebidas: [] as string[],
   };
 
-  order.items.forEach(item => {
-      const itemDisplay = `${item.quantity}x ${item.name}`;
+  // Obtener las categorías de todos los productos del pedido de una sola vez
+  const itemIds = order.items.map(item => item.id);
+  
+  let menuItemsWithCategories: any[] = [];
+  try {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .select('id, name, category')
+      .in('id', itemIds);
+    
+    if (!error && data) {
+      menuItemsWithCategories = data;
+    }
+  } catch (error) {
+    console.error('Error obteniendo categorías:', error);
+  }
 
-      // --- PRIORIDAD 1: Usar la categoría del producto si existe ---
-      // @ts-ignore - Asumiendo que item puede tener una propiedad 'category'
-      const category = item.category ? item.category.toLowerCase() : null;
-      
-      if (category) {
-        // Palabras clave para identificar el tipo de categoría
-        if (category.includes('entrada') || category.includes('ensalada') || category.includes('sopa')) {
-          result.entradas.push(itemDisplay);
-          return;
-        }
-        if (category.includes('fondo') || category.includes('principal') || category.includes('plato')) {
-          result.fondos.push(itemDisplay);
-          return;
-        }
-        if (category.includes('bebida') || category.includes('gaseosa') || category.includes('jugo') || 
-            category.includes('café') || category.includes('infusión') || category.includes('te') || 
-            category.includes('mate') || category.includes('agua')) {
-          result.bebidas.push(itemDisplay);
-          return;
-        }
-        // Si no coincide con las keywords anteriores, pero tiene categoría, lo dejamos como fondo por defecto.
-        result.fondos.push(itemDisplay);
-        return;
-      }
+  // Crear un mapa para acceso rápido: id -> categoría
+  const categoryMap = new Map();
+  menuItemsWithCategories.forEach(item => {
+    categoryMap.set(item.id, item.category);
+  });
 
-      // --- PRIORIDAD 2: Si no hay categoría, usar palabras clave en el nombre (RESPALDO MEJORADO) ---
-      const itemName = item.name.toLowerCase();
-      
-      // Bebidas (Lista más completa)
-      if (itemName.includes('gaseosa') || 
-          itemName.includes('inca kola') || 
-          itemName.includes('coca cola') ||
-          itemName.includes('sprite') ||
-          itemName.includes('fanta') ||
-          itemName.includes('agua') ||
-          itemName.includes('jugo') ||
-          itemName.includes('chicha') ||
-          itemName.includes('maracuya') ||
-          itemName.includes('limonada') ||
-          itemName.includes('café') ||      // <--- AGREGADO
-          itemName.includes('infusión') ||  // <--- AGREGADO
-          itemName.includes('te') ||        // <--- AGREGADO
-          itemName.includes('mate') ||      // <--- AGREGADO
-          itemName.includes('capuchino') || // <--- AGREGADO
-          itemName.includes('expresso')) {  // <--- AGREGADO
+  for (const item of order.items) {
+    const itemDisplay = `${item.quantity}x ${item.name}`;
+    
+    // Obtener la categoría del mapa
+    const category = categoryMap.get(item.id) || '';
+    const categoryLower = category.toLowerCase();
+    const itemNameLower = item.name.toLowerCase();
+
+    // --- CLASIFICACIÓN BASADA EN CATEGORÍA (si existe) ---
+    if (category) {
+      // Bebidas
+      if (categoryLower.includes('bebida') || 
+          categoryLower.includes('gaseosa') || 
+          categoryLower.includes('jugo') || 
+          categoryLower.includes('café') || 
+          categoryLower.includes('infusión') || 
+          categoryLower.includes('te') || 
+          categoryLower.includes('mate') || 
+          categoryLower.includes('agua')) {
         result.bebidas.push(itemDisplay);
-        return;
+        continue;
       }
       
       // Entradas
-      if (itemName.includes('entrada') || 
-          itemName.includes('ensalada') || 
-          itemName.includes('sopa') ||
-          itemName.includes('caldo') ||
-          itemName.includes('causa') ||
-          itemName.includes('papa a la huancaina') ||
-          itemName.includes('tamal')) {
+      if (categoryLower.includes('entrada') || 
+          categoryLower.includes('ensalada') || 
+          categoryLower.includes('sopa')) {
         result.entradas.push(itemDisplay);
-        return;
+        continue;
       }
       
-      // Si no coincide con ninguna, es un plato de fondo
+      // Platos de fondo (por defecto si no es bebida ni entrada)
       result.fondos.push(itemDisplay);
-  });
+      continue;
+    }
+
+    // --- RESPALDO: CLASIFICACIÓN POR NOMBRE (si no hay categoría) ---
+    
+    // Bebidas
+    if (itemNameLower.includes('gaseosa') || 
+        itemNameLower.includes('inca kola') || 
+        itemNameLower.includes('coca cola') ||
+        itemNameLower.includes('sprite') ||
+        itemNameLower.includes('fanta') ||
+        itemNameLower.includes('agua') ||
+        itemNameLower.includes('jugo') ||
+        itemNameLower.includes('chicha') ||
+        itemNameLower.includes('maracuya') ||
+        itemNameLower.includes('limonada') ||
+        itemNameLower.includes('café') ||
+        itemNameLower.includes('infusión') ||
+        itemNameLower.includes('te') ||
+        itemNameLower.includes('mate') ||
+        itemNameLower.includes('capuchino') ||
+        itemNameLower.includes('expresso') ||
+        itemNameLower.includes('bebida')) {
+      result.bebidas.push(itemDisplay);
+      continue;
+    }
+    
+    // Entradas
+    if (itemNameLower.includes('entrada') || 
+        itemNameLower.includes('ensalada') || 
+        itemNameLower.includes('sopa') ||
+        itemNameLower.includes('caldo') ||
+        itemNameLower.includes('causa') ||
+        itemNameLower.includes('papa a la huancaina') ||
+        itemNameLower.includes('tamal') ||
+        itemNameLower.includes('chaufa')) {
+      result.entradas.push(itemDisplay);
+      continue;
+    }
+    
+    // Si no coincide con ninguna, es un plato de fondo
+    result.fondos.push(itemDisplay);
+  }
 
   return {
       entradas: result.entradas.join('\n'),
@@ -153,18 +186,18 @@ const listFullDayItemsByMainCategory = (order: FullDayOrder): {
   };
 };
 
-export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'all' = 'today') => {
+export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today' | 'all' = 'today') => {
   if (orders.length === 0) {
     alert('No hay pedidos para exportar');
     return;
   }
 
   // --- ESTRUCTURA DE DATOS PARA LA HOJA PRINCIPAL ---
-  // CON EMOJIS EN LOS ENCABEZADOS
-  const data = orders.map(order => {
+  // Procesar cada orden de forma asíncrona para obtener las categorías
+  const dataPromises = orders.map(async (order) => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
-    const categorizedItems = listFullDayItemsByMainCategory(order);
+    const categorizedItems = await listFullDayItemsByMainCategory(order);
 
     return {
       '📅 FECHA': fecha,
@@ -176,12 +209,14 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
       '📞 TELÉFONO': order.phone || '',
       '💰 MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
       '💳 MÉTODO PAGO': order.payment_method || 'NO APLICA',
-      // --- COLUMNAS CON EMOJIS DISTINTIVOS ---
       '🥗 ENTRADAS': categorizedItems.entradas,
       '🍽️ PLATOS DE FONDO': categorizedItems.fondos,
       '🥤 BEBIDAS': categorizedItems.bebidas,
     };
   });
+
+  // Esperar a que todas las promesas se resuelvan
+  const data = await Promise.all(dataPromises);
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
@@ -212,7 +247,7 @@ export const exportFullDayToExcel = (orders: FullDayOrder[], tipo: 'today' | 'al
   XLSX.writeFile(wb, fileName);
 };
 
-export const exportFullDayByDateRange = (
+export const exportFullDayByDateRange = async (
   orders: FullDayOrder[],
   startDate: Date,
   endDate: Date
@@ -268,25 +303,23 @@ export const exportFullDayByDateRange = (
   wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, '📊 RESUMEN');
 
-  // HOJA 2: DETALLE POR ALUMNO
+  // HOJA 2: DETALLE POR ALUMNO (ahora usa la función categorizadora)
   const detailData: any[][] = [
     ['DETALLE DE PEDIDOS'],
     [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
     [],
-    ['FECHA', 'HORA', 'N° ORDEN', 'GRADO', 'SECCIÓN', 'ALUMNO', 'APODERADO', 'TELÉFONO', 'PAGO', 'PRODUCTOS', 'TOTAL']
+    ['FECHA', 'HORA', 'N° ORDEN', 'GRADO', 'SECCIÓN', 'ALUMNO', 'APODERADO', 'TELÉFONO', 'PAGO', 'ENTRADAS', 'PLATOS DE FONDO', 'BEBIDAS', 'TOTAL']
   ];
 
   const sortedOrders = [...filteredOrders].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
-  sortedOrders.forEach(order => {
+  // Procesar cada orden con categorización
+  for (const order of sortedOrders) {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
-    
-    const productos = order.items.map(item => 
-      `${item.quantity}x ${item.name}${item.notes ? ` (${item.notes})` : ''}`
-    ).join('\n');
+    const categorizedItems = await listFullDayItemsByMainCategory(order);
 
     detailData.push([
       fecha,
@@ -298,16 +331,18 @@ export const exportFullDayByDateRange = (
       order.guardian_name,
       order.phone || '---',
       order.payment_method || 'NO APLICA',
-      productos,
+      categorizedItems.entradas,
+      categorizedItems.fondos,
+      categorizedItems.bebidas,
       `S/ ${order.total.toFixed(2)}`
     ]);
-  });
+  }
 
   const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
   wsDetail['!cols'] = [
     { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 20 }, { wch: 8 }, 
     { wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, 
-    { wch: 50 }, { wch: 12 }
+    { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 12 }
   ];
   XLSX.utils.book_append_sheet(wb, wsDetail, '📋 DETALLE');
 
