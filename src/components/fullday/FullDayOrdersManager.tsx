@@ -1,9 +1,7 @@
-// ========================================================
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// ========================================================
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet, Printer, Trash2 } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,7 +14,8 @@ import { PaymentFilter } from '../ui/PaymentFilter';
 import { FullDayOrderPreview } from './FullDayOrderPreview';
 import FullDayTicket from './FullDayTicket';
 import { FullDayOrder, FullDayPaymentMethod } from '../../types/fullday';
-import { exportFullDayToCSV, exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
+import { exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
+import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -93,7 +92,6 @@ const FullDayOrderRow = React.memo(({
           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.payment_method)}`}>
             {getPaymentText(order.payment_method)}
           </span>
-
           <button
             onClick={handleEditClick}
             className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
@@ -119,6 +117,7 @@ const FullDayOrderRow = React.memo(({
           {order.items.map(item => item.name).join(', ')}
         </div>
       </td>
+      {/* ✅ onMouseEnter={onMouseLeave} oculta el preview al entrar a Acciones */}
       <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
         <div ref={actionsRef} className="flex space-x-2">
           <FullDayTicket order={order} />
@@ -154,6 +153,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<FullDayOrder | null>(null);
   const [showDateRangeExcel, setShowDateRangeExcel] = useState(false);
+  const [showDateRangeTicket, setShowDateRangeTicket] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [localOrders, setLocalOrders] = useState<FullDayOrder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -168,9 +168,7 @@ export const FullDayOrdersManager: React.FC = () => {
 
   useEffect(() => {
     if (deletedOrder) {
-      const timer = setTimeout(() => {
-        setDeletedOrder(null);
-      }, 3000);
+      const timer = setTimeout(() => setDeletedOrder(null), 3000);
       return () => clearTimeout(timer);
     }
   }, [deletedOrder]);
@@ -185,22 +183,14 @@ export const FullDayOrdersManager: React.FC = () => {
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(selectedDate);
     endOfDay.setHours(23, 59, 59, 999);
-
     const dayOrders = orders.filter(o => {
       const d = new Date(o.created_at);
       return d >= startOfDay && d <= endOfDay;
     });
-
     return {
-      efectivo: dayOrders
-        .filter(o => o.payment_method === 'EFECTIVO')
-        .reduce((sum, o) => sum + o.total, 0),
-      yape: dayOrders
-        .filter(o => o.payment_method === 'YAPE/PLIN')
-        .reduce((sum, o) => sum + o.total, 0),
-      tarjeta: dayOrders
-        .filter(o => o.payment_method === 'TARJETA')
-        .reduce((sum, o) => sum + o.total, 0),
+      efectivo: dayOrders.filter(o => o.payment_method === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0),
+      yape:     dayOrders.filter(o => o.payment_method === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0),
+      tarjeta:  dayOrders.filter(o => o.payment_method === 'TARJETA').reduce((sum, o) => sum + o.total, 0),
     };
   }, [orders, selectedDate]);
 
@@ -209,7 +199,6 @@ export const FullDayOrdersManager: React.FC = () => {
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(selectedDate);
     endOfDay.setHours(23, 59, 59, 999);
-    
     return localOrders.filter(order => {
       const orderDate = new Date(order.created_at);
       return orderDate >= startOfDay && orderDate <= endOfDay;
@@ -219,7 +208,6 @@ export const FullDayOrdersManager: React.FC = () => {
   const filteredAndSortedOrders = useMemo(() => {
     if (!dateFilteredOrders.length) return [];
     let filtered = dateFilteredOrders;
-
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -228,11 +216,9 @@ export const FullDayOrdersManager: React.FC = () => {
         o.order_number?.toLowerCase().includes(term)
       );
     }
-
     if (paymentFilter) {
       filtered = filtered.filter(o => o.payment_method === paymentFilter);
     }
-
     if (filtered.length > 1) {
       filtered = [...filtered].sort((a, b) => {
         switch (currentSort) {
@@ -241,25 +227,18 @@ export const FullDayOrdersManager: React.FC = () => {
             if (so[a.status] !== so[b.status]) return so[a.status] - so[b.status];
             return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           }
-          case 'waiting-time':
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          case 'total-desc':      return b.total - a.total;
-          case 'created-desc':    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          case 'created-asc':     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case 'waiting-time': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case 'total-desc':   return b.total - a.total;
+          case 'created-desc': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          case 'created-asc':  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           default: return 0;
         }
       });
     }
-
     return filtered;
   }, [dateFilteredOrders, searchTerm, paymentFilter, currentSort]);
 
-  const pagination = usePagination({
-    items: filteredAndSortedOrders,
-    itemsPerPage,
-    mobileBreakpoint: 768
-  });
-
+  const pagination = usePagination({ items: filteredAndSortedOrders, itemsPerPage, mobileBreakpoint: 768 });
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
 
   const handleRowMouseEnter = useCallback((order: FullDayOrder, event: React.MouseEvent) => {
@@ -268,14 +247,11 @@ export const FullDayOrdersManager: React.FC = () => {
     setPreviewPosition({ x: rect.left + rect.width / 2, y: rect.top });
   }, []);
 
-  const handleRowMouseLeave = useCallback(() => {
-    setPreviewOrder(null);
-  }, []);
+  const handleRowMouseLeave = useCallback(() => setPreviewOrder(null), []);
 
   const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
     if (window.confirm(`¿Estás seguro de eliminar el pedido ${orderNumber}?`)) {
       setLocalOrders(prev => prev.filter(o => o.id !== orderId));
-      
       const result = await deleteOrder(orderId);
       if (result.success) {
         setDeletedOrder({ id: orderId, number: orderNumber });
@@ -286,14 +262,7 @@ export const FullDayOrdersManager: React.FC = () => {
     }
   }, [deleteOrder, orders]);
 
-  const handleExportTodayCSV = useCallback(() => {
-    exportFullDayToCSV(getTodayOrders(), 'fullday_hoy');
-  }, [getTodayOrders]);
-
-  const handleExportAllCSV = useCallback(() => {
-    exportFullDayToCSV(orders, 'fullday_todos');
-  }, [orders]);
-
+  // ── Reportes ─────────────────────────────────────────────────
   const handleExportTodayExcel = useCallback(() => {
     exportFullDayToExcel(getTodayOrders(), 'today');
   }, [getTodayOrders]);
@@ -306,28 +275,30 @@ export const FullDayOrdersManager: React.FC = () => {
     exportFullDayByDateRange(orders, startDate, endDate);
   }, [orders]);
 
-  const handleOpenCash = () => {
-    setCashModalType('open');
-    setShowCashModal(true);
-  };
-  const handleCloseCash = () => {
-    setCashModalType('close');
-    setShowCashModal(true);
-  };
+  const handleTicketResumen = useCallback((startDate: Date, endDate: Date) => {
+    const s = new Date(startDate); s.setHours(0, 0, 0, 0);
+    const e = new Date(endDate);   e.setHours(23, 59, 59, 999);
+    const filtered = orders.filter(o => {
+      const d = new Date(o.created_at);
+      return d >= s && d <= e;
+    });
+    if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
+    printFullDayResumenTicket(generateFullDayTicketSummary(filtered), startDate, endDate);
+  }, [orders]);
+
+  // ── Caja ─────────────────────────────────────────────────────
+  const handleOpenCash  = () => { setCashModalType('open');  setShowCashModal(true); };
+  const handleCloseCash = () => { setCashModalType('close'); setShowCashModal(true); };
 
   const handleCashConfirm = async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
     if (cashModalType === 'open') {
       const r = await openCashRegister(data.initialCash!);
-      if (r.success) {
-        alert('✅ Caja FullDay abierta correctamente');
-        setShowCashModal(false);
-      } else alert('❌ ' + r.error);
+      if (r.success) { alert('✅ Caja FullDay abierta correctamente'); setShowCashModal(false); }
+      else alert('❌ ' + r.error);
     } else {
       const r = await closeCashRegister(data.finalCash!, data.notes || '');
-      if (r.success) {
-        alert('✅ Caja FullDay cerrada correctamente');
-        setShowCashModal(false);
-      } else alert('❌ ' + r.error);
+      if (r.success) { alert('✅ Caja FullDay cerrada correctamente'); setShowCashModal(false); }
+      else alert('❌ ' + r.error);
     }
   };
 
@@ -349,41 +320,28 @@ export const FullDayOrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment]);
 
-  const getDisplayNumber = useCallback((order: FullDayOrder) => {
-    return order.order_number || `FD-${order.id.slice(-8).toUpperCase()}`;
-  }, []);
+  const getDisplayNumber = useCallback((order: FullDayOrder) =>
+    order.order_number || `FD-${order.id.slice(-8).toUpperCase()}`, []);
 
-  const getPaymentColor = useCallback((method?: string | null) => {
-    const colors: Record<string, string> = {
-      'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
-      'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
-      'TARJETA': 'bg-blue-100 text-blue-800 border-blue-200',
-    };
-    return colors[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200';
-  }, []);
+  const getPaymentColor = useCallback((method?: string | null) => ({
+    'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
+    'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
+    'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
+  }[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200'), []);
 
-  const getPaymentText = useCallback((method?: string | null) => {
-    const texts: Record<string, string> = {
-      'EFECTIVO': 'EFECTIVO',
-      'YAPE/PLIN': 'YAPE/PLIN',
-      'TARJETA': 'TARJETA',
-    };
-    return texts[method || ''] || 'NO APLICA';
-  }, []);
+  const getPaymentText = useCallback((method?: string | null) => ({
+    'EFECTIVO': 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', 'TARJETA': 'TARJETA',
+  }[method || ''] || 'NO APLICA'), []);
 
   const sortOptions = useMemo(() => [
-    { value: 'status-time',       label: '🔄 Estado + Tiempo' },
-    { value: 'waiting-time',      label: '⏱️ Tiempo Espera' },
-    { value: 'total-desc',        label: '💰 Mayor Monto' },
-    { value: 'created-desc',      label: '📅 Más Recientes' },
-    { value: 'created-asc',       label: '📅 Más Antiguas' },
+    { value: 'status-time',  label: '🔄 Estado + Tiempo' },
+    { value: 'waiting-time', label: '⏱️ Tiempo Espera' },
+    { value: 'total-desc',   label: '💰 Mayor Monto' },
+    { value: 'created-desc', label: '📅 Más Recientes' },
+    { value: 'created-asc',  label: '📅 Más Antiguas' },
   ], []);
 
-  const handleClearFilters = useCallback(() => {
-    setPaymentFilter('');
-    setSearchTerm('');
-  }, []);
-
+  const handleClearFilters = useCallback(() => { setPaymentFilter(''); setSearchTerm(''); }, []);
   const hasActiveFilters = paymentFilter !== '' || searchTerm !== '';
   const isAdmin = user?.role === 'admin';
 
@@ -396,17 +354,15 @@ export const FullDayOrdersManager: React.FC = () => {
         </div>
       )}
 
-      {/* shouldIgnoreEvents={true} */}
       {previewOrder && (
         <FullDayOrderPreview
           order={previewOrder}
           isVisible={true}
           position={previewPosition}
-          shouldIgnoreEvents={true} 
+          shouldIgnoreEvents={true}
         />
       )}
 
-      {/* Modal */}
       <FullDayPaymentModal
         isOpen={showPaymentModal}
         onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
@@ -422,10 +378,17 @@ export const FullDayOrdersManager: React.FC = () => {
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
+      {/* Modal Excel por rango */}
       <FullDayDateRangeModal
         isOpen={showDateRangeExcel}
         onClose={() => setShowDateRangeExcel(false)}
         onConfirm={handleExportByDateRange}
+      />
+      {/* Modal Ticket Resumen por rango */}
+      <FullDayDateRangeModal
+        isOpen={showDateRangeTicket}
+        onClose={() => setShowDateRangeTicket(false)}
+        onConfirm={handleTicketResumen}
       />
 
       {/* HEADER */}
@@ -435,7 +398,8 @@ export const FullDayOrdersManager: React.FC = () => {
             <span>🎒</span> Pedidos FullDay
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            {filteredAndSortedOrders.length} pedidos · Total del día: <span className="font-semibold text-purple-600">S/ {todayTotal.toFixed(2)}</span>
+            {filteredAndSortedOrders.length} pedidos · Total del día:{' '}
+            <span className="font-semibold text-purple-600">S/ {todayTotal.toFixed(2)}</span>
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -468,13 +432,8 @@ export const FullDayOrdersManager: React.FC = () => {
         />
       </div>
 
+      {/* ✅ BOTONES: sin CSV — con Excel Hoy, Excel Todo, Reporte por Fechas, Ticket Resumen */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExportTodayCSV} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1">
-          <FileSpreadsheet size={16} /><span>CSV Hoy</span>
-        </button>
-        <button onClick={handleExportAllCSV} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1">
-          <FileSpreadsheet size={16} /><span>CSV Todo</span>
-        </button>
         <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
           <FileSpreadsheet size={16} /><span>Excel Hoy</span>
         </button>
@@ -484,8 +443,12 @@ export const FullDayOrdersManager: React.FC = () => {
         <button onClick={() => setShowDateRangeExcel(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1">
           <Calendar size={16} /><span>Reporte por Fechas</span>
         </button>
+        <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
+          <Printer size={16} /><span>Ticket Resumen</span>
+        </button>
       </div>
 
+      {/* FILTROS */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
@@ -499,7 +462,6 @@ export const FullDayOrdersManager: React.FC = () => {
             />
           </div>
         </div>
-
         {hasActiveFilters && (
           <div className="mt-3 flex items-center justify-between">
             <div className="flex flex-wrap gap-2">
@@ -514,16 +476,14 @@ export const FullDayOrdersManager: React.FC = () => {
                 </span>
               )}
             </div>
-            <button
-              onClick={handleClearFilters}
-              className="text-xs text-red-600 hover:text-red-800 font-medium"
-            >
+            <button onClick={handleClearFilters} className="text-xs text-red-600 hover:text-red-800 font-medium">
               Limpiar filtros
             </button>
           </div>
         )}
       </div>
 
+      {/* PAGINACIÓN */}
       <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
           <div className="text-sm text-gray-600">
@@ -531,31 +491,26 @@ export const FullDayOrdersManager: React.FC = () => {
             {Math.min(pagination.currentPage * itemsPerPage, filteredAndSortedOrders.length)} de{' '}
             <span className="font-semibold">{filteredAndSortedOrders.length}</span> pedidos
           </div>
-          
           <div className="flex items-center space-x-4">
             <select
               value={itemsPerPage}
               onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 text-sm"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
               <option value={50}>50</option>
               <option value={100}>100</option>
             </select>
-            
             <select
               value={currentSort}
               onChange={(e) => setCurrentSort(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 text-sm"
             >
               {sortOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
-            
             <div className="flex items-center space-x-1">
               <button
                 onClick={pagination.prevPage}
@@ -564,11 +519,7 @@ export const FullDayOrdersManager: React.FC = () => {
               >
                 <ChevronLeft size={16} />
               </button>
-              
-              <span className="px-3 py-1 text-sm">
-                {pagination.currentPage} / {totalPages}
-              </span>
-              
+              <span className="px-3 py-1 text-sm">{pagination.currentPage} / {totalPages}</span>
               <button
                 onClick={pagination.nextPage}
                 disabled={pagination.currentPage === totalPages}
@@ -581,6 +532,7 @@ export const FullDayOrdersManager: React.FC = () => {
         </div>
       </div>
 
+      {/* TABLA */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {loading && !isInitialized ? (
           <div className="text-center py-12">
@@ -652,4 +604,3 @@ export const FullDayOrdersManager: React.FC = () => {
     </div>
   );
 };
-
