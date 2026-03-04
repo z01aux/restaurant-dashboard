@@ -2,6 +2,7 @@
 // ARCHIVO: src/components/fullday/FullDayTicket.tsx
 // Ticket FullDay — mismo diseño que OrderTicket (sin emoticonos)
 // Nombres: primer nombre + 2 apellidos (se omite el segundo nombre)
+// ✅ FIX: onMouseEnter/onMouseLeave para suprimir preview al hover en botones
 // ============================================
 
 import React from 'react';
@@ -10,20 +11,17 @@ import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer
 
 interface FullDayTicketProps {
   order: FullDayOrder;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
-const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
+const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMouseLeave }) => {
 
   // ── Eliminar solo el segundo nombre ─────────────────────────
-  // Formato: "Nombre1 Nombre2 Apellido1 Apellido2"
-  // Resultado: "Nombre1 Apellido1 Apellido2"  (se omite Nombre2)
-  // Con 3 palabras (Nombre1 Apellido1 Apellido2): se devuelve igual
-  // Con 2 palabras o menos: se devuelve igual
   const truncateName = (fullName: string): string => {
     if (!fullName) return '';
     const parts = fullName.trim().split(/\s+/);
-    if (parts.length <= 3) return fullName; // Sin segundo nombre, sin cambios
-    // parts[0]=Nombre1  parts[1]=Nombre2(omitir)  parts[2..]=Apellidos
+    if (parts.length <= 3) return fullName;
     return `${parts[0]} ${parts.slice(2).join(' ')}`;
   };
 
@@ -53,7 +51,7 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
   const igv      = order.total - subtotal;
   const createdDate = new Date(order.created_at);
 
-  // ── ESTILOS PDF (copiados de normalStyles en OrderTicket) ────
+  // ── ESTILOS PDF ────
   const styles = StyleSheet.create({
     page: {
       flexDirection: 'column',
@@ -64,114 +62,28 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
       fontWeight: 'normal',
       width: PAGE_WIDTH,
     },
-    header: {
-      textAlign: 'center',
-      marginBottom: 6,
-    },
-    title: {
-      fontSize: FONT_SIZE_XLARGE,
-      fontWeight: 'bold',
-      marginBottom: 3,
-    },
-    subtitle: {
-      fontSize: FONT_SIZE_SMALL,
-      marginBottom: 1,
-      fontWeight: 'normal',
-    },
-    boldSubtitle: {
-      fontSize: FONT_SIZE_SMALL,
-      marginBottom: 1,
-      fontWeight: 'bold',
-    },
-    divider: {
-      borderBottom: '1pt solid #000000',
-      marginVertical: 3,
-    },
-    row: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 2,
-    },
-    bold: {
-      fontWeight: 'bold',
-    },
-    section: {
-      marginBottom: 6,
-    },
-    table: {
-      marginBottom: 6,
-    },
-    tableHeader: {
-      flexDirection: 'row',
-      borderBottom: '1pt solid #000000',
-      paddingBottom: 2,
-      marginBottom: 2,
-    },
-    tableRow: {
-      flexDirection: 'row',
-      marginBottom: 3,
-    },
-    colQuantity: {
-      width: '15%',
-      fontSize: FONT_SIZE_PRODUCT,
-      fontWeight: 'bold',
-    },
-    colDescription: {
-      width: '50%',
-      fontSize: FONT_SIZE_PRODUCT,
-      fontWeight: 'normal',
-    },
-    colPrice: {
-      width: '35%',
-      textAlign: 'right',
-      fontSize: FONT_SIZE_PRODUCT,
-      fontWeight: 'normal',
-    },
-    productName: {
-      fontWeight: 'bold',
-      textTransform: 'uppercase',
-      fontSize: FONT_SIZE_PRODUCT,
-      flexWrap: 'wrap',
-      lineHeight: 1.4,
-    },
-    notes: {
-      fontStyle: 'italic',
-      fontSize: FONT_SIZE_SMALL,
-      marginLeft: 0,
-      marginTop: 1,
-      flexWrap: 'wrap',
-      fontWeight: 'normal',
-    },
-    calculations: {
-      marginTop: 3,
-    },
-    calculationRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 1,
-      fontSize: FONT_SIZE_SMALL,
-      fontWeight: 'normal',
-    },
-    total: {
-      borderTop: '1pt solid #000000',
-      paddingTop: 3,
-      marginTop: 3,
-    },
-    footer: {
-      textAlign: 'center',
-      marginTop: 8,
-    },
-    footerDate: {
-      marginTop: 6,
-      fontSize: FONT_SIZE_SMALL - 1,
-      fontWeight: 'normal',
-    },
-    valueBold: {
-      fontWeight: 'bold',
-      fontSize: FONT_SIZE_SMALL,
-      maxWidth: '60%',
-      flexWrap: 'wrap',
-    },
+    header: { textAlign: 'center', marginBottom: 6 },
+    title: { fontSize: FONT_SIZE_XLARGE, fontWeight: 'bold', marginBottom: 3 },
+    subtitle: { fontSize: FONT_SIZE_SMALL, marginBottom: 1, fontWeight: 'normal' },
+    boldSubtitle: { fontSize: FONT_SIZE_SMALL, marginBottom: 1, fontWeight: 'bold' },
+    divider: { borderBottom: '1pt solid #000000', marginVertical: 3 },
+    row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
+    bold: { fontWeight: 'bold' },
+    section: { marginBottom: 6 },
+    table: { marginBottom: 6 },
+    tableHeader: { flexDirection: 'row', borderBottom: '1pt solid #000000', paddingBottom: 2, marginBottom: 2 },
+    tableRow: { flexDirection: 'row', marginBottom: 3 },
+    colQuantity: { width: '15%', fontSize: FONT_SIZE_PRODUCT, fontWeight: 'bold' },
+    colDescription: { width: '50%', fontSize: FONT_SIZE_PRODUCT, fontWeight: 'normal' },
+    colPrice: { width: '35%', textAlign: 'right', fontSize: FONT_SIZE_PRODUCT, fontWeight: 'normal' },
+    productName: { fontWeight: 'bold', textTransform: 'uppercase', fontSize: FONT_SIZE_PRODUCT, flexWrap: 'wrap', lineHeight: 1.4 },
+    notes: { fontStyle: 'italic', fontSize: FONT_SIZE_SMALL, marginLeft: 0, marginTop: 1, flexWrap: 'wrap', fontWeight: 'normal' },
+    calculations: { marginTop: 3 },
+    calculationRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1, fontSize: FONT_SIZE_SMALL, fontWeight: 'normal' },
+    total: { borderTop: '1pt solid #000000', paddingTop: 3, marginTop: 3 },
+    footer: { textAlign: 'center', marginTop: 8 },
+    footerDate: { marginTop: 6, fontSize: FONT_SIZE_SMALL - 1, fontWeight: 'normal' },
+    valueBold: { fontWeight: 'bold', fontSize: FONT_SIZE_SMALL, maxWidth: '60%', flexWrap: 'wrap' },
   });
 
   // ── DOCUMENTO PDF ─────────────────────────────────────────────
@@ -179,7 +91,7 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
     <Document>
       <Page size={[PAGE_WIDTH]} style={styles.page}>
 
-        {/* Encabezado — idéntico al NormalTicketDocument */}
+        {/* Encabezado */}
         <View style={styles.header}>
           <Text style={styles.title}>MARY'S RESTAURANT</Text>
           <Text style={styles.subtitle}>INVERSIONES AROMO S.A.C.</Text>
@@ -191,51 +103,28 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
 
         {/* Info pedido */}
         <View style={styles.section}>
-          <View style={styles.row}>
-            <Text style={styles.bold}>PEDIDO:</Text>
-            <Text>#{order.order_number}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.bold}>TIPO:</Text>
-            <Text>FULLDAY</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.bold}>FECHA:</Text>
-            <Text>{createdDate.toLocaleDateString()}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.bold}>HORA:</Text>
-            <Text>{createdDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.bold}>PAGO:</Text>
-            <Text>{getPaymentText()}</Text>
-          </View>
+          <View style={styles.row}><Text style={styles.bold}>PEDIDO:</Text><Text>#{order.order_number}</Text></View>
+          <View style={styles.row}><Text style={styles.bold}>TIPO:</Text><Text>FULLDAY</Text></View>
+          <View style={styles.row}><Text style={styles.bold}>FECHA:</Text><Text>{createdDate.toLocaleDateString()}</Text></View>
+          <View style={styles.row}><Text style={styles.bold}>HORA:</Text><Text>{createdDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</Text></View>
+          <View style={styles.row}><Text style={styles.bold}>PAGO:</Text><Text>{getPaymentText()}</Text></View>
         </View>
 
         <View style={styles.divider} />
 
-        {/* Info alumno — misma estructura que sección CLIENTE en OrderTicket */}
+        {/* Info alumno */}
         <View style={styles.section}>
           <View style={styles.row}>
             <Text style={styles.bold}>ALUMNO:</Text>
             <Text style={styles.valueBold}>{studentDisplay.toUpperCase()}</Text>
           </View>
-          <View style={styles.row}>
-            <Text style={styles.bold}>GRADO:</Text>
-            <Text>{order.grade} - {order.section}</Text>
-          </View>
+          <View style={styles.row}><Text style={styles.bold}>GRADO:</Text><Text>{order.grade} - {order.section}</Text></View>
           <View style={styles.row}>
             <Text style={styles.bold}>APODERADO:</Text>
-            <Text style={{ maxWidth: '60%', flexWrap: 'wrap', fontSize: FONT_SIZE_SMALL }}>
-              {guardianDisplay.toUpperCase()}
-            </Text>
+            <Text style={{ maxWidth: '60%', flexWrap: 'wrap', fontSize: FONT_SIZE_SMALL }}>{guardianDisplay.toUpperCase()}</Text>
           </View>
           {order.phone && (
-            <View style={styles.row}>
-              <Text style={styles.bold}>TELEFONO:</Text>
-              <Text>{order.phone}</Text>
-            </View>
+            <View style={styles.row}><Text style={styles.bold}>TELEFONO:</Text><Text>{order.phone}</Text></View>
           )}
         </View>
 
@@ -248,7 +137,6 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
             <Text style={styles.colDescription}>Descripcion</Text>
             <Text style={styles.colPrice}>Precio</Text>
           </View>
-
           {order.items.map((item, index) => (
             <View key={index}>
               <View style={styles.tableRow}>
@@ -256,9 +144,7 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
                 <View style={styles.colDescription}>
                   <Text style={styles.productName}>{item.name}</Text>
                 </View>
-                <Text style={styles.colPrice}>
-                  S/ {(item.price * item.quantity).toFixed(2)}
-                </Text>
+                <Text style={styles.colPrice}>S/ {(item.price * item.quantity).toFixed(2)}</Text>
               </View>
               {item.notes?.trim() && (
                 <View style={styles.tableRow}>
@@ -275,17 +161,10 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
 
         {/* Totales */}
         <View style={styles.calculations}>
-          <View style={styles.calculationRow}>
-            <Text>Subtotal:</Text>
-            <Text>S/ {subtotal.toFixed(2)}</Text>
-          </View>
-          <View style={styles.calculationRow}>
-            <Text>IGV (10%):</Text>
-            <Text>S/ {igv.toFixed(2)}</Text>
-          </View>
+          <View style={styles.calculationRow}><Text>Subtotal:</Text><Text>S/ {subtotal.toFixed(2)}</Text></View>
+          <View style={styles.calculationRow}><Text>IGV (10%):</Text><Text>S/ {igv.toFixed(2)}</Text></View>
           <View style={[styles.row, styles.total, styles.bold]}>
-            <Text>TOTAL:</Text>
-            <Text>S/ {order.total.toFixed(2)}</Text>
+            <Text>TOTAL:</Text><Text>S/ {order.total.toFixed(2)}</Text>
           </View>
         </View>
 
@@ -296,24 +175,18 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
           <Text style={styles.bold}>GRACIAS POR SU PEDIDO!</Text>
           <Text>*** FULLDAY ***</Text>
           {order.notes && (
-            <Text style={{ fontSize: FONT_SIZE_SMALL, fontStyle: 'italic', marginTop: 3 }}>
-              Nota: {order.notes}
-            </Text>
+            <Text style={{ fontSize: FONT_SIZE_SMALL, fontStyle: 'italic', marginTop: 3 }}>Nota: {order.notes}</Text>
           )}
           <Text style={styles.footerDate}>
-            {new Date().toLocaleString('es-ES', {
-              year: 'numeric', month: '2-digit', day: '2-digit',
-              hour: '2-digit', minute: '2-digit'
-            })}
+            {new Date().toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
           </Text>
-
         </View>
 
       </Page>
     </Document>
   );
 
-  // ── HTML PARA IMPRESIÓN (copia exacta del estilo de OrderTicket) ──
+  // ── HTML PARA IMPRESIÓN ──
   const generateTicketHTML = (): string => `
     <div class="ticket">
       <div class="center">
@@ -324,58 +197,19 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
         <div class="header-subtitle">Tel: 941 778 599</div>
         <div class="divider"></div>
       </div>
-
-      <div class="info-row">
-        <span class="label">PEDIDO:</span>
-        <span class="value">#${order.order_number}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">TIPO:</span>
-        <span class="value">FULLDAY</span>
-      </div>
-      <div class="info-row">
-        <span class="label">FECHA:</span>
-        <span class="value">${createdDate.toLocaleDateString()}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">HORA:</span>
-        <span class="value">${createdDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">PAGO:</span>
-        <span class="value">${getPaymentText()}</span>
-      </div>
-
+      <div class="info-row"><span class="label">PEDIDO:</span><span class="value">#${order.order_number}</span></div>
+      <div class="info-row"><span class="label">TIPO:</span><span class="value">FULLDAY</span></div>
+      <div class="info-row"><span class="label">FECHA:</span><span class="value">${createdDate.toLocaleDateString()}</span></div>
+      <div class="info-row"><span class="label">HORA:</span><span class="value">${createdDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span></div>
+      <div class="info-row"><span class="label">PAGO:</span><span class="value">${getPaymentText()}</span></div>
       <div class="divider"></div>
-
-      <div class="info-row">
-        <span class="label">ALUMNO:</span>
-        <span class="customer-name-bold">${studentDisplay.toUpperCase()}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">GRADO:</span>
-        <span class="value">${order.grade} - ${order.section}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">APODERADO:</span>
-        <span class="value" style="max-width:60%;word-wrap:break-word;">${guardianDisplay.toUpperCase()}</span>
-      </div>
-      ${order.phone ? `
-      <div class="info-row">
-        <span class="label">TELEFONO:</span>
-        <span class="value">${order.phone}</span>
-      </div>` : ''}
-
+      <div class="info-row"><span class="label">ALUMNO:</span><span class="customer-name-bold">${studentDisplay.toUpperCase()}</span></div>
+      <div class="info-row"><span class="label">GRADO:</span><span class="value">${order.grade} - ${order.section}</span></div>
+      <div class="info-row"><span class="label">APODERADO:</span><span class="value" style="max-width:60%;word-wrap:break-word;">${guardianDisplay.toUpperCase()}</span></div>
+      ${order.phone ? `<div class="info-row"><span class="label">TELEFONO:</span><span class="value">${order.phone}</span></div>` : ''}
       <div class="divider"></div>
-
       <table>
-        <thead>
-          <tr>
-            <th>Cant</th>
-            <th>Descripcion</th>
-            <th style="text-align:right;">Precio</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Cant</th><th>Descripcion</th><th style="text-align:right;">Precio</th></tr></thead>
         <tbody>
           ${order.items.map(item => `
             <tr>
@@ -389,35 +223,21 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
           `).join('')}
         </tbody>
       </table>
-
       <div class="divider"></div>
-
       <div style="font-size:11px;">
-        <div class="info-row">
-          <span class="normal">Subtotal:</span>
-          <span class="normal">S/ ${subtotal.toFixed(2)}</span>
-        </div>
-        <div class="info-row">
-          <span class="normal">IGV (10%):</span>
-          <span class="normal">S/ ${igv.toFixed(2)}</span>
-        </div>
+        <div class="info-row"><span class="normal">Subtotal:</span><span class="normal">S/ ${subtotal.toFixed(2)}</span></div>
+        <div class="info-row"><span class="normal">IGV (10%):</span><span class="normal">S/ ${igv.toFixed(2)}</span></div>
         <div class="info-row" style="border-top:2px solid #000;padding-top:5px;margin-top:5px;">
-          <span class="label">TOTAL:</span>
-          <span class="label">S/ ${order.total.toFixed(2)}</span>
+          <span class="label">TOTAL:</span><span class="label">S/ ${order.total.toFixed(2)}</span>
         </div>
       </div>
-
       <div class="divider"></div>
-
       <div class="center">
         <div class="header-title">GRACIAS POR SU PEDIDO!</div>
         <div class="normal">*** FULLDAY ***</div>
         ${order.notes ? `<div class="normal" style="font-style:italic;margin-top:4px;font-size:10px;">Nota: ${order.notes}</div>` : ''}
         <div class="normal" style="margin-top:10px;font-size:10px;">
-          ${new Date().toLocaleString('es-ES', {
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit'
-          })}
+          ${new Date().toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
     </div>
@@ -445,120 +265,38 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
             <title>Ticket ${order.order_number}</title>
             <style>
               @media print {
-                @page {
-                  size: 80mm auto;
-                  margin: 0;
-                  padding: 0;
-                }
-                body {
-                  width: 80mm !important;
-                  margin: 0 auto !important;
-                  padding: 0 !important;
-                  font-family: "Courier New", monospace !important;
-                  font-weight: normal !important;
-                }
+                @page { size: 80mm auto; margin: 0; padding: 0; }
+                body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; font-family: "Courier New", monospace !important; font-weight: normal !important; }
                 * { font-family: "Courier New", monospace !important; }
               }
-              body {
-                font-family: "Courier New", monospace;
-                font-weight: normal;
-                font-size: 12px;
-                line-height: 1.3;
-                width: 80mm;
-                margin: 0 auto;
-                padding: 8px;
-                background: white;
-                color: black;
-              }
-              .ticket, .ticket *, div, span, td, th {
-                font-family: "Courier New", monospace !important;
-              }
-              .center  { text-align: center; }
-              .bold    { font-weight: bold !important; }
-              .normal  { font-weight: normal !important; }
+              body { font-family: "Courier New", monospace; font-weight: normal; font-size: 12px; line-height: 1.3; width: 80mm; margin: 0 auto; padding: 8px; background: white; color: black; }
+              .ticket, .ticket *, div, span, td, th { font-family: "Courier New", monospace !important; }
+              .center { text-align: center; }
+              .bold { font-weight: bold !important; }
+              .normal { font-weight: normal !important; }
               .uppercase { text-transform: uppercase; }
               .divider { border-top: 1px solid #000; margin: 6px 0; }
-              .info-row {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 3px;
-                font-size: 11px;
-              }
+              .info-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; }
               .label { font-weight: bold !important; }
               .value { font-weight: normal !important; }
-              .customer-name-bold {
-                font-weight: bold !important;
-                max-width: 60%;
-                word-wrap: break-word;
-                font-size: 12px;
-              }
-              .header-title {
-                font-weight: bold !important;
-                font-size: 13px;
-              }
-              .header-subtitle {
-                font-weight: normal !important;
-                font-size: 11px;
-              }
-              .notes {
-                font-style: italic;
-                font-size: 10px;
-                margin-left: 15%;
-                margin-bottom: 3px;
-                display: block;
-                width: 85%;
-                font-weight: normal !important;
-              }
-              .table-notes {
-                font-style: italic;
-                font-size: 10px;
-                margin-left: 0;
-                margin-top: 2px;
-                display: block;
-                font-weight: normal !important;
-              }
-              .product-row {
-                display: flex;
-                margin-bottom: 4px;
-              }
-              .quantity {
-                width: 15%;
-                font-weight: bold !important;
-                font-size: 12px;
-              }
-              .product-name {
-                width: 85%;
-                font-weight: bold !important;
-                text-transform: uppercase;
-                font-size: 12px;
-                line-height: 1.4;
-              }
-              table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 5px 0;
-                font-size: 12px;
-              }
-              th, td {
-                padding: 2px 0;
-                text-align: left;
-                vertical-align: top;
-              }
-              th {
-                border-bottom: 1px solid #000;
-                font-weight: bold !important;
-                font-size: 11px;
-              }
+              .customer-name-bold { font-weight: bold !important; max-width: 60%; word-wrap: break-word; font-size: 12px; }
+              .header-title { font-weight: bold !important; font-size: 13px; }
+              .header-subtitle { font-weight: normal !important; font-size: 11px; }
+              .notes { font-style: italic; font-size: 10px; margin-left: 15%; margin-bottom: 3px; display: block; width: 85%; font-weight: normal !important; }
+              .table-notes { font-style: italic; font-size: 10px; margin-left: 0; margin-top: 2px; display: block; font-weight: normal !important; }
+              .product-row { display: flex; margin-bottom: 4px; }
+              .quantity { width: 15%; font-weight: bold !important; font-size: 12px; }
+              .product-name { width: 85%; font-weight: bold !important; text-transform: uppercase; font-size: 12px; line-height: 1.4; }
+              table { width: 100%; border-collapse: collapse; margin: 5px 0; font-size: 12px; }
+              th, td { padding: 2px 0; text-align: left; vertical-align: top; }
+              th { border-bottom: 1px solid #000; font-weight: bold !important; font-size: 11px; }
               td { font-size: 12px; }
             </style>
           </head>
-          <body>
-            ${generateTicketHTML()}
-          </body>
+          <body>${generateTicketHTML()}</body>
         </html>
       `);
       iframeDoc.close();
-
       iframe.onload = () => {
         setTimeout(() => {
           iframe.contentWindow?.print();
@@ -590,9 +328,14 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order }) => {
     }
   };
 
-  // ── RENDER — mismo estilo de botones que OrderTicket ─────────
+  // ── RENDER ─────────────────────────────────────────────────
+  // ✅ FIX: onMouseEnter/onMouseLeave en el div wrapper para suprimir preview
   return (
-    <div style={{ display: 'flex', gap: '10px', margin: '10px 0' }}>
+    <div
+      style={{ display: 'flex', gap: '10px', margin: '10px 0' }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       <button
         onClick={handlePrint}
         style={{
