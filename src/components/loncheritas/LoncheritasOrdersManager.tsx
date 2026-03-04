@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'; // ← Añadido useRef
-import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -752,3 +752,4 @@ export const LoncheritasOrdersManager: React.FC = () => {
     </div>
   );
 };
+
