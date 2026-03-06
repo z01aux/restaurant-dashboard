@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { X, Calendar, Download, Printer } from 'lucide-react';
+import { X, Calendar, Download } from 'lucide-react'; // Eliminado 'Printer' que no se usaba
 
 interface FullDayDateRangeModalProps {
   isOpen: boolean;
