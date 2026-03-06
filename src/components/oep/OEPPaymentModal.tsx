@@ -1,9 +1,10 @@
 // ============================================================
-// ARCHIVO: src/components/oep/OEPPaymentModal.tsx (VERSIÓN CORREGIDA)
+// ARCHIVO: src/components/oep/OEPPaymentModal.tsx
+// Modal para cambiar método de pago en OEP - VERSIÓN MEJORADA
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, DollarSign, Smartphone } from 'lucide-react';
+import { X, CreditCard, DollarSign, Smartphone, Minus } from 'lucide-react';
 import { OEPOrder } from '../../types/oep';
 
 interface OEPPaymentModalProps {
@@ -43,7 +44,6 @@ export const OEPPaymentModal: React.FC<OEPPaymentModalProps> = ({
         setLoading(true);
         try {
             await onSave(order.id, selectedMethod);
-            onClose();
         } catch (error) {
             console.error(error);
         } finally {
@@ -51,95 +51,173 @@ export const OEPPaymentModal: React.FC<OEPPaymentModalProps> = ({
         }
     };
 
+    const paymentOptions = [
+        { value: 'EFECTIVO', label: 'Efectivo', icon: DollarSign, color: 'green', bgColor: 'bg-green-50', borderColor: 'border-green-500', textColor: 'text-green-700' },
+        { value: 'YAPE/PLIN', label: 'Yape/Plin', icon: Smartphone, color: 'purple', bgColor: 'bg-purple-50', borderColor: 'border-purple-500', textColor: 'text-purple-700' },
+        { value: 'TARJETA', label: 'Tarjeta', icon: CreditCard, color: 'blue', bgColor: 'bg-blue-50', borderColor: 'border-blue-500', textColor: 'text-blue-700' },
+        { value: 'none', label: 'No Aplica', icon: Minus, color: 'gray', bgColor: 'bg-gray-50', borderColor: 'border-gray-400', textColor: 'text-gray-600' }
+    ];
+
+    const handleSelectOption = (value: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'none') => {
+        if (value === 'none') {
+            setSelectedMethod(null);
+        } else {
+            setSelectedMethod(value);
+        }
+    };
+
+    const isSelected = (value: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'none') => {
+        return value === 'none' ? selectedMethod === null : selectedMethod === value;
+    };
+
+    const getOptionClasses = (option: typeof paymentOptions[0]) => {
+        const selected = isSelected(option.value as any);
+        return `
+            p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center space-y-2
+            ${selected 
+                ? `${option.bgColor} ${option.borderColor} shadow-lg scale-105` 
+                : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-md'
+            }
+            ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `;
+    };
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md">
-                <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900">Cambiar Método de Pago</h2>
-                        <p className="text-sm text-gray-500 mt-1">Pedido #{order.order_number} — {order.customer_name}</p>
+        <div 
+            className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${
+                isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+            }`}
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+            onClick={onClose}
+        >
+            {/* Modal centrado */}
+            <div 
+                className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform transition-all duration-300 scale-100 opacity-100"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header con gradiente */}
+                <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-5 text-white">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                            <div className="bg-white/20 p-2 rounded-lg">
+                                <CreditCard size={22} className="text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold">Cambiar Método de Pago</h2>
+                                <p className="text-xs text-blue-100 mt-0.5">Pedido #{order.order_number}</p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors" disabled={loading}>
+                            <X size={20} />
+                        </button>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        <X size={24} />
-                    </button>
                 </div>
 
                 <div className="p-6">
-                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                        <div className="flex justify-between items-center">
+                    {/* Información del pedido */}
+                    <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm text-gray-600">Cliente:</span>
+                            <span className="font-semibold text-gray-900">{order.customer_name}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-600">Monto:</span>
-                            <span className="font-bold text-blue-600">S/ {order.total.toFixed(2)}</span>
+                            <span className="text-xl font-bold text-blue-600">S/ {order.total.toFixed(2)}</span>
                         </div>
                     </div>
 
-                    <div className="mb-4">
-                        <span className="text-sm font-medium text-gray-700 mb-2 block">Método actual:</span>
-                        <div className="p-3 bg-gray-100 rounded-lg flex items-center space-x-2">
-                            {order.payment_method ? (
+                    {/* Método actual */}
+                    <div className="mb-5">
+                        <span className="text-sm font-medium text-gray-700 block mb-2">Método actual:</span>
+                        <div className="p-3 bg-gray-100 rounded-lg flex items-center space-x-3 border border-gray-200">
+                            {order.payment_method === 'EFECTIVO' && (
                                 <>
-                                    {order.payment_method === 'EFECTIVO' && <DollarSign size={18} className="text-green-600" />}
-                                    {order.payment_method === 'YAPE/PLIN' && <Smartphone size={18} className="text-purple-600" />}
-                                    {order.payment_method === 'TARJETA' && <CreditCard size={18} className="text-blue-600" />}
-                                    <span className="font-medium">{order.payment_method}</span>
+                                    <div className="bg-green-100 p-2 rounded-full">
+                                        <DollarSign size={18} className="text-green-600" />
+                                    </div>
+                                    <span className="font-semibold text-green-700">EFECTIVO</span>
                                 </>
-                            ) : (
-                                <span className="font-medium">NO APLICA</span>
+                            )}
+                            {order.payment_method === 'YAPE/PLIN' && (
+                                <>
+                                    <div className="bg-purple-100 p-2 rounded-full">
+                                        <Smartphone size={18} className="text-purple-600" />
+                                    </div>
+                                    <span className="font-semibold text-purple-700">YAPE/PLIN</span>
+                                </>
+                            )}
+                            {order.payment_method === 'TARJETA' && (
+                                <>
+                                    <div className="bg-blue-100 p-2 rounded-full">
+                                        <CreditCard size={18} className="text-blue-600" />
+                                    </div>
+                                    <span className="font-semibold text-blue-700">TARJETA</span>
+                                </>
+                            )}
+                            {!order.payment_method && (
+                                <>
+                                    <div className="bg-gray-200 p-2 rounded-full">
+                                        <Minus size={18} className="text-gray-600" />
+                                    </div>
+                                    <span className="font-semibold text-gray-600">NO APLICA</span>
+                                </>
                             )}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3 mb-6">
-                        <button
-                            onClick={() => handleSelectMethod('EFECTIVO')}
-                            className={`p-4 rounded-xl border-2 flex flex-col items-center space-y-2 ${
-                                selectedMethod === 'EFECTIVO'
-                                    ? 'border-green-500 bg-green-50'
-                                    : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                        >
-                            <DollarSign size={24} className="text-green-600" />
-                            <span className="text-sm font-medium">Efectivo</span>
-                        </button>
-
-                        <button
-                            onClick={() => handleSelectMethod('YAPE/PLIN')}
-                            className={`p-4 rounded-xl border-2 flex flex-col items-center space-y-2 ${
-                                selectedMethod === 'YAPE/PLIN'
-                                    ? 'border-purple-500 bg-purple-50'
-                                    : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                        >
-                            <Smartphone size={24} className="text-purple-600" />
-                            <span className="text-sm font-medium">Yape/Plin</span>
-                        </button>
-
-                        <button
-                            onClick={() => handleSelectMethod('TARJETA')}
-                            className={`p-4 rounded-xl border-2 flex flex-col items-center space-y-2 ${
-                                selectedMethod === 'TARJETA'
-                                    ? 'border-blue-500 bg-blue-50'
-                                    : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                        >
-                            <CreditCard size={24} className="text-blue-600" />
-                            <span className="text-sm font-medium">Tarjeta</span>
-                        </button>
+                    {/* Selección de nuevo método */}
+                    <div className="mb-6">
+                        <span className="text-sm font-medium text-gray-700 block mb-3">Seleccionar nuevo método:</span>
+                        <div className="grid grid-cols-2 gap-3">
+                            {paymentOptions.map((option) => {
+                                const Icon = option.icon;
+                                const selected = isSelected(option.value as any);
+                                
+                                return (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => handleSelectOption(option.value as any)}
+                                        disabled={loading}
+                                        className={getOptionClasses(option)}
+                                    >
+                                        <div className={`p-2 rounded-full ${selected ? option.bgColor : 'bg-gray-100'}`}>
+                                            <Icon size={24} className={selected ? option.textColor : 'text-gray-600'} />
+                                        </div>
+                                        <span className={`text-sm font-medium ${selected ? option.textColor : 'text-gray-700'}`}>
+                                            {option.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
+                    {/* Botones de acción */}
                     <div className="flex space-x-3">
                         <button
                             onClick={onClose}
                             disabled={loading}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                            className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium"
                         >
                             Cancelar
                         </button>
                         <button
                             onClick={handleSave}
                             disabled={!selectedMethod || loading}
-                            className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg hover:shadow-md disabled:opacity-50 font-semibold"
+                            className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-3 rounded-xl hover:shadow-lg disabled:opacity-50 font-semibold flex items-center justify-center space-x-2"
                         >
-                            {loading ? 'Guardando...' : 'Guardar'}
+                            {loading ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                                    <span>Guardando...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <CreditCard size={18} />
+                                    <span>Actualizar</span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>
