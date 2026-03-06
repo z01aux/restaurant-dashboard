@@ -31,8 +31,9 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
     
+    // Productos en mayúsculas
     const productos = order.items.map(item => 
-      `${item.quantity}x ${item.name}`
+      `${item.quantity}x ${item.name.toUpperCase()}`
     ).join(' | ');
 
     return [
@@ -103,7 +104,8 @@ const listFullDayItemsByMainCategory = async (order: FullDayOrder): Promise<{
   });
 
   for (const item of order.items) {
-    const itemDisplay = `${item.quantity}x ${item.name}`;
+    // Nombre del producto en mayúsculas para la visualización
+    const itemDisplay = `${item.quantity}x ${item.name.toUpperCase()}`;
     
     // Obtener la categoría del mapa
     const category = categoryMap.get(item.id) || '';
@@ -209,6 +211,7 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
       '📞 TELÉFONO': order.phone || '',
       '💰 MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
       '💳 MÉTODO PAGO': order.payment_method || 'NO APLICA',
+      // Las siguientes columnas ya vienen en mayúsculas desde listFullDayItemsByMainCategory
       '🥗 ENTRADAS': categorizedItems.entradas,
       '🍽️ PLATOS DE FONDO': categorizedItems.fondos,
       '🥤 BEBIDAS': categorizedItems.bebidas,
@@ -331,6 +334,7 @@ export const exportFullDayByDateRange = async (
       order.guardian_name,
       order.phone || '---',
       order.payment_method || 'NO APLICA',
+      // Las columnas de productos ya vienen en mayúsculas
       categorizedItems.entradas,
       categorizedItems.fondos,
       categorizedItems.bebidas,
@@ -370,7 +374,7 @@ export const exportFullDayByDateRange = async (
     .slice(0, 10)
     .map((p, index) => [
       index + 1,
-      p.name,
+      p.name.toUpperCase(), // Producto en mayúsculas
       p.quantity,
       `S/ ${p.total.toFixed(2)}`
     ]);

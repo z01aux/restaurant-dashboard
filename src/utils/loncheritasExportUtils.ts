@@ -16,7 +16,7 @@ const getStartOfDay = (d: Date) => { const s = new Date(d); s.setHours(0, 0, 0, 
 const getEndOfDay = (d: Date) => { const e = new Date(d); e.setHours(23, 59, 59, 999); return e; };
 
 /**
- * Formatea los items del pedido como una lista de desayunos
+ * Formatea los items del pedido como una lista de desayunos en mayúsculas
  * Ejemplo: "2x PAN CON CHICHARRÓN, 1x JUGO DE NARANJA"
  */
 const formatDesayunos = (items: LoncheritasOrder['items']): string => {
@@ -26,9 +26,9 @@ const formatDesayunos = (items: LoncheritasOrder['items']): string => {
       const quantity = item.quantity;
       const base = `${quantity}x ${itemName}`;
       
-      // Si tiene notas, las agregamos entre paréntesis
+      // Si tiene notas, las agregamos entre paréntesis (también en mayúsculas)
       if (item.notes && item.notes.trim() !== '') {
-        return `${base} (${item.notes.trim()})`;
+        return `${base} (${item.notes.trim().toUpperCase()})`;
       }
       return base;
     })
@@ -36,15 +36,15 @@ const formatDesayunos = (items: LoncheritasOrder['items']): string => {
 };
 
 /**
- * Formato compacto para desayunos (cuando hay muchos items)
+ * Formato compacto para desayunos (cuando hay muchos items) en mayúsculas
  * Ejemplo: "2x PAN CON CHICHARRÓN + 1x JUGO"
  */
 const formatDesayunosCompact = (items: LoncheritasOrder['items']): string => {
   return items
     .map(item => {
       const itemName = item.name.length > 20 
-        ? item.name.substring(0, 20) + '…' 
-        : item.name;
+        ? item.name.substring(0, 20).toUpperCase() + '…' 
+        : item.name.toUpperCase();
       return `${item.quantity}x ${itemName}`;
     })
     .join(' + ');
@@ -58,7 +58,7 @@ export const exportLoncheritasToExcel = (orders: LoncheritasOrder[], tipo: 'toda
     const fecha = formatDate(new Date(order.created_at));
     const hora = formatTime(new Date(order.created_at));
     
-    // Determinar qué formato usar para desayunos
+    // Determinar qué formato usar para desayunos (ahora en mayúsculas)
     const desayunos = order.items.length > 3 
       ? formatDesayunosCompact(order.items)
       : formatDesayunos(order.items);
@@ -143,7 +143,7 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
   wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, '📊 RESUMEN');
 
-  // HOJA 2: DETALLE (SIN APODERADO, CON DESAYUNOS)
+  // HOJA 2: DETALLE (SIN APODERADO, CON DESAYUNOS EN MAYÚSCULAS)
   const detailRows: any[][] = [
     ['DETALLE DE PEDIDOS LONCHERITAS'],
     [`Período: ${formatDate(startDate)} al ${formatDate(endDate)}`],
@@ -155,10 +155,10 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .forEach(o => {
       const desayunos = o.items.length > 3
-        ? o.items.map(i => `${i.quantity}x ${i.name}`).join('\n')
+        ? o.items.map(i => `${i.quantity}x ${i.name.toUpperCase()}`).join('\n')
         : o.items.map(i => {
-          const base = `${i.quantity}x ${i.name}`;
-          return i.notes ? `${base} (${i.notes})` : base;
+          const base = `${i.quantity}x ${i.name.toUpperCase()}`;
+          return i.notes ? `${base} (${i.notes.toUpperCase()})` : base;
         }).join('\n');
 
       detailRows.push([
@@ -190,7 +190,7 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
   ];
   XLSX.utils.book_append_sheet(wb, wsDetail, '📋 DETALLE');
 
-  // HOJA 3: TOP PRODUCTOS (se mantiene igual)
+  // HOJA 3: TOP PRODUCTOS (ahora en mayúsculas)
   const productMap = new Map<string, { name: string; quantity: number; total: number }>();
   filtered.forEach(o => o.items.forEach(item => {
     const ex = productMap.get(item.id);
@@ -204,7 +204,7 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
 
   const topProducts = Array.from(productMap.values())
     .sort((a, b) => b.quantity - a.quantity).slice(0, 10)
-    .map((p, i) => [i + 1, p.name, p.quantity, `S/ ${p.total.toFixed(2)}`]);
+    .map((p, i) => [i + 1, p.name.toUpperCase(), p.quantity, `S/ ${p.total.toFixed(2)}`]);
 
   const wsProducts = XLSX.utils.aoa_to_sheet([
     ['🏆 TOP 10 PRODUCTOS LONCHERITAS'],
