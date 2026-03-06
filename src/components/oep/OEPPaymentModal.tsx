@@ -29,12 +29,6 @@ export const OEPPaymentModal: React.FC<OEPPaymentModalProps> = ({
 
     if (!isOpen || !order) return null;
 
-    const handleSelectMethod = (value: string) => {
-        if (value === 'EFECTIVO' || value === 'YAPE/PLIN' || value === 'TARJETA') {
-            setSelectedMethod(value);
-        }
-    };
-
     const handleSave = async () => {
         if (selectedMethod === order.payment_method) {
             onClose();
