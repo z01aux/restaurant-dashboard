@@ -4,7 +4,7 @@
 // ============================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download, ChevronLeft, ChevronRight, Printer } from 'lucide-react'; // ← Eliminados Calendar y FileSpreadsheet
+import { Search, Pencil, Download, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { usePagination } from '../../hooks/usePagination';
@@ -14,7 +14,7 @@ import { OEPDateFilter } from './OEPDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
 import { OEPOrderPreview } from './OEPOrderPreview';
 import OEPTicket from './OEPTicket';
-import { OEPOrder } from '../../types/oep';
+import { OEPOrder, OEPPaymentMethod } from '../../types/oep';
 import { exportOEPToExcel, exportOEPByDateRange } from '../../utils/oepExportUtils';
 import { generateOEPTicketSummary, printOEPResumenTicket } from '../../utils/oepTicketUtils';
 
@@ -363,18 +363,23 @@ export const OEPOrdersManager: React.FC = () => {
     setShowPaymentModal(true);
   }, []);
 
-  const handleSavePaymentMethod = useCallback(async (orderId: string, paymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null) => {
+  const handleSavePaymentMethod = useCallback(async (orderId: string, paymentMethod: OEPPaymentMethod | null) => {
     try {
       const result = await updateOrderPayment(orderId, paymentMethod);
       if (!result.success) alert('❌ Error al actualizar: ' + result.error);
-      else alert('✅ Método de pago actualizado correctamente');
     } catch (error: any) {
       alert('❌ Error inesperado: ' + error.message);
-    } finally {
-      setShowPaymentModal(false);
-      setSelectedOrder(null);
     }
   }, [updateOrderPayment]);
+
+  // NUEVO: Manejador para actualizar la UI inmediatamente después del cambio de pago
+  const handlePaymentUpdated = useCallback((orderId: string, newMethod: OEPPaymentMethod | null) => {
+    setLocalOrders(prev => prev.map(order => 
+      order.id === orderId 
+        ? { ...order, payment_method: newMethod } 
+        : order
+    ));
+  }, []);
 
   // Funciones auxiliares
   const getDisplayNumber = useCallback((order: OEPOrder) => {
@@ -433,6 +438,7 @@ export const OEPOrdersManager: React.FC = () => {
         onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
         order={selectedOrder}
         onSave={handleSavePaymentMethod}
+        onPaymentUpdated={handlePaymentUpdated}
       />
       <OEPCashRegisterModal
         isOpen={showCashModal}
@@ -682,4 +688,3 @@ export const OEPOrdersManager: React.FC = () => {
     </div>
   );
 };
-

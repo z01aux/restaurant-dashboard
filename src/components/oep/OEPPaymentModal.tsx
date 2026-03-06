@@ -1,6 +1,6 @@
 // ============================================================
 // ARCHIVO: src/components/oep/OEPPaymentModal.tsx
-// Modal para cambiar método de pago en OEP - VERSIÓN MEJORADA
+// Modal para cambiar método de pago en OEP - CON ACTUALIZACIÓN INMEDIATA
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
@@ -12,6 +12,7 @@ interface OEPPaymentModalProps {
     onClose: () => void;
     order: OEPOrder | null;
     onSave: (orderId: string, paymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null) => Promise<void>;
+    onPaymentUpdated?: (orderId: string, newMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null) => void;
 }
 
 export const OEPPaymentModal: React.FC<OEPPaymentModalProps> = ({
@@ -19,6 +20,7 @@ export const OEPPaymentModal: React.FC<OEPPaymentModalProps> = ({
     onClose,
     order,
     onSave,
+    onPaymentUpdated
 }) => {
     const [selectedMethod, setSelectedMethod] = useState<'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null>(null);
     const [loading, setLoading] = useState(false);
@@ -38,6 +40,13 @@ export const OEPPaymentModal: React.FC<OEPPaymentModalProps> = ({
         setLoading(true);
         try {
             await onSave(order.id, selectedMethod);
+            
+            // Notificar al componente padre para actualizar la UI
+            if (onPaymentUpdated) {
+                onPaymentUpdated(order.id, selectedMethod);
+            }
+            
+            onClose();
         } catch (error) {
             console.error(error);
         } finally {

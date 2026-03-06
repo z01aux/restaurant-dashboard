@@ -1,7 +1,6 @@
-// ============================================
+// =======================================================
 // ARCHIVO: src/components/fullday/FullDayPaymentModal.tsx
-// Modal para cambiar método de pago en FullDay - VERSIÓN MEJORADA
-// ============================================
+// =======================================================
 
 import React, { useState, useEffect } from 'react';
 import { X, CreditCard, DollarSign, Smartphone, Minus } from 'lucide-react';
@@ -12,13 +11,15 @@ interface FullDayPaymentModalProps {
   onClose: () => void;
   order: FullDayOrder | null;
   onSave: (orderId: string, paymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null) => Promise<void>;
+  onPaymentUpdated?: (orderId: string, newMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null) => void;
 }
 
 export const FullDayPaymentModal: React.FC<FullDayPaymentModalProps> = ({
   isOpen,
   onClose,
   order,
-  onSave
+  onSave,
+  onPaymentUpdated
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null>(null);
   const [saving, setSaving] = useState(false);
@@ -40,6 +41,13 @@ export const FullDayPaymentModal: React.FC<FullDayPaymentModalProps> = ({
     setSaving(true);
     try {
       await onSave(order.id, selectedMethod);
+      
+      // Notificar al componente padre para actualizar la UI
+      if (onPaymentUpdated) {
+        onPaymentUpdated(order.id, selectedMethod);
+      }
+      
+      onClose();
     } catch (error) {
       console.error('Error:', error);
     } finally {

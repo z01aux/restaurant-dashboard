@@ -1,7 +1,7 @@
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2, Calendar } from 'lucide-react'; // Eliminado 'Download' que no se usaba, agregado 'Calendar' que sí se necesita
+import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2, Calendar } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -26,9 +26,6 @@ interface LoncheritasDateRangeModalProps {
   title?: string;
 }
 
-/**
- * Obtiene la fecha de hoy en formato YYYY-MM-DD usando hora local de Perú
- */
 const getTodayString = (): string => {
   const now = new Date();
   const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
@@ -38,9 +35,6 @@ const getTodayString = (): string => {
   return `${year}-${month}-${day}`;
 };
 
-/**
- * Convierte una fecha local (YYYY-MM-DD) a un objeto Date en hora local de Perú
- */
 const createPeruDate = (dateStr: string): Date => {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day, 0, 0, 0, 0);
@@ -156,7 +150,7 @@ const LoncheritasDateRangeModal: React.FC<LoncheritasDateRangeModalProps> = ({
               <h2 className="text-lg font-bold">{title}</h2>
             </div>
             <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg">
-              <Calendar size={20} className="text-white" /> {/* Cambiado de X a Calendar temporalmente */}
+              <X size={20} className="text-white" />
             </button>
           </div>
         </div>
@@ -503,7 +497,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
     exportLoncheritasByDateRange(orders, startDate, endDate);
   }, [orders]);
 
-  // NUEVO: Manejador para ticket resumen por rango de fechas
   const handleTicketResumen = useCallback((startDate: Date, endDate: Date) => {
     const s = new Date(startDate); s.setHours(0, 0, 0, 0);
     const e = new Date(endDate);   e.setHours(23, 59, 59, 999);
@@ -540,14 +533,19 @@ export const LoncheritasOrdersManager: React.FC = () => {
     try {
       const result = await updateOrderPayment(orderId, paymentMethod);
       if (!result.success) alert('❌ Error al actualizar: ' + result.error);
-      else alert('✅ Método de pago actualizado correctamente');
     } catch (error: any) {
       alert('❌ Error inesperado: ' + error.message);
-    } finally {
-      setShowPaymentModal(false);
-      setSelectedOrder(null);
     }
   }, [updateOrderPayment]);
+
+  // NUEVO: Manejador para actualizar la UI inmediatamente después del cambio de pago
+  const handlePaymentUpdated = useCallback((orderId: string, newMethod: LoncheritasPaymentMethod) => {
+    setLocalOrders(prev => prev.map(order => 
+      order.id === orderId 
+        ? { ...order, payment_method: newMethod } 
+        : order
+    ));
+  }, []);
 
   const getDisplayNumber = useCallback((order: LoncheritasOrder) =>
     order.order_number || `LON-${order.id.slice(-8).toUpperCase()}`, []);
@@ -597,6 +595,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
         order={selectedOrder}
         onSave={handleSavePaymentMethod}
+        onPaymentUpdated={handlePaymentUpdated}
       />
       <LoncheritasCashRegisterModal
         isOpen={showCashModal}
@@ -614,7 +613,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         title="📊 Reporte Excel por Rango de Fechas - Loncheritas"
       />
       
-      {/* NUEVO: Modal Ticket Resumen por rango */}
+      {/* Modal Ticket Resumen por rango */}
       <LoncheritasDateRangeModal
         isOpen={showDateRangeTicket}
         onClose={() => setShowDateRangeTicket(false)}
@@ -663,7 +662,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         />
       </div>
 
-      {/* ✅ BOTONES: Excel Hoy, Excel Todo, Reporte por Fechas, Ticket Resumen */}
+      {/* BOTONES */}
       <div className="flex flex-wrap gap-2">
         <button onClick={handleExcelHoy} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
           <FileSpreadsheet size={16} /><span>Excel Hoy</span>
@@ -674,7 +673,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
         <button onClick={() => setShowDateRangeExcel(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1">
           <Calendar size={16} /><span>Reporte por Fechas</span>
         </button>
-        {/* NUEVO: Botón para Ticket Resumen */}
         <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
           <Printer size={16} /><span>Ticket Resumen</span>
         </button>

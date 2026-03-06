@@ -117,7 +117,6 @@ const FullDayOrderRow = React.memo(({
           {order.items.map(item => item.name).join(', ')}
         </div>
       </td>
-      {/* ✅ onMouseEnter={onMouseLeave} oculta el preview al entrar a Acciones */}
       <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
         <div ref={actionsRef} className="flex space-x-2">
           <FullDayTicket order={order} />
@@ -311,14 +310,19 @@ export const FullDayOrdersManager: React.FC = () => {
     try {
       const result = await updateOrderPayment(orderId, paymentMethod);
       if (!result.success) alert('❌ Error al actualizar: ' + result.error);
-      else alert('✅ Método de pago actualizado correctamente');
     } catch (error: any) {
       alert('❌ Error inesperado: ' + error.message);
-    } finally {
-      setShowPaymentModal(false);
-      setSelectedOrder(null);
     }
   }, [updateOrderPayment]);
+
+  // NUEVO: Manejador para actualizar la UI inmediatamente después del cambio de pago
+  const handlePaymentUpdated = useCallback((orderId: string, newMethod: FullDayPaymentMethod) => {
+    setLocalOrders(prev => prev.map(order => 
+      order.id === orderId 
+        ? { ...order, payment_method: newMethod } 
+        : order
+    ));
+  }, []);
 
   const getDisplayNumber = useCallback((order: FullDayOrder) =>
     order.order_number || `FD-${order.id.slice(-8).toUpperCase()}`, []);
@@ -368,6 +372,7 @@ export const FullDayOrdersManager: React.FC = () => {
         onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
         order={selectedOrder}
         onSave={handleSavePaymentMethod}
+        onPaymentUpdated={handlePaymentUpdated}
       />
       <FullDayCashRegisterModal
         isOpen={showCashModal}
@@ -385,7 +390,7 @@ export const FullDayOrdersManager: React.FC = () => {
         onConfirm={handleExportByDateRange}
         title="📊 Reporte Excel por Rango de Fechas - FullDay"
       />
-      {/* Modal Ticket Resumen por rango - CORREGIDO: título ahora dice "Ticket" en lugar de "Excel" */}
+      {/* Modal Ticket Resumen por rango */}
       <FullDayDateRangeModal
         isOpen={showDateRangeTicket}
         onClose={() => setShowDateRangeTicket(false)}
@@ -434,7 +439,7 @@ export const FullDayOrdersManager: React.FC = () => {
         />
       </div>
 
-      {/* ✅ BOTONES: sin CSV — con Excel Hoy, Excel Todo, Reporte por Fechas, Ticket Resumen */}
+      {/* BOTONES */}
       <div className="flex flex-wrap gap-2">
         <button onClick={handleExportTodayExcel} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
           <FileSpreadsheet size={16} /><span>Excel Hoy</span>
