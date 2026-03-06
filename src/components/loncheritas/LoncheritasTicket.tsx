@@ -14,17 +14,21 @@ interface LoncheritasTicketProps {
   onMouseLeave?: () => void;
 }
 
-// Función para truncar nombres largos
-const limitNameLength = (fullName: string): string => {
-  if (fullName.length > 35) {
-    const parts = fullName.split(',');
-    if (parts.length >= 2) {
-      const lastName = parts[0].trim();
-      const firstNames = parts[1].trim().split(' ');
-      if (firstNames.length >= 2) return `${lastName}, ${firstNames[0]}`;
-    }
-    return fullName.substring(0, 35) + '...';
+// ── Función para mostrar apellidos y primer nombre ─────────
+const formatName = (fullName: string): string => {
+  if (!fullName) return '';
+  
+  const parts = fullName.trim().split(/\s+/);
+  
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return fullName;
+  
+  if (parts.length >= 3) {
+    const firstName = parts[0];
+    const lastNames = parts.slice(1).join(' ');
+    return `${firstName} ${lastNames}`;
   }
+  
   return fullName;
 };
 
@@ -48,8 +52,8 @@ const LoncheritasTicket: React.FC<LoncheritasTicketProps> = ({ order, onMouseEnt
   };
 
   const createdDate = new Date(order.created_at);
-  const studentDisplay = limitNameLength(order.student_name);
-  const guardianDisplay = limitNameLength(order.guardian_name);
+  const studentDisplay = formatName(order.student_name);
+  const guardianDisplay = formatName(order.guardian_name);
 
   // Estilos PDF
   const styles = StyleSheet.create({

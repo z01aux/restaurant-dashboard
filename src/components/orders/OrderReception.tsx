@@ -1,5 +1,5 @@
 // =================================================
-// ARCHIVO: src/components/orders/OrderReception.tsx 
+// ARCHIVO: src/components/orders/OrderReception.tsx (VERSIÓN FINAL CON OEP - SIN IGV)
 // =================================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -1023,23 +1023,26 @@ const QuickMenuManager: React.FC<{
 };
 
 // ============================================
-// FUNCIÓN PARA LIMITAR NOMBRES LARGOS
+// FUNCIÓN PARA MOSTRAR APELLIDOS Y PRIMER NOMBRE
 // ============================================
-const limitNameLength = (fullName: string): string => {
-  if (fullName.length > 35) {
-    const parts = fullName.split(',');
-    
-    if (parts.length >= 2) {
-      const lastName = parts[0].trim();
-      const firstNames = parts[1].trim().split(' ');
-      
-      if (firstNames.length >= 2) {
-        return `${lastName}, ${firstNames[0]}`;
-      }
-    }
-    
-    return fullName.substring(0, 35) + '...';
+const formatName = (fullName: string): string => {
+  if (!fullName) return '';
+  
+  // Dividir el nombre completo por espacios
+  const parts = fullName.trim().split(/\s+/);
+  
+  if (parts.length === 1) return parts[0]; // Solo un nombre
+  
+  if (parts.length === 2) return fullName; // Nombre y apellido
+  
+  if (parts.length >= 3) {
+    // Para nombres con 3 o más partes: asumimos que el primero es el nombre
+    // y los siguientes son los apellidos
+    const firstName = parts[0];
+    const lastNames = parts.slice(1).join(' ');
+    return `${firstName} ${lastNames}`;
   }
+  
   return fullName;
 };
 
@@ -1347,13 +1350,13 @@ const OrderReception: React.FC = React.memo(() => {
         let customerInfo = '';
         
         if ((order.source.type === 'fullDay' || order.source.type === 'loncheritas') && order.studentInfo) {
-          const limitedStudentName = limitNameLength(order.studentInfo.fullName);
-          const limitedGuardianName = limitNameLength(order.studentInfo.guardianName);
+          const formattedStudentName = formatName(order.studentInfo.fullName);
+          const formattedGuardianName = formatName(order.studentInfo.guardianName);
           
           customerInfo = `
             <div class="info-row">
               <span class="label">ALUMNO:</span>
-              <span class="customer-name-bold">${limitedStudentName.toUpperCase()}</span>
+              <span class="customer-name-bold">${formattedStudentName.toUpperCase()}</span>
             </div>
             <div class="info-row">
               <span class="label">GRADO:</span>
@@ -1361,7 +1364,7 @@ const OrderReception: React.FC = React.memo(() => {
             </div>
             <div class="info-row">
               <span class="label">APODERADO:</span>
-              <span class="value">${limitedGuardianName.toUpperCase()}</span>
+              <span class="value">${formattedGuardianName.toUpperCase()}</span>
             </div>
             ${order.phone ? `
             <div class="info-row">
@@ -1705,15 +1708,17 @@ const OrderReception: React.FC = React.memo(() => {
           notes: orderNotes
         });
 
-        if (result.success) {
+        if (result.success && result.data) {
           showToast('✅ Pedido FullDay guardado', 'success');
           
-          const tempOrder: Order = {
-            id: 'temp-' + Date.now(),
-            orderNumber: `FLD-${Date.now().toString().slice(-8)}`,
+          // Usar los datos reales de la orden creada para imprimir
+          const createdOrder = result.data;
+          const orderForTicket: Order = {
+            id: createdOrder.id,
+            orderNumber: createdOrder.order_number,
             items: cart,
             status: 'pending',
-            createdAt: new Date(),
+            createdAt: new Date(createdOrder.created_at),
             total: total,
             customerName: studentName,
             phone: phone || 'Sin teléfono',
@@ -1730,7 +1735,7 @@ const OrderReception: React.FC = React.memo(() => {
             orderType: 'fullday'
           };
           
-          printOrderImmediately(tempOrder);
+          printOrderImmediately(orderForTicket);
         } else {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
@@ -1757,15 +1762,16 @@ const OrderReception: React.FC = React.memo(() => {
           notes: orderNotes
         });
 
-        if (result.success) {
+        if (result.success && result.data) {
           showToast('✅ Pedido Loncheritas guardado', 'success');
 
-          const tempOrder: Order = {
-            id: 'temp-' + Date.now(),
-            orderNumber: `LON-${Date.now().toString().slice(-8)}`,
+          const createdOrder = result.data;
+          const orderForTicket: Order = {
+            id: createdOrder.id,
+            orderNumber: createdOrder.order_number,
             items: cart,
             status: 'pending',
-            createdAt: new Date(),
+            createdAt: new Date(createdOrder.created_at),
             total: total,
             customerName: studentName,
             phone: phone || 'Sin teléfono',
@@ -1782,7 +1788,7 @@ const OrderReception: React.FC = React.memo(() => {
             orderType: 'fullday'
           };
 
-          printOrderImmediately(tempOrder);
+          printOrderImmediately(orderForTicket);
         } else {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
@@ -1806,16 +1812,17 @@ const OrderReception: React.FC = React.memo(() => {
           notes: orderNotes
         });
 
-        if (result.success) {
+        if (result.success && result.data) {
           showToast('✅ Pedido OEP guardado', 'success');
 
-          const tempOrder: Order = {
-            id: 'temp-' + Date.now(),
-            orderNumber: `OEP-${Date.now().toString().slice(-8)}`,
-            kitchenNumber: `COM-${Date.now().toString().slice(-8)}`,
+          const createdOrder = result.data;
+          const orderForTicket: Order = {
+            id: createdOrder.id,
+            orderNumber: createdOrder.order_number,
+            kitchenNumber: `COM-${createdOrder.id.slice(-8).toUpperCase()}`,
             items: cart,
             status: 'pending',
-            createdAt: new Date(),
+            createdAt: new Date(createdOrder.created_at),
             total: total,
             customerName: customerName,
             phone: phone,
@@ -1825,7 +1832,7 @@ const OrderReception: React.FC = React.memo(() => {
             paymentMethod: paymentMethod,
             orderType: 'regular'
           };
-          printOrderImmediately(tempOrder);
+          printOrderImmediately(orderForTicket);
         } else {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
@@ -1854,30 +1861,32 @@ const OrderReception: React.FC = React.memo(() => {
           orderType: 'regular'
         };
 
-        const tempOrder: Order = {
-          id: 'temp-' + Date.now(),
-          orderNumber: activeTab === 'phone' ? `COM-${Date.now().toString().slice(-8)}` : `ORD-${Date.now().toString().slice(-8)}`,
-          kitchenNumber: activeTab === 'phone' ? `COM-${Date.now().toString().slice(-8)}` : undefined,
-          items: cart,
-          status: 'pending',
-          createdAt: new Date(),
-          total: total,
-          customerName: customerName,
-          phone: phone,
-          address: address,
-          tableNumber: tableNumber,
-          source: orderData.source,
-          notes: orderNotes,
-          paymentMethod: orderData.paymentMethod,
-          orderType: 'regular'
-        };
-
-        printOrderImmediately(tempOrder);
-
         const result = await createOrder(orderData);
 
-        if (result.success) {
+        if (result.success && result.order) {
           showToast('✅ Orden guardada', 'success');
+          
+          // Usar los datos reales de la orden creada para imprimir
+          const createdOrder = result.order;
+          const orderForTicket: Order = {
+            id: createdOrder.id,
+            orderNumber: createdOrder.orderNumber,
+            kitchenNumber: createdOrder.kitchenNumber,
+            items: cart,
+            status: 'pending',
+            createdAt: new Date(createdOrder.createdAt),
+            total: total,
+            customerName: customerName,
+            phone: phone,
+            address: address,
+            tableNumber: tableNumber,
+            source: orderData.source,
+            notes: orderNotes,
+            paymentMethod: orderData.paymentMethod,
+            orderType: 'regular'
+          };
+          
+          printOrderImmediately(orderForTicket);
         } else {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }

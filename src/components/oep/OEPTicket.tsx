@@ -14,6 +14,24 @@ interface OEPTicketProps {
   onMouseLeave?: () => void;
 }
 
+// ── Función para mostrar apellidos y primer nombre ─────────
+const formatName = (fullName: string): string => {
+  if (!fullName) return '';
+  
+  const parts = fullName.trim().split(/\s+/);
+  
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return fullName;
+  
+  if (parts.length >= 3) {
+    const firstName = parts[0];
+    const lastNames = parts.slice(1).join(' ');
+    return `${firstName} ${lastNames}`;
+  }
+  
+  return fullName;
+};
+
 const OEPTicket: React.FC<OEPTicketProps> = ({ order, onMouseEnter, onMouseLeave }) => {
   // Constantes de diseño
   const TICKET_WIDTH = 80;
@@ -34,13 +52,7 @@ const OEPTicket: React.FC<OEPTicketProps> = ({ order, onMouseEnter, onMouseLeave
   };
 
   const createdDate = new Date(order.created_at);
-
-  const limitNameLength = (fullName: string): string => {
-    if (fullName.length > 35) return fullName.substring(0, 35) + '...';
-    return fullName;
-  };
-
-  const customerDisplay = limitNameLength(order.customer_name);
+  const customerDisplay = formatName(order.customer_name);
 
   // Estilos PDF
   const styles = StyleSheet.create({

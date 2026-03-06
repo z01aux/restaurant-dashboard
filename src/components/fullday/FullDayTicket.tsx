@@ -1,7 +1,7 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayTicket.tsx
 // Ticket FullDay — mismo diseño que OrderTicket (sin emoticonos)
-// Nombres: primer nombre + 2 apellidos (se omite el segundo nombre)
+// Nombres: apellidos y primer nombre
 // ✅ FIX: onMouseEnter/onMouseLeave para suprimir preview al hover en botones
 // ============================================
 
@@ -15,18 +15,28 @@ interface FullDayTicketProps {
   onMouseLeave?: () => void;
 }
 
+// ── Función para mostrar apellidos y primer nombre ─────────
+const formatName = (fullName: string): string => {
+  if (!fullName) return '';
+  
+  const parts = fullName.trim().split(/\s+/);
+  
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return fullName;
+  
+  if (parts.length >= 3) {
+    const firstName = parts[0];
+    const lastNames = parts.slice(1).join(' ');
+    return `${firstName} ${lastNames}`;
+  }
+  
+  return fullName;
+};
+
 const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMouseLeave }) => {
 
-  // ── Eliminar solo el segundo nombre ─────────────────────────
-  const truncateName = (fullName: string): string => {
-    if (!fullName) return '';
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length <= 3) return fullName;
-    return `${parts[0]} ${parts.slice(2).join(' ')}`;
-  };
-
-  const studentDisplay  = truncateName(order.student_name);
-  const guardianDisplay = truncateName(order.guardian_name);
+  const studentDisplay  = formatName(order.student_name);
+  const guardianDisplay = formatName(order.guardian_name);
 
   // ── Constantes de diseño (igual que OrderTicket) ─────────────
   const TICKET_WIDTH = 80;
