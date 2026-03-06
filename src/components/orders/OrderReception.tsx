@@ -1,5 +1,5 @@
 // =================================================
-// ARCHIVO: src/components/orders/OrderReception.tsx (VERSIÓN FINAL CON OEP)
+// ARCHIVO: src/components/orders/OrderReception.tsx 
 // =================================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -1260,226 +1260,8 @@ const OrderReception: React.FC = React.memo(() => {
   }, [cart.length, showToast]);
 
   // ============================================
-  // FUNCIÓN GENERATE TICKET CONTENT
+  // FUNCIÓN PARA IMPRIMIR TICKET INMEDIATAMENTE (SIN IGV)
   // ============================================
-  const generateTicketContent = useCallback((order: Order, isKitchenTicket: boolean) => {
-    const getCurrentUserName = () => {
-      try {
-        const savedUser = localStorage.getItem('restaurant-user');
-        if (savedUser) {
-          const userData = JSON.parse(savedUser);
-          return userData.name || 'Sistema';
-        }
-      } catch (error) {
-        console.error('Error obteniendo usuario:', error);
-      }
-      return 'Sistema';
-    };
-
-    if (isKitchenTicket) {
-      return `
-        <div class="ticket">
-          <div class="center">
-            <div class="header-title uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
-            <div class="header-title">** COCINA **</div>
-            <div class="divider"></div>
-          </div>
-          
-          <div class="info-row">
-            <span class="label">CLIENTE:</span>
-            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">AREA:</span>
-            <span class="value">COCINA</span>
-          </div>
-          <div class="info-row">
-            <span class="label">COMANDA:</span>
-            <span class="value">#${order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">FECHA:</span>
-            <span class="value">${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">ATENDIDO POR:</span>
-            <span class="value">${getCurrentUserName().toUpperCase()}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="products-header">DESCRIPCION</div>
-          
-          <div class="divider"></div>
-          
-          ${order.items.map(item => `
-            <div class="product-row">
-              <div class="quantity">${item.quantity}x</div>
-              <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
-            </div>
-            ${item.notes && item.notes.trim() !== '' ? `<div class="notes">- ${item.notes}</div>` : ''}
-          `).join('')}
-          
-          <div class="divider"></div>
-          
-          <div class="center">
-            <div class="asterisk-line">********************************</div>
-          </div>
-        </div>
-      `;
-    } else {
-      const subtotal = order.total / 1.10;
-      const igv = order.total - subtotal;
-      
-      let customerInfo = '';
-      
-      if ((order.source.type === 'fullDay' || order.source.type === 'loncheritas') && order.studentInfo) {
-        const limitedStudentName = limitNameLength(order.studentInfo.fullName);
-        const limitedGuardianName = limitNameLength(order.studentInfo.guardianName);
-        
-        customerInfo = `
-          <div class="info-row">
-            <span class="label">ALUMNO:</span>
-            <span class="customer-name-bold">${limitedStudentName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">GRADO:</span>
-            <span class="value">${order.studentInfo.grade} "${order.studentInfo.section}"</span>
-          </div>
-          <div class="info-row">
-            <span class="label">APODERADO:</span>
-            <span class="value">${limitedGuardianName.toUpperCase()}</span>
-          </div>
-          ${order.phone ? `
-          <div class="info-row">
-            <span class="label">TELÉFONO:</span>
-            <span class="value">${order.phone}</span>
-          </div>
-          ` : ''}
-        `;
-      } else {
-        customerInfo = `
-          <div class="info-row">
-            <span class="label">CLIENTE:</span>
-            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">TELÉFONO:</span>
-            <span class="value">${order.phone}</span>
-          </div>
-        `;
-      }
-      
-      return `
-        <div class="ticket">
-          <div class="center">
-            <div class="header-title" style="font-size: 14px;">MARY'S RESTAURANT</div>
-            <div class="header-subtitle">INVERSIONES AROMO S.A.C.</div>
-            <div class="header-subtitle">RUC: 20505262086</div>
-            <div class="header-subtitle">AV. ISABEL LA CATOLICA 1254</div>
-            <div class="header-subtitle">Tel: 941 778 599</div>
-            <div class="divider"></div>
-          </div>
-          
-          <div class="info-row">
-            <span class="label">ORDEN:</span>
-            <span class="value">${order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">TIPO:</span>
-            <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : order.source.type === 'loncheritas' ? 'LONCHERITAS' : 'OEP'}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">FECHA:</span>
-            <span class="value">${order.createdAt.toLocaleDateString()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">HORA:</span>
-            <span class="value">${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">PAGO:</span>
-            <span class="value">${order.paymentMethod || 'NO APLICA'}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          ${customerInfo}
-          
-          ${order.address ? `
-          <div class="info-row">
-            <span class="label">DIRECCIÓN:</span>
-            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
-          </div>
-          ` : ''}
-          ${order.tableNumber ? `
-          <div class="info-row">
-            <span class="label">MESA:</span>
-            <span class="value">${order.tableNumber}</span>
-          </div>
-          ` : ''}
-          
-          <div class="divider"></div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>Cant</th>
-                <th>Descripción</th>
-                <th style="text-align: right;">Precio</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${order.items.map(item => `
-                <tr>
-                  <td class="quantity" style="vertical-align: top;">${item.quantity}x</td>
-                  <td style="vertical-align: top;">
-                    <div class="product-name bold">${item.menuItem.name}</div>
-                    ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes">Nota: ${item.notes}</div>` : ''}
-                  </td>
-                  <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <div class="divider"></div>
-          
-          <div style="font-size: 11px;">
-            <div class="info-row">
-              <span class="normal">Subtotal:</span>
-              <span class="normal">S/ ${subtotal.toFixed(2)}</span>
-            </div>
-            <div class="info-row">
-              <span class="normal">IGV (10%):</span>
-              <span class="normal">S/ ${igv.toFixed(2)}</span>
-            </div>
-            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
-              <span class="label">TOTAL:</span>
-              <span class="label">S/ ${order.total.toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="center">
-            <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
-            <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : order.source.type === 'loncheritas' ? 'LONCHERITAS' : 'OEP'} ***</div>
-            <div class="normal" style="margin-top: 10px; font-size: 10px;">
-              ${new Date().toLocaleString('es-ES', { 
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-  }, []);
-
   const printOrderImmediately = useCallback((order: Order) => {
     const isPhoneOrder = order.source.type === 'phone';
     
@@ -1492,6 +1274,216 @@ const OrderReception: React.FC = React.memo(() => {
     iframe.style.border = 'none';
     
     document.body.appendChild(iframe);
+
+    // Función para generar el contenido del ticket (SIN IGV)
+    const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
+      const getCurrentUserName = () => {
+        try {
+          const savedUser = localStorage.getItem('restaurant-user');
+          if (savedUser) {
+            const userData = JSON.parse(savedUser);
+            return userData.name || 'Sistema';
+          }
+        } catch (error) {
+          console.error('Error obteniendo usuario:', error);
+        }
+        return 'Sistema';
+      };
+
+      if (isKitchenTicket) {
+        // TICKET DE COCINA (sin cambios)
+        return `
+          <div class="ticket">
+            <div class="center">
+              <div class="header-title uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
+              <div class="header-title">** COCINA **</div>
+              <div class="divider"></div>
+            </div>
+            
+            <div class="info-row">
+              <span class="label">CLIENTE:</span>
+              <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">AREA:</span>
+              <span class="value">COCINA</span>
+            </div>
+            <div class="info-row">
+              <span class="label">COMANDA:</span>
+              <span class="value">#${order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">FECHA:</span>
+              <span class="value">${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">ATENDIDO POR:</span>
+              <span class="value">${getCurrentUserName().toUpperCase()}</span>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="products-header">DESCRIPCION</div>
+            
+            <div class="divider"></div>
+            
+            ${order.items.map(item => `
+              <div class="product-row">
+                <div class="quantity">${item.quantity}x</div>
+                <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
+              </div>
+              ${item.notes && item.notes.trim() !== '' ? `<div class="notes">- ${item.notes}</div>` : ''}
+            `).join('')}
+            
+            <div class="divider"></div>
+            
+            <div class="center">
+              <div class="asterisk-line">********************************</div>
+            </div>
+          </div>
+        `;
+      } else {
+        // TICKET DE CLIENTE (SIN IGV)
+        let customerInfo = '';
+        
+        if ((order.source.type === 'fullDay' || order.source.type === 'loncheritas') && order.studentInfo) {
+          const limitedStudentName = limitNameLength(order.studentInfo.fullName);
+          const limitedGuardianName = limitNameLength(order.studentInfo.guardianName);
+          
+          customerInfo = `
+            <div class="info-row">
+              <span class="label">ALUMNO:</span>
+              <span class="customer-name-bold">${limitedStudentName.toUpperCase()}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">GRADO:</span>
+              <span class="value">${order.studentInfo.grade} "${order.studentInfo.section}"</span>
+            </div>
+            <div class="info-row">
+              <span class="label">APODERADO:</span>
+              <span class="value">${limitedGuardianName.toUpperCase()}</span>
+            </div>
+            ${order.phone ? `
+            <div class="info-row">
+              <span class="label">TELÉFONO:</span>
+              <span class="value">${order.phone}</span>
+            </div>
+            ` : ''}
+          `;
+        } else {
+          customerInfo = `
+            <div class="info-row">
+              <span class="label">CLIENTE:</span>
+              <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">TELÉFONO:</span>
+              <span class="value">${order.phone}</span>
+            </div>
+          `;
+        }
+        
+        // HTML del ticket sin líneas de IGV
+        return `
+          <div class="ticket">
+            <div class="center">
+              <div class="header-title" style="font-size: 14px;">MARY'S RESTAURANT</div>
+              <div class="header-subtitle">INVERSIONES AROMO S.A.C.</div>
+              <div class="header-subtitle">RUC: 20505262086</div>
+              <div class="header-subtitle">AV. ISABEL LA CATOLICA 1254</div>
+              <div class="header-subtitle">Tel: 941 778 599</div>
+              <div class="divider"></div>
+            </div>
+            
+            <div class="info-row">
+              <span class="label">ORDEN:</span>
+              <span class="value">${order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">TIPO:</span>
+              <span class="value">${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : order.source.type === 'loncheritas' ? 'LONCHERITAS' : 'OEP'}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">FECHA:</span>
+              <span class="value">${order.createdAt.toLocaleDateString()}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">HORA:</span>
+              <span class="value">${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">PAGO:</span>
+              <span class="value">${order.paymentMethod || 'NO APLICA'}</span>
+            </div>
+            
+            <div class="divider"></div>
+            
+            ${customerInfo}
+            
+            ${order.address ? `
+            <div class="info-row">
+              <span class="label">DIRECCIÓN:</span>
+              <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
+            </div>
+            ` : ''}
+            ${order.tableNumber ? `
+            <div class="info-row">
+              <span class="label">MESA:</span>
+              <span class="value">${order.tableNumber}</span>
+            </div>
+            ` : ''}
+            
+            <div class="divider"></div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Cant</th>
+                  <th>Descripción</th>
+                  <th style="text-align: right;">Precio</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.items.map(item => `
+                  <tr>
+                    <td class="quantity" style="vertical-align: top;">${item.quantity}x</td>
+                    <td style="vertical-align: top;">
+                      <div class="product-name bold">${item.menuItem.name}</div>
+                      ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes">Nota: ${item.notes}</div>` : ''}
+                    </td>
+                    <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            
+            <div class="divider"></div>
+            
+            <!-- SOLO TOTAL - SIN IGV -->
+            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
+              <span class="label">TOTAL:</span>
+              <span class="label">S/ ${order.total.toFixed(2)}</span>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="center">
+              <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
+              <div class="normal">*** ${order.source.type === 'phone' ? 'COCINA' : order.source.type === 'walk-in' ? 'LOCAL' : order.source.type === 'delivery' ? 'DELIVERY' : order.source.type === 'fullDay' ? 'FULLDAY' : order.source.type === 'loncheritas' ? 'LONCHERITAS' : 'OEP'} ***</div>
+              <div class="normal" style="margin-top: 10px; font-size: 10px;">
+                ${new Date().toLocaleString('es-ES', { 
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    };
 
     const ticketContent = generateTicketContent(order, isPhoneOrder);
     
@@ -1655,7 +1647,7 @@ const OrderReception: React.FC = React.memo(() => {
         }, 1000);
       }, 50);
     }
-  }, [generateTicketContent]);
+  }, []); // Dependencias vacías porque las funciones dentro son estables
 
   const handleCreateOrder = useCallback(async () => {
     if (cart.length === 0) {
@@ -1735,8 +1727,7 @@ const OrderReception: React.FC = React.memo(() => {
               guardianName: guardianName,
               phone: phone
             },
-            orderType: 'fullday',
-            igvRate: 10
+            orderType: 'fullday'
           };
           
           printOrderImmediately(tempOrder);
@@ -1788,8 +1779,7 @@ const OrderReception: React.FC = React.memo(() => {
               guardianName: guardianName,
               phone: phone
             },
-            orderType: 'fullday',
-            igvRate: 10
+            orderType: 'fullday'
           };
 
           printOrderImmediately(tempOrder);
@@ -1833,8 +1823,7 @@ const OrderReception: React.FC = React.memo(() => {
             source: { type: 'oep' },
             notes: orderNotes,
             paymentMethod: paymentMethod,
-            orderType: 'regular',
-            igvRate: 10
+            orderType: 'regular'
           };
           printOrderImmediately(tempOrder);
         } else {
@@ -1880,8 +1869,7 @@ const OrderReception: React.FC = React.memo(() => {
           source: orderData.source,
           notes: orderNotes,
           paymentMethod: orderData.paymentMethod,
-          orderType: 'regular',
-          igvRate: 10
+          orderType: 'regular'
         };
 
         printOrderImmediately(tempOrder);
