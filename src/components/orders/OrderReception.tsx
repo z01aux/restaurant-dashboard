@@ -1299,7 +1299,7 @@ const OrderReception: React.FC = React.memo(() => {
       };
 
       if (isKitchenTicket) {
-        // TICKET DE COCINA (sin cambios)
+        // TICKET DE COCINA (con notas del pedido antes del footer)
         return `
           <div class="ticket">
             <div class="center">
@@ -1344,6 +1344,17 @@ const OrderReception: React.FC = React.memo(() => {
             `).join('')}
             
             <div class="divider"></div>
+
+            <!-- SECCIÓN DE NOTAS DEL PEDIDO (ANTES DEL FOOTER) -->
+            ${order.notes && order.notes.trim() !== '' ? `
+            <div class="info-row">
+              <span class="label">NOTAS:</span>
+            </div>
+            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px;">
+              ${order.notes}
+            </div>
+            <div class="divider"></div>
+            ` : ''}
             
             <div class="center">
               <div class="asterisk-line">********************************</div>
@@ -1391,7 +1402,7 @@ const OrderReception: React.FC = React.memo(() => {
           `;
         }
         
-        // HTML del ticket sin líneas de IGV
+        // HTML del ticket sin líneas de IGV, con notas del pedido antes del footer
         return `
           <div class="ticket">
             <div class="center">
@@ -1472,6 +1483,17 @@ const OrderReception: React.FC = React.memo(() => {
               <span class="label">TOTAL:</span>
               <span class="label">S/ ${order.total.toFixed(2)}</span>
             </div>
+
+            <!-- SECCIÓN DE NOTAS DEL PEDIDO (ANTES DEL FOOTER) -->
+            ${order.notes && order.notes.trim() !== '' ? `
+            <div class="divider"></div>
+            <div class="info-row">
+              <span class="label">NOTAS DEL PEDIDO:</span>
+            </div>
+            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px;">
+              ${order.notes}
+            </div>
+            ` : ''}
             
             <div class="divider"></div>
             
@@ -2188,6 +2210,20 @@ const OrderReception: React.FC = React.memo(() => {
                     )}
                   </>
                 )}
+
+                {/* Campo para notas del pedido */}
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notas del pedido
+                  </label>
+                  <textarea
+                    value={orderNotes}
+                    onChange={(e) => setOrderNotes(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Ej: Sin cebolla, bien cocido, etc."
+                  />
+                </div>
               </div>
             </div>
 
@@ -2562,6 +2598,20 @@ const OrderReception: React.FC = React.memo(() => {
                         )}
                       </>
                     )}
+
+                    {/* Campo para notas del pedido */}
+                    <div className="mt-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Notas del pedido
+                      </label>
+                      <textarea
+                        value={orderNotes}
+                        onChange={(e) => setOrderNotes(e.target.value)}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        placeholder="Ej: Sin cebolla, bien cocido, etc."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
