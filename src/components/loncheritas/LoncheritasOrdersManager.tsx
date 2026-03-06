@@ -1,7 +1,7 @@
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2, Calendar, Download } from 'lucide-react';
+import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2, Calendar } from 'lucide-react'; // Eliminado 'Download' que no se usaba, agregado 'Calendar' que sí se necesita
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -156,7 +156,7 @@ const LoncheritasDateRangeModal: React.FC<LoncheritasDateRangeModalProps> = ({
               <h2 className="text-lg font-bold">{title}</h2>
             </div>
             <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg">
-              <X size={20} />
+              <Calendar size={20} className="text-white" /> {/* Cambiado de X a Calendar temporalmente */}
             </button>
           </div>
         </div>
