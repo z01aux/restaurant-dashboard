@@ -253,7 +253,7 @@ export const FullDayDateRangeModal: React.FC<FullDayDateRangeModalProps> = ({
               className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-semibold flex items-center justify-center space-x-2"
             >
               <Download size={16} />
-              <span>Generar Excel</span>
+              <span>Generar Ticket</span>
             </button>
           </div>
         </div>

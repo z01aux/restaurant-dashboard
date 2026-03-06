@@ -1,7 +1,7 @@
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2, Calendar, Download } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -15,6 +15,255 @@ import LoncheritasTicket from './LoncheritasTicket';
 import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
+
+// ============================================
+// MODAL DE RANGO DE FECHAS PARA LONCHERITAS (TICKET RESUMEN)
+// ============================================
+interface LoncheritasDateRangeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (startDate: Date, endDate: Date) => void;
+  title?: string;
+}
+
+/**
+ * Obtiene la fecha de hoy en formato YYYY-MM-DD usando hora local de Perú
+ */
+const getTodayString = (): string => {
+  const now = new Date();
+  const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+  const year = peruDate.getFullYear();
+  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+  const day = String(peruDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Convierte una fecha local (YYYY-MM-DD) a un objeto Date en hora local de Perú
+ */
+const createPeruDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+};
+
+const LoncheritasDateRangeModal: React.FC<LoncheritasDateRangeModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = "Reporte por Rango de Fechas"
+}) => {
+  const [startDate, setStartDate] = useState<string>(getTodayString);
+  const [endDate, setEndDate] = useState<string>(getTodayString);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!isOpen) return null;
+
+  const validateDates = (): boolean => {
+    const start = createPeruDate(startDate);
+    const end = createPeruDate(endDate);
+
+    if (start > end) {
+      setError('La fecha de inicio no puede ser mayor que la fecha de fin');
+      return false;
+    }
+
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 31) {
+      setError('El rango máximo permitido es de 31 días');
+      return false;
+    }
+
+    setError(null);
+    return true;
+  };
+
+  const handleConfirm = () => {
+    if (validateDates()) {
+      onConfirm(createPeruDate(startDate), createPeruDate(endDate));
+      onClose();
+    }
+  };
+
+  const setToday = () => {
+    const today = getTodayString();
+    setStartDate(today);
+    setEndDate(today);
+  };
+
+  const setYesterday = () => {
+    const now = new Date();
+    const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    peruDate.setDate(peruDate.getDate() - 1);
+    const year = peruDate.getFullYear();
+    const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+    const day = String(peruDate.getDate()).padStart(2, '0');
+    const yesterdayStr = `${year}-${month}-${day}`;
+    setStartDate(yesterdayStr);
+    setEndDate(yesterdayStr);
+  };
+
+  const setThisWeek = () => {
+    const now = new Date();
+    const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+
+    const monday = new Date(peruDate);
+    const dayOfWeek = peruDate.getDay();
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    monday.setDate(peruDate.getDate() - diff);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const formatDate = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    setStartDate(formatDate(monday));
+    setEndDate(formatDate(sunday));
+  };
+
+  const setThisMonth = () => {
+    const now = new Date();
+    const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+
+    const firstDay = new Date(peruDate.getFullYear(), peruDate.getMonth(), 1);
+    const lastDay = new Date(peruDate.getFullYear(), peruDate.getMonth() + 1, 0);
+
+    const formatDate = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    setStartDate(formatDate(firstDay));
+    setEndDate(formatDate(lastDay));
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
+      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+        
+        <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-4 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Calendar size={20} />
+              <h2 className="text-lg font-bold">{title}</h2>
+            </div>
+            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Opciones rápidas:
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={setToday}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+              >
+                📅 Hoy
+              </button>
+              <button
+                onClick={setYesterday}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+              >
+                📅 Ayer
+              </button>
+              <button
+                onClick={setThisWeek}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+              >
+                📅 Esta Semana
+              </button>
+              <button
+                onClick={setThisMonth}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+              >
+                📅 Este Mes
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de inicio:
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setError(null);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de fin:
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setError(null);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
+            <h3 className="text-sm font-semibold text-orange-800 mb-2">🎫 El ticket incluirá:</h3>
+            <ul className="text-xs text-orange-700 space-y-1 list-disc list-inside">
+              <li>Resumen general del período</li>
+              <li>Ventas por método de pago</li>
+              <li>Top 5 productos más vendidos</li>
+            </ul>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-semibold flex items-center justify-center space-x-2"
+            >
+              <Printer size={16} />
+              <span>Generar Ticket</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -103,7 +352,6 @@ const LoncheritasOrderRow = React.memo(({
           {order.items.map(item => item.name).join(', ')}
         </div>
       </td>
-      {/* ✅ onMouseEnter={onMouseLeave} oculta el preview al entrar a Acciones */}
       <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
         <div ref={actionsRef} className="flex space-x-2">
           <LoncheritasTicket order={order} />
@@ -121,69 +369,6 @@ const LoncheritasOrderRow = React.memo(({
     </tr>
   );
 });
-
-// ─── Modal de rango de fechas ────────────────────────────────
-const getTodayString = (): string => {
-  const now = new Date();
-  const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
-  return `${peruDate.getFullYear()}-${String(peruDate.getMonth() + 1).padStart(2, '0')}-${String(peruDate.getDate()).padStart(2, '0')}`;
-};
-
-const createPeruDate = (dateStr: string): Date => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day, 12, 0, 0);
-};
-
-interface DateRangeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (startDate: Date, endDate: Date) => void;
-  title: string;
-}
-
-const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConfirm, title }) => {
-  const [startDate, setStartDate] = useState(getTodayString());
-  const [endDate, setEndDate] = useState(getTodayString());
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">{title}</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-        </div>
-        <div className="flex space-x-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-            Cancelar
-          </button>
-          <button
-            onClick={() => { onConfirm(createPeruDate(startDate), createPeruDate(endDate)); onClose(); }}
-            className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold"
-          >
-            Generar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ─── COMPONENTE PRINCIPAL ──────────────────────────────────────
 export const LoncheritasOrdersManager: React.FC = () => {
@@ -310,7 +495,6 @@ export const LoncheritasOrdersManager: React.FC = () => {
     exportLoncheritasToExcel(getTodayOrders(), 'today');
   }, [getTodayOrders]);
 
-  // ✅ NUEVO: Excel Todo (todos los pedidos cargados)
   const handleExcelTodo = useCallback(() => {
     exportLoncheritasToExcel(orders, 'all');
   }, [orders]);
@@ -319,6 +503,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
     exportLoncheritasByDateRange(orders, startDate, endDate);
   }, [orders]);
 
+  // NUEVO: Manejador para ticket resumen por rango de fechas
   const handleTicketResumen = useCallback((startDate: Date, endDate: Date) => {
     const s = new Date(startDate); s.setHours(0, 0, 0, 0);
     const e = new Date(endDate);   e.setHours(23, 59, 59, 999);
@@ -420,17 +605,21 @@ export const LoncheritasOrdersManager: React.FC = () => {
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
-      <DateRangeModal
+      
+      {/* Modal Excel por rango */}
+      <LoncheritasDateRangeModal
         isOpen={showDateRangeExcel}
         onClose={() => setShowDateRangeExcel(false)}
         onConfirm={handleExcelRango}
-        title="📊 Reporte Excel por Fechas - Loncheritas"
+        title="📊 Reporte Excel por Rango de Fechas - Loncheritas"
       />
-      <DateRangeModal
+      
+      {/* NUEVO: Modal Ticket Resumen por rango */}
+      <LoncheritasDateRangeModal
         isOpen={showDateRangeTicket}
         onClose={() => setShowDateRangeTicket(false)}
         onConfirm={handleTicketResumen}
-        title="🖨️ Ticket Resumen por Fechas - Loncheritas"
+        title="🎫 Ticket Resumen por Rango de Fechas - Loncheritas"
       />
 
       {/* HEADER */}
@@ -474,7 +663,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
         />
       </div>
 
-      {/* ✅ BOTONES: Excel Hoy + Excel Todo (nuevo) + Reporte por Fechas + Ticket Resumen */}
+      {/* ✅ BOTONES: Excel Hoy, Excel Todo, Reporte por Fechas, Ticket Resumen */}
       <div className="flex flex-wrap gap-2">
         <button onClick={handleExcelHoy} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
           <FileSpreadsheet size={16} /><span>Excel Hoy</span>
@@ -482,9 +671,10 @@ export const LoncheritasOrdersManager: React.FC = () => {
         <button onClick={handleExcelTodo} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
           <FileSpreadsheet size={16} /><span>Excel Todo</span>
         </button>
-        <button onClick={() => setShowDateRangeExcel(true)} className="bg-emerald-800 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-900 flex items-center space-x-1">
-          <FileSpreadsheet size={16} /><span>Reporte por Fechas</span>
+        <button onClick={() => setShowDateRangeExcel(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1">
+          <Calendar size={16} /><span>Reporte por Fechas</span>
         </button>
+        {/* NUEVO: Botón para Ticket Resumen */}
         <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
           <Printer size={16} /><span>Ticket Resumen</span>
         </button>
