@@ -19,26 +19,6 @@ const getEndOfDay = (d: Date) => { const e = new Date(d); e.setHours(23, 59, 59,
  * Formatea los items del pedido como una lista de desayunos en mayúsculas
  * SIEMPRE COMPLETA, sin truncar
  */
-const formatDesayunos = (items: LoncheritasOrder['items']): string => {
-  return items
-    .map(item => {
-      const itemName = item.name.toUpperCase();
-      const quantity = item.quantity;
-      const base = `${quantity}x ${itemName}`;
-      
-      // Si tiene notas, las agregamos entre paréntesis (también en mayúsculas)
-      if (item.notes && item.notes.trim() !== '') {
-        return `${base} (${item.notes.trim().toUpperCase()})`;
-      }
-      return base;
-    })
-    .join(', ');
-};
-
-/**
- * Formato alternativo para desayunos - AHORA TAMBIÉN COMPLETO
- * (antes truncaba, ahora muestra todo)
- */
 const formatDesayunosCompleto = (items: LoncheritasOrder['items']): string => {
   return items
     .map(item => {
