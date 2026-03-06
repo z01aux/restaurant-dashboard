@@ -244,8 +244,8 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
   XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
 
   const fecha = new Date().toISOString().split('T')[0];
-  const tipoTexto = tipo === 'today' ? 'diarios' : 'todos';
-  const fileName = `fullday_${tipoTexto}_${fecha}.xlsx`;
+  // CAMBIADO: Eliminado el tipoTexto para que el nombre sea solo fullday_fecha.xlsx
+  const fileName = `fullday_${fecha}.xlsx`;
 
   XLSX.writeFile(wb, fileName);
 };
@@ -393,7 +393,8 @@ export const exportFullDayByDateRange = async (
   ];
   XLSX.utils.book_append_sheet(wb, wsProducts, '🏆 TOP 10');
 
-  const fileName = `FULLDAY_${startStr}_al_${endStr}.xlsx`;
+  // CAMBIADO: Nombre del archivo en minúsculas y sin mayúsculas
+  const fileName = `fullday_${startStr}_al_${endStr}.xlsx`;
   XLSX.writeFile(wb, fileName);
   console.log('✅ Reporte generado:', fileName);
 };

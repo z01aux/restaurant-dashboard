@@ -99,8 +99,8 @@ export const exportLoncheritasToExcel = (orders: LoncheritasOrder[], tipo: 'toda
   XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
 
   const fecha = new Date().toISOString().split('T')[0];
-  const tipoTexto = tipo === 'today' ? 'hoy' : 'todos';
-  XLSX.writeFile(wb, `loncheritas_${tipoTexto}_${fecha}.xlsx`);
+  // CAMBIADO: Eliminado el tipoTexto para que el nombre sea solo loncheritas_fecha.xlsx
+  XLSX.writeFile(wb, `loncheritas_${fecha}.xlsx`);
 };
 
 // ─── REPORTE POR RANGO DE FECHAS ──────────────────────────────
@@ -218,5 +218,6 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
 
   const s = startDate.toISOString().split('T')[0].replace(/-/g, '');
   const e = endDate.toISOString().split('T')[0].replace(/-/g, '');
-  XLSX.writeFile(wb, `LONCHERITAS_${s}_al_${e}.xlsx`);
+  // CAMBIADO: Nombre del archivo en minúsculas
+  XLSX.writeFile(wb, `loncheritas_${s}_al_${e}.xlsx`);
 };
