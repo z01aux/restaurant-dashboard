@@ -17,7 +17,7 @@ const getEndOfDay = (d: Date) => { const e = new Date(d); e.setHours(23, 59, 59,
 
 /**
  * Formatea los items del pedido como una lista de desayunos en mayúsculas
- * Ejemplo: "2x PAN CON CHICHARRÓN, 1x JUGO DE NARANJA"
+ * SIEMPRE COMPLETA, sin truncar
  */
 const formatDesayunos = (items: LoncheritasOrder['items']): string => {
   return items
@@ -36,18 +36,16 @@ const formatDesayunos = (items: LoncheritasOrder['items']): string => {
 };
 
 /**
- * Formato compacto para desayunos (cuando hay muchos items) en mayúsculas
- * Ejemplo: "2x PAN CON CHICHARRÓN + 1x JUGO"
+ * Formato alternativo para desayunos - AHORA TAMBIÉN COMPLETO
+ * (antes truncaba, ahora muestra todo)
  */
-const formatDesayunosCompact = (items: LoncheritasOrder['items']): string => {
+const formatDesayunosCompleto = (items: LoncheritasOrder['items']): string => {
   return items
     .map(item => {
-      const itemName = item.name.length > 20 
-        ? item.name.substring(0, 20).toUpperCase() + '…' 
-        : item.name.toUpperCase();
-      return `${item.quantity}x ${itemName}`;
+      const base = `${item.quantity}x ${item.name.toUpperCase()}`;
+      return item.notes ? `${base} (${item.notes.toUpperCase()})` : base;
     })
-    .join(' + ');
+    .join('\n');
 };
 
 // ─── EXCEL HOY / TODOS ────────────────────────────────────────
@@ -58,10 +56,8 @@ export const exportLoncheritasToExcel = (orders: LoncheritasOrder[], tipo: 'toda
     const fecha = formatDate(new Date(order.created_at));
     const hora = formatTime(new Date(order.created_at));
     
-    // Determinar qué formato usar para desayunos (ahora en mayúsculas)
-    const desayunos = order.items.length > 3 
-      ? formatDesayunosCompact(order.items)
-      : formatDesayunos(order.items);
+    // AHORA SIEMPRE USA EL FORMATO COMPLETO, sin importar la cantidad de items
+    const desayunos = formatDesayunosCompleto(order.items);
 
     return {
       '📅 FECHA': fecha,
@@ -70,11 +66,10 @@ export const exportLoncheritasToExcel = (orders: LoncheritasOrder[], tipo: 'toda
       '👤 ALUMNO': order.student_name.toUpperCase(),
       '📚 GRADO': order.grade,
       '📌 SECCIÓN': order.section,
-      // 👥 APODERADO eliminado
       '📞 TELÉFONO': order.phone || '',
       '💰 MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
       '💳 MÉTODO PAGO': order.payment_method || 'NO APLICA',
-      '🥪 DESAYUNOS': desayunos, // ← Cambiado de "PRODUCTOS" a "DESAYUNOS"
+      '🥪 DESAYUNOS': desayunos, // Ahora siempre completo
     };
   });
 
@@ -92,7 +87,7 @@ export const exportLoncheritasToExcel = (orders: LoncheritasOrder[], tipo: 'toda
     { wch: 15 }, // 📞 TELÉFONO
     { wch: 12 }, // 💰 MONTO TOTAL
     { wch: 12 }, // 💳 MÉTODO PAGO
-    { wch: 60 }, // 🥪 DESAYUNOS (más ancho para lista de productos)
+    { wch: 80 }, // 🥪 DESAYUNOS - AUMENTADO A 80 PARA QUE QUEPAN TODOS LOS PRODUCTOS
   ];
 
   const nombreHoja = tipo === 'today' ? 'Pedidos del Día' : 'Todos los Pedidos';
@@ -143,7 +138,7 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
   wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, '📊 RESUMEN');
 
-  // HOJA 2: DETALLE (SIN APODERADO, CON DESAYUNOS EN MAYÚSCULAS)
+  // HOJA 2: DETALLE (SIN APODERADO, CON DESAYUNOS EN MAYÚSCULAS Y COMPLETOS)
   const detailRows: any[][] = [
     ['DETALLE DE PEDIDOS LONCHERITAS'],
     [`Período: ${formatDate(startDate)} al ${formatDate(endDate)}`],
@@ -154,12 +149,11 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
   [...filtered]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .forEach(o => {
-      const desayunos = o.items.length > 3
-        ? o.items.map(i => `${i.quantity}x ${i.name.toUpperCase()}`).join('\n')
-        : o.items.map(i => {
-          const base = `${i.quantity}x ${i.name.toUpperCase()}`;
-          return i.notes ? `${base} (${i.notes.toUpperCase()})` : base;
-        }).join('\n');
+      // AHORA SIEMPRE COMPLETO, sin truncar
+      const desayunos = o.items.map(i => {
+        const base = `${i.quantity}x ${i.name.toUpperCase()}`;
+        return i.notes ? `${base} (${i.notes.toUpperCase()})` : base;
+      }).join('\n');
 
       detailRows.push([
         formatDate(new Date(o.created_at)),
@@ -185,7 +179,7 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
     { wch: 8 },  // SECCIÓN
     { wch: 15 }, // TELÉFONO
     { wch: 12 }, // MÉTODO PAGO
-    { wch: 60 }, // DESAYUNOS
+    { wch: 80 }, // DESAYUNOS - AUMENTADO A 80
     { wch: 12 }, // TOTAL
   ];
   XLSX.utils.book_append_sheet(wb, wsDetail, '📋 DETALLE');

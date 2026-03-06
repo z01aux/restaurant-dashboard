@@ -31,7 +31,7 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
     
-    // Productos en mayúsculas
+    // Productos en mayúsculas - AHORA SIEMPRE COMPLETO
     const productos = order.items.map(item => 
       `${item.quantity}x ${item.name.toUpperCase()}`
     ).join(' | ');
@@ -235,8 +235,8 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
     { wch: 15 }, // 📞 TELÉFONO
     { wch: 12 }, // 💰 MONTO TOTAL
     { wch: 12 }, // 💳 MÉTODO PAGO
-    { wch: 40 }, // 🥗 ENTRADAS
-    { wch: 40 }, // 🍽️ PLATOS DE FONDO
+    { wch: 60 }, // 🥗 ENTRADAS - AUMENTADO A 60 PARA QUE QUEPAN TODOS LOS PRODUCTOS
+    { wch: 60 }, // 🍽️ PLATOS DE FONDO - AUMENTADO A 60
     { wch: 40 }, // 🥤 BEBIDAS
   ];
 
@@ -346,7 +346,7 @@ export const exportFullDayByDateRange = async (
   wsDetail['!cols'] = [
     { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 20 }, { wch: 8 }, 
     { wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, 
-    { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 12 }
+    { wch: 60 }, { wch: 60 }, { wch: 40 }, { wch: 12 }
   ];
   XLSX.utils.book_append_sheet(wb, wsDetail, '📋 DETALLE');
 
