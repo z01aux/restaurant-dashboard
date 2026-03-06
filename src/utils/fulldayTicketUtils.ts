@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO: src/utils/fulldayTicketUtils.ts
-// Utilidades para tickets de FullDay
+// Utilidades para tickets de FullDay - VERSIÓN MEJORADA PARA IMPRESIÓN
 // ============================================
 
 import { FullDayOrder } from '../types/fullday';
@@ -91,71 +91,70 @@ export const generateFullDayTicketHTML = (
     ? `DIA: ${formatDateForDisplay(startDate)}`
     : `PERIODO: ${formatDateForDisplay(startDate)} AL ${formatDateForDisplay(endDate)}`;
 
-  // HTML con estilos mejorados para mejor calidad de impresión
+  // HTML con estilos mejorados para impresión más compacta y nítida
   return `
-    <div class="ticket" style="font-family: 'Courier New', monospace; width: 80mm; padding: 8px; margin: 0 auto; background: white; color: black; font-size: 11px; line-height: 1.3;">
+    <div class="ticket" style="font-family: 'Courier New', monospace; width: 72mm; margin: 0 auto; background: white; color: black; font-size: 10px; line-height: 1.2; padding: 4px;">
       
-      <div style="text-align: center; margin-bottom: 8px;">
-        <div style="font-size: 14px; font-weight: bold;">MARY'S RESTAURANT</div>
-        <div style="font-size: 10px;">FULLDAY - PEDIDOS DE ALUMNOS</div>
-        <div style="font-size: 10px; font-weight: bold;">${periodText}</div>
-        <div style="font-size: 9px;">EMITIDO: ${formatDateForDisplay(new Date())} ${formatTimeForDisplay(new Date())}</div>
-        <div style="font-size: 9px;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+      <div style="text-align: center; margin-bottom: 4px;">
+        <div style="font-size: 12px; font-weight: bold; letter-spacing: -0.3px;">MARY'S RESTAURANT</div>
+        <div style="font-size: 9px;">FULLDAY - RESUMEN</div>
+        <div style="font-size: 9px; font-weight: bold;">${periodText}</div>
+        <div style="font-size: 8px;">${formatDateForDisplay(new Date())} ${formatTimeForDisplay(new Date())}</div>
+        <div style="font-size: 8px;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
+        <div style="border-top: 1px solid #000; margin: 4px 0;"></div>
       </div>
 
-      <div style="margin-bottom: 8px;">
-        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">RESUMEN GENERAL</div>
-        <div style="display: flex; justify-content: space-between;">
+      <div style="margin-bottom: 4px;">
+        <div style="display: flex; justify-content: space-between; font-size: 9px;">
           <span>TOTAL PEDIDOS:</span>
           <span style="font-weight: bold;">${summary.totalOrders}</span>
         </div>
-        <div style="display: flex; justify-content: space-between;">
+        <div style="display: flex; justify-content: space-between; font-size: 9px;">
           <span>TOTAL VENTAS:</span>
           <span style="font-weight: bold;">${formatCurrency(summary.totalAmount)}</span>
         </div>
       </div>
 
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+      <div style="border-top: 1px solid #000; margin: 4px 0;"></div>
 
-      <div style="margin-bottom: 8px;">
-        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">METODO DE PAGO</div>
-        <div style="display: flex; justify-content: space-between;">
+      <div style="margin-bottom: 4px;">
+        <div style="text-align: center; font-weight: bold; margin-bottom: 2px; font-size: 9px;">METODO DE PAGO</div>
+        <div style="display: flex; justify-content: space-between; font-size: 8px;">
           <span>EFECTIVO:</span>
           <span>${formatCurrency(summary.byPaymentMethod.EFECTIVO)}</span>
         </div>
-        <div style="display: flex; justify-content: space-between;">
+        <div style="display: flex; justify-content: space-between; font-size: 8px;">
           <span>YAPE/PLIN:</span>
           <span>${formatCurrency(summary.byPaymentMethod.YAPE_PLIN)}</span>
         </div>
-        <div style="display: flex; justify-content: space-between;">
+        <div style="display: flex; justify-content: space-between; font-size: 8px;">
           <span>TARJETA:</span>
           <span>${formatCurrency(summary.byPaymentMethod.TARJETA)}</span>
         </div>
-        <div style="display: flex; justify-content: space-between;">
+        <div style="display: flex; justify-content: space-between; font-size: 8px;">
           <span>NO APLICA:</span>
           <span>${formatCurrency(summary.byPaymentMethod.NO_APLICA)}</span>
         </div>
       </div>
 
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+      <div style="border-top: 1px solid #000; margin: 4px 0;"></div>
 
       ${summary.topProducts.length > 0 ? `
-        <div style="margin-bottom: 8px;">
-          <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">TOP 5 PRODUCTOS</div>
+        <div style="margin-bottom: 4px;">
+          <div style="text-align: center; font-weight: bold; margin-bottom: 2px; font-size: 9px;">TOP 5 PRODUCTOS</div>
           ${summary.topProducts.map((p, i) => `
-            <div style="display: flex; justify-content: space-between; font-size: 10px;">
-              <span>${i+1}. ${p.name.substring(0, 20)}${p.name.length > 20 ? '...' : ''}</span>
+            <div style="display: flex; justify-content: space-between; font-size: 8px;">
+              <span>${i+1}. ${p.name.substring(0, 18)}${p.name.length > 18 ? '' : ''}</span>
               <span>${p.quantity}x ${formatCurrency(p.total)}</span>
             </div>
           `).join('')}
         </div>
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+        <div style="border-top: 1px solid #000; margin: 4px 0;"></div>
       ` : ''}
 
-      <div style="text-align: center; font-size: 9px;">
+      <div style="text-align: center; font-size: 8px;">
         <div>GRACIAS POR SU TRABAJO</div>
-        <div style="margin-top: 4px;">********************************</div>
+        <div style="margin-top: 2px;">********************************</div>
       </div>
     </div>
   `;
@@ -185,26 +184,30 @@ export const printFullDayResumenTicket = (summary: FullDayTicketSummary, startDa
           <style>
             @media print {
               @page {
-                size: 80mm auto;
+                size: 72mm auto;
                 margin: 0;
                 padding: 0;
               }
               body {
-                width: 80mm !important;
+                width: 72mm !important;
                 margin: 0 auto !important;
                 padding: 0 !important;
                 background: white !important;
                 font-family: 'Courier New', monospace !important;
-                font-size: 12px !important;
-                line-height: 1.3 !important;
+                font-size: 10px !important;
+                line-height: 1.2 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
               * {
                 font-family: 'Courier New', monospace !important;
                 box-sizing: border-box;
+                margin: 0;
+                padding: 0;
               }
               .ticket {
-                width: 80mm !important;
-                padding: 8px !important;
+                width: 72mm !important;
+                padding: 4px !important;
                 margin: 0 !important;
               }
             }
@@ -213,13 +216,13 @@ export const printFullDayResumenTicket = (summary: FullDayTicketSummary, startDa
               padding: 0;
               background: white;
               font-family: 'Courier New', monospace;
-              font-size: 12px;
-              line-height: 1.3;
+              font-size: 10px;
+              line-height: 1.2;
             }
             .ticket {
-              width: 80mm;
+              width: 72mm;
               margin: 0 auto;
-              padding: 8px;
+              padding: 4px;
             }
           </style>
         </head>

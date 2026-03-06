@@ -1,4 +1,5 @@
 // ARCHIVO: src/utils/loncheritasTicketUtils.ts
+// VERSIÓN MEJORADA PARA IMPRESIÓN - MÁS COMPACTA Y NÍTIDA
 // =========================================
 
 import { LoncheritasOrder } from '../types/loncheritas';
@@ -57,45 +58,66 @@ export const generateLoncheritasTicketHTML = (
       ? `DIA: ${formatDate(startDate)}`
       : `PERIODO: ${formatDate(startDate)} AL ${formatDate(endDate)}`;
 
+  // HTML con estilos mejorados para impresión más compacta y nítida
   return `
-    <div style="font-family:'Courier New',monospace;width:80mm;padding:8px;margin:0 auto;background:white;color:black;font-size:11px;line-height:1.3;">
-      <div style="text-align:center;margin-bottom:8px;">
-        <div style="font-size:14px;font-weight:bold;">MARY'S RESTAURANT</div>
-        <div style="font-size:10px;">LONCHERITAS - PEDIDOS DE ALUMNOS</div>
-        <div style="font-size:10px;">${periodText}</div>
-        <div style="font-size:9px;">EMITIDO: ${formatDate(new Date())} ${formatTime(new Date())}</div>
-        <div style="font-size:9px;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
-        <div style="border-top:1px dashed #000;margin:8px 0;"></div>
+    <div class="ticket" style="font-family:'Courier New',monospace;width:72mm;margin:0 auto;background:white;color:black;font-size:10px;line-height:1.2;padding:4px;">
+      
+      <div style="text-align:center;margin-bottom:4px;">
+        <div style="font-size:12px;font-weight:bold;letter-spacing:-0.3px;">MARY'S RESTAURANT</div>
+        <div style="font-size:9px;">LONCHERITAS - RESUMEN</div>
+        <div style="font-size:9px;font-weight:bold;">${periodText}</div>
+        <div style="font-size:8px;">${formatDate(new Date())} ${formatTime(new Date())}</div>
+        <div style="font-size:8px;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
+        <div style="border-top:1px solid #000;margin:4px 0;"></div>
       </div>
-      <div style="margin-bottom:8px;">
-        <div style="text-align:center;font-weight:bold;margin-bottom:4px;">RESUMEN GENERAL</div>
-        <div style="display:flex;justify-content:space-between;"><span>TOTAL PEDIDOS:</span><span style="font-weight:bold;">${summary.totalOrders}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>TOTAL VENTAS:</span><span style="font-weight:bold;">${fmt(summary.totalAmount)}</span></div>
+
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;font-size:9px;">
+          <span>TOTAL PEDIDOS:</span>
+          <span style="font-weight:bold;">${summary.totalOrders}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;">
+          <span>TOTAL VENTAS:</span>
+          <span style="font-weight:bold;">${fmt(summary.totalAmount)}</span>
+        </div>
       </div>
-      <div style="border-top:1px dashed #000;margin:8px 0;"></div>
-      <div style="margin-bottom:8px;">
-        <div style="text-align:center;font-weight:bold;margin-bottom:4px;">METODO DE PAGO</div>
-        <div style="display:flex;justify-content:space-between;"><span>EFECTIVO:</span><span>${fmt(summary.byPaymentMethod.EFECTIVO)}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>YAPE/PLIN:</span><span>${fmt(summary.byPaymentMethod.YAPE_PLIN)}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>TARJETA:</span><span>${fmt(summary.byPaymentMethod.TARJETA)}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>NO APLICA:</span><span>${fmt(summary.byPaymentMethod.NO_APLICA)}</span></div>
+
+      <div style="border-top:1px solid #000;margin:4px 0;"></div>
+
+      <div style="margin-bottom:4px;">
+        <div style="text-align:center;font-weight:bold;margin-bottom:2px;font-size:9px;">METODO DE PAGO</div>
+        <div style="display:flex;justify-content:space-between;font-size:8px;">
+          <span>EFECTIVO:</span><span>${fmt(summary.byPaymentMethod.EFECTIVO)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:8px;">
+          <span>YAPE/PLIN:</span><span>${fmt(summary.byPaymentMethod.YAPE_PLIN)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:8px;">
+          <span>TARJETA:</span><span>${fmt(summary.byPaymentMethod.TARJETA)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:8px;">
+          <span>NO APLICA:</span><span>${fmt(summary.byPaymentMethod.NO_APLICA)}</span>
+        </div>
       </div>
-      <div style="border-top:1px dashed #000;margin:8px 0;"></div>
+
+      <div style="border-top:1px solid #000;margin:4px 0;"></div>
+
       ${summary.topProducts.length > 0 ? `
-        <div style="margin-bottom:8px;">
-          <div style="text-align:center;font-weight:bold;margin-bottom:4px;">TOP 5 PRODUCTOS</div>
+        <div style="margin-bottom:4px;">
+          <div style="text-align:center;font-weight:bold;margin-bottom:2px;font-size:9px;">TOP 5 PRODUCTOS</div>
           ${summary.topProducts.map((p, i) => `
-            <div style="display:flex;justify-content:space-between;font-size:10px;">
-              <span>${i+1}. ${p.name.substring(0,20)}${p.name.length>20?'...':''}</span>
+            <div style="display:flex;justify-content:space-between;font-size:8px;">
+              <span>${i+1}. ${p.name.substring(0,18)}${p.name.length>18?'':''}</span>
               <span>${p.quantity}x ${fmt(p.total)}</span>
             </div>
           `).join('')}
         </div>
-        <div style="border-top:1px dashed #000;margin:8px 0;"></div>
+        <div style="border-top:1px solid #000;margin:4px 0;"></div>
       ` : ''}
-      <div style="text-align:center;font-size:9px;">
+
+      <div style="text-align:center;font-size:8px;">
         <div>GRACIAS POR SU TRABAJO</div>
-        <div style="margin-top:4px;">********************************</div>
+        <div style="margin-top:2px;">********************************</div>
       </div>
     </div>
   `;
@@ -105,14 +127,65 @@ export const printLoncheritasResumenTicket = (summary: LoncheritasTicketSummary,
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:none;';
   document.body.appendChild(iframe);
+  
+  const ticketContent = generateLoncheritasTicketHTML(summary, startDate, endDate);
+  
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
   if (iframeDoc) {
     iframeDoc.open();
-    iframeDoc.write(`<!DOCTYPE html><html><head><title>Loncheritas ${formatDate(startDate)}</title>
-      <style>
-        @media print { @page { size:80mm auto;margin:0; } body { width:80mm !important;margin:0 auto !important;padding:0 !important; } }
-        body { margin:0;padding:0;background:white;font-family:'Courier New',monospace; }
-      </style></head><body>${generateLoncheritasTicketHTML(summary, startDate, endDate)}</body></html>`);
+    iframeDoc.write(`<!DOCTYPE html>
+      <html>
+        <head>
+          <title>Loncheritas ${formatDate(startDate)}</title>
+          <style>
+            @media print {
+              @page {
+                size: 72mm auto;
+                margin: 0;
+                padding: 0;
+              }
+              body {
+                width: 72mm !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                background: white !important;
+                font-family: 'Courier New', monospace !important;
+                font-size: 10px !important;
+                line-height: 1.2 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              * {
+                font-family: 'Courier New', monospace !important;
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+              }
+              .ticket {
+                width: 72mm !important;
+                padding: 4px !important;
+                margin: 0 !important;
+              }
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              background: white;
+              font-family: 'Courier New', monospace;
+              font-size: 10px;
+              line-height: 1.2;
+            }
+            .ticket {
+              width: 72mm;
+              margin: 0 auto;
+              padding: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          ${ticketContent}
+        </body>
+      </html>`);
     iframeDoc.close();
     setTimeout(() => {
       iframe.contentWindow?.print();
