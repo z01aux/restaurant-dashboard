@@ -3,12 +3,13 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { X, Calendar, Download } from 'lucide-react';
+import { X, Calendar, Download, Printer } from 'lucide-react';
 
 interface FullDayDateRangeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (startDate: Date, endDate: Date) => void;
+  title?: string; // Título personalizable
 }
 
 /**
@@ -36,7 +37,8 @@ const createPeruDate = (dateStr: string): Date => {
 export const FullDayDateRangeModal: React.FC<FullDayDateRangeModalProps> = ({
   isOpen,
   onClose,
-  onConfirm
+  onConfirm,
+  title = "Reporte por Rango de Fechas" // Título por defecto
 }) => {
   const [startDate, setStartDate] = useState<string>(getTodayString);
   const [endDate, setEndDate] = useState<string>(getTodayString);
@@ -136,12 +138,12 @@ export const FullDayDateRangeModal: React.FC<FullDayDateRangeModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
         
-        {/* Header */}
+        {/* Header - Ahora usa el título personalizado */}
         <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-4 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Calendar size={20} />
-              <h2 className="text-lg font-bold">Reporte por Rango de Fechas</h2>
+              <h2 className="text-lg font-bold">{title}</h2>
             </div>
             <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg">
               <X size={20} />
@@ -226,9 +228,9 @@ export const FullDayDateRangeModal: React.FC<FullDayDateRangeModalProps> = ({
           )}
 
           {/* Información */}
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h3 className="text-sm font-semibold text-blue-800 mb-2">📋 El reporte incluirá:</h3>
-            <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+          <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+            <h3 className="text-sm font-semibold text-purple-800 mb-2">📋 El reporte incluirá:</h3>
+            <ul className="text-xs text-purple-700 space-y-1 list-disc list-inside">
               <li>Resumen general del período</li>
               <li>Desglose diario de ventas</li>
               <li>Detalle de pedidos por alumno (organizado por grado)</li>

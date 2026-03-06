@@ -91,13 +91,14 @@ export const generateFullDayTicketHTML = (
     ? `DIA: ${formatDateForDisplay(startDate)}`
     : `PERIODO: ${formatDateForDisplay(startDate)} AL ${formatDateForDisplay(endDate)}`;
 
+  // HTML con estilos mejorados para mejor calidad de impresión
   return `
     <div class="ticket" style="font-family: 'Courier New', monospace; width: 80mm; padding: 8px; margin: 0 auto; background: white; color: black; font-size: 11px; line-height: 1.3;">
       
       <div style="text-align: center; margin-bottom: 8px;">
         <div style="font-size: 14px; font-weight: bold;">MARY'S RESTAURANT</div>
         <div style="font-size: 10px;">FULLDAY - PEDIDOS DE ALUMNOS</div>
-        <div style="font-size: 10px;">${periodText}</div>
+        <div style="font-size: 10px; font-weight: bold;">${periodText}</div>
         <div style="font-size: 9px;">EMITIDO: ${formatDateForDisplay(new Date())} ${formatTimeForDisplay(new Date())}</div>
         <div style="font-size: 9px;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
         <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
@@ -194,6 +195,17 @@ export const printFullDayResumenTicket = (summary: FullDayTicketSummary, startDa
                 padding: 0 !important;
                 background: white !important;
                 font-family: 'Courier New', monospace !important;
+                font-size: 12px !important;
+                line-height: 1.3 !important;
+              }
+              * {
+                font-family: 'Courier New', monospace !important;
+                box-sizing: border-box;
+              }
+              .ticket {
+                width: 80mm !important;
+                padding: 8px !important;
+                margin: 0 !important;
               }
             }
             body {
@@ -201,6 +213,13 @@ export const printFullDayResumenTicket = (summary: FullDayTicketSummary, startDa
               padding: 0;
               background: white;
               font-family: 'Courier New', monospace;
+              font-size: 12px;
+              line-height: 1.3;
+            }
+            .ticket {
+              width: 80mm;
+              margin: 0 auto;
+              padding: 8px;
             }
           </style>
         </head>

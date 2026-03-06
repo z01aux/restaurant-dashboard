@@ -383,12 +383,14 @@ export const FullDayOrdersManager: React.FC = () => {
         isOpen={showDateRangeExcel}
         onClose={() => setShowDateRangeExcel(false)}
         onConfirm={handleExportByDateRange}
+        title="📊 Reporte Excel por Rango de Fechas - FullDay"
       />
-      {/* Modal Ticket Resumen por rango */}
+      {/* Modal Ticket Resumen por rango - CORREGIDO: título ahora dice "Ticket" en lugar de "Excel" */}
       <FullDayDateRangeModal
         isOpen={showDateRangeTicket}
         onClose={() => setShowDateRangeTicket(false)}
         onConfirm={handleTicketResumen}
+        title="🎫 Ticket Resumen por Rango de Fechas - FullDay"
       />
 
       {/* HEADER */}
