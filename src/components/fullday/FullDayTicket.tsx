@@ -47,8 +47,6 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
     return order.payment_method ? (map[order.payment_method] || 'NO APLICA') : 'NO APLICA';
   };
 
-  const subtotal = order.total / 1.10;
-  const igv      = order.total - subtotal;
   const createdDate = new Date(order.created_at);
 
   // ── ESTILOS PDF ────
@@ -78,9 +76,6 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
     colPrice: { width: '35%', textAlign: 'right', fontSize: FONT_SIZE_PRODUCT, fontWeight: 'normal' },
     productName: { fontWeight: 'bold', textTransform: 'uppercase', fontSize: FONT_SIZE_PRODUCT, flexWrap: 'wrap', lineHeight: 1.4 },
     notes: { fontStyle: 'italic', fontSize: FONT_SIZE_SMALL, marginLeft: 0, marginTop: 1, flexWrap: 'wrap', fontWeight: 'normal' },
-    calculations: { marginTop: 3 },
-    calculationRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1, fontSize: FONT_SIZE_SMALL, fontWeight: 'normal' },
-    total: { borderTop: '1pt solid #000000', paddingTop: 3, marginTop: 3 },
     footer: { textAlign: 'center', marginTop: 8 },
     footerDate: { marginTop: 6, fontSize: FONT_SIZE_SMALL - 1, fontWeight: 'normal' },
     valueBold: { fontWeight: 'bold', fontSize: FONT_SIZE_SMALL, maxWidth: '60%', flexWrap: 'wrap' },
@@ -159,13 +154,10 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
           ))}
         </View>
 
-        {/* Totales */}
-        <View style={styles.calculations}>
-          <View style={styles.calculationRow}><Text>Subtotal:</Text><Text>S/ {subtotal.toFixed(2)}</Text></View>
-          <View style={styles.calculationRow}><Text>IGV (10%):</Text><Text>S/ {igv.toFixed(2)}</Text></View>
-          <View style={[styles.row, styles.total, styles.bold]}>
-            <Text>TOTAL:</Text><Text>S/ {order.total.toFixed(2)}</Text>
-          </View>
+        {/* SOLO TOTAL - SIN IGV */}
+        <View style={[styles.row, styles.bold, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#000000', paddingTop: 4 }]}>
+          <Text style={styles.bold}>TOTAL:</Text>
+          <Text style={styles.bold}>S/ {order.total.toFixed(2)}</Text>
         </View>
 
         <View style={styles.divider} />
@@ -224,12 +216,9 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
         </tbody>
       </table>
       <div class="divider"></div>
-      <div style="font-size:11px;">
-        <div class="info-row"><span class="normal">Subtotal:</span><span class="normal">S/ ${subtotal.toFixed(2)}</span></div>
-        <div class="info-row"><span class="normal">IGV (10%):</span><span class="normal">S/ ${igv.toFixed(2)}</span></div>
-        <div class="info-row" style="border-top:2px solid #000;padding-top:5px;margin-top:5px;">
-          <span class="label">TOTAL:</span><span class="label">S/ ${order.total.toFixed(2)}</span>
-        </div>
+      <!-- SOLO TOTAL - SIN IGV -->
+      <div class="info-row" style="border-top:2px solid #000;padding-top:5px;margin-top:5px;">
+        <span class="label">TOTAL:</span><span class="label">S/ ${order.total.toFixed(2)}</span>
       </div>
       <div class="divider"></div>
       <div class="center">

@@ -12,30 +12,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   // Verificar si es un pedido por teléfono para ticket de cocina
   const isPhoneOrder = order.source.type === 'phone';
   
-  // Determinar la tasa de IGV (10% por defecto, pero puede venir de la orden)
-  const getIgvRate = (): number => {
-    // Si la orden tiene una propiedad igvRate, úsala
-    if ((order as any).igvRate) {
-      return (order as any).igvRate;
-    }
-    // Por defecto, usar 10%
-    return 10;
-  };
-
-  const igvRate = getIgvRate();
-
-  // Cálculos de IGV con la tasa correcta
-  const calculateSubtotal = (total: number) => {
-    return total / (1 + (igvRate / 100));
-  };
-
-  const calculateIGV = (total: number) => {
-    return total - (total / (1 + (igvRate / 100)));
-  };
-
-  const subtotal = calculateSubtotal(order.total);
-  const igv = calculateIGV(order.total);
-  
   // Obtener el nombre del usuario actual desde localStorage
   const getCurrentUserName = () => {
     try {
@@ -195,7 +171,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   });
 
-  // Estilos normales para otros tipos de pedido
+  // Estilos normales para otros tipos de pedido - SIN IGV
   const normalStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
@@ -287,21 +263,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       flexWrap: 'wrap',
       fontWeight: 'normal',
     },
-    calculations: {
-      marginTop: 3,
-    },
-    calculationRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 1,
-      fontSize: FONT_SIZE_SMALL,
-      fontWeight: 'normal',
-    },
-    total: {
-      borderTop: '1pt solid #000000',
-      paddingTop: 3,
-      marginTop: 3,
-    },
     footer: {
       textAlign: 'center',
       marginTop: 8,
@@ -382,7 +343,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     </Document>
   );
 
-  // Componente del documento PDF normal - CON IGV DINÁMICO
+  // Componente del documento PDF normal - SIN IGV
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -476,19 +437,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           ))}
         </View>
 
-        <View style={normalStyles.calculations}>
-          <View style={normalStyles.calculationRow}>
-            <Text>Subtotal:</Text>
-            <Text>S/ {subtotal.toFixed(2)}</Text>
-          </View>
-          <View style={normalStyles.calculationRow}>
-            <Text>IGV ({igvRate}%):</Text>
-            <Text>S/ {igv.toFixed(2)}</Text>
-          </View>
-          <View style={[normalStyles.row, normalStyles.total, normalStyles.bold]}>
-            <Text>TOTAL:</Text>
-            <Text>S/ {order.total.toFixed(2)}</Text>
-          </View>
+        {/* SOLO TOTAL - SIN IGV */}
+        <View style={[normalStyles.row, normalStyles.bold, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#000000', paddingTop: 4 }]}>
+          <Text style={normalStyles.bold}>TOTAL:</Text>
+          <Text style={normalStyles.bold}>S/ {order.total.toFixed(2)}</Text>
         </View>
 
         <View style={normalStyles.divider} />
@@ -728,7 +680,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   };
 
-  // Generar contenido HTML para impresión
+  // Generar contenido HTML para impresión - SIN IGV
   const generateTicketContent = () => {
     if (isPhoneOrder) {
       return `
@@ -863,19 +815,10 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           
           <div class="divider"></div>
           
-          <div style="font-size: 11px;">
-            <div class="info-row">
-              <span class="normal">Subtotal:</span>
-              <span class="normal">S/ ${subtotal.toFixed(2)}</span>
-            </div>
-            <div class="info-row">
-              <span class="normal">IGV (${igvRate}%):</span>
-              <span class="normal">S/ ${igv.toFixed(2)}</span>
-            </div>
-            <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
-              <span class="label">TOTAL:</span>
-              <span class="label">S/ ${order.total.toFixed(2)}</span>
-            </div>
+          <!-- SOLO TOTAL - SIN IGV -->
+          <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
+            <span class="label">TOTAL:</span>
+            <span class="label">S/ ${order.total.toFixed(2)}</span>
           </div>
           
           <div class="divider"></div>
