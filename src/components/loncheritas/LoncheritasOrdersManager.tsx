@@ -1,7 +1,7 @@
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2, Calendar } from 'lucide-react';
+import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2, Calendar, X } from 'lucide-react';
 import { useLoncheritasOrders } from '../../hooks/useLoncheritasOrders';
 import { useLoncheritasSalesClosure } from '../../hooks/useLoncheritasSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
