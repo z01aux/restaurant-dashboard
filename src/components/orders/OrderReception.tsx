@@ -1252,7 +1252,12 @@ const OrderReception: React.FC = React.memo(() => {
 
   const handleCategoryChange = useCallback((category: string) => setActiveCategory(category), []);
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value), []);
-  const handlePaymentMethodChange = useCallback((method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA') => setPaymentMethod(method), []);
+  
+  // Manejador para el método de pago (ahora con fondos de color)
+  const handlePaymentMethodChange = useCallback((method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA') => {
+    setPaymentMethod(method);
+  }, []);
+  
   const handleShowCartDrawer = useCallback((show: boolean) => setShowCartDrawer(show), []);
   
   const clearCart = useCallback(() => {
@@ -2186,24 +2191,39 @@ const OrderReception: React.FC = React.memo(() => {
                       Método de Pago *
                     </label>
                     <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { value: 'EFECTIVO', label: '💵', color: 'bg-green-500' },
-                        { value: 'YAPE/PLIN', label: '📱', color: 'bg-purple-500' },
-                        { value: 'TARJETA', label: '💳', color: 'bg-blue-500' }
-                      ].map((method) => (
-                        <button
-                          key={method.value}
-                          type="button"
-                          onClick={() => handlePaymentMethodChange(method.value as any)}
-                          className={`p-2 rounded-lg text-white font-medium text-xs transition-all ${
-                            paymentMethod === method.value 
-                              ? `${method.color} shadow-md transform scale-105` 
-                              : 'bg-gray-300 text-gray-600'
-                          }`}
-                        >
-                          {method.label}
-                        </button>
-                      ))}
+                      <button
+                        type="button"
+                        onClick={() => handlePaymentMethodChange('EFECTIVO')}
+                        className={`px-4 py-3 rounded-lg text-sm font-medium text-white transition-all ${
+                          paymentMethod === 'EFECTIVO' 
+                            ? 'bg-green-600 ring-2 ring-green-300 ring-offset-2' 
+                            : 'bg-green-500 hover:bg-green-600'
+                        }`}
+                      >
+                        EFECTIVO
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePaymentMethodChange('YAPE/PLIN')}
+                        className={`px-4 py-3 rounded-lg text-sm font-medium text-white transition-all ${
+                          paymentMethod === 'YAPE/PLIN' 
+                            ? 'bg-purple-600 ring-2 ring-purple-300 ring-offset-2' 
+                            : 'bg-purple-500 hover:bg-purple-600'
+                        }`}
+                      >
+                        YAPE/PLIN
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePaymentMethodChange('TARJETA')}
+                        className={`px-4 py-3 rounded-lg text-sm font-medium text-white transition-all ${
+                          paymentMethod === 'TARJETA' 
+                            ? 'bg-blue-600 ring-2 ring-blue-300 ring-offset-2' 
+                            : 'bg-blue-500 hover:bg-blue-600'
+                        }`}
+                      >
+                        TARJETA
+                      </button>
                     </div>
                   </div>
                 )}
@@ -2541,21 +2561,41 @@ const OrderReception: React.FC = React.memo(() => {
                     {/* <-- AGREGADO OEP A LA CONDICIÓN DE PAGO */}
                     {(activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep' || activeTab === 'loncheritas') && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Pago</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Método de Pago</label>
                         <div className="grid grid-cols-3 gap-2">
-                          {['EFECTIVO', 'YAPE/PLIN', 'TARJETA'].map(method => (
-                            <button
-                              key={method}
-                              onClick={() => handlePaymentMethodChange(method as any)}
-                              className={`p-2 rounded-lg text-xs font-medium ${
-                                paymentMethod === method
-                                  ? 'bg-red-500 text-white'
-                                  : 'bg-gray-100 text-gray-700'
-                              }`}
-                            >
-                              {method === 'EFECTIVO' ? '💵' : method === 'YAPE/PLIN' ? '📱' : '💳'}
-                            </button>
-                          ))}
+                          <button
+                            type="button"
+                            onClick={() => handlePaymentMethodChange('EFECTIVO')}
+                            className={`px-4 py-3 rounded-lg text-sm font-medium text-white transition-all ${
+                              paymentMethod === 'EFECTIVO' 
+                                ? 'bg-green-600 ring-2 ring-green-300 ring-offset-2' 
+                                : 'bg-green-500 hover:bg-green-600'
+                            }`}
+                          >
+                            EFECTIVO
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePaymentMethodChange('YAPE/PLIN')}
+                            className={`px-4 py-3 rounded-lg text-sm font-medium text-white transition-all ${
+                              paymentMethod === 'YAPE/PLIN' 
+                                ? 'bg-purple-600 ring-2 ring-purple-300 ring-offset-2' 
+                                : 'bg-purple-500 hover:bg-purple-600'
+                            }`}
+                          >
+                            YAPE/PLIN
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePaymentMethodChange('TARJETA')}
+                            className={`px-4 py-3 rounded-lg text-sm font-medium text-white transition-all ${
+                              paymentMethod === 'TARJETA' 
+                                ? 'bg-blue-600 ring-2 ring-blue-300 ring-offset-2' 
+                                : 'bg-blue-500 hover:bg-blue-600'
+                            }`}
+                          >
+                            TARJETA
+                          </button>
                         </div>
                       </div>
                     )}
