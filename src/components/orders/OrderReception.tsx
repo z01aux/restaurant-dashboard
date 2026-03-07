@@ -1,5 +1,6 @@
 // =================================================
-// ARCHIVO: src/components/orders/OrderReception.tsx 
+// ARCHIVO: src/components/orders/OrderReception.tsx (VERSIÓN CORREGIDA)
+// CORREGIDO: Error de sintaxis en línea 629
 // =================================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -1319,14 +1320,14 @@ const OrderReception: React.FC = React.memo(() => {
             <div class="divider"></div>
 
             ${order.notes && order.notes.trim() !== '' ? `
-<div class="divider"></div>
-<div class="info-row">
-  <span class="label">NOTAS DEL PEDIDO:</span>
-</div>
-<div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
+            <div class="divider"></div>
+            <div class="info-row">
+              <span class="label">NOTAS DEL PEDIDO:</span>
+            </div>
+            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
 ${order.notes.toUpperCase().split('\n').map(line => `- ${line}`).join('\n')}
-</div>
-` : ''}
+            </div>
+            ` : ''}
             
             <div class="center">
               <div class="asterisk-line">********************************</div>
@@ -1454,14 +1455,14 @@ ${order.notes.toUpperCase().split('\n').map(line => `- ${line}`).join('\n')}
             </div>
 
             ${order.notes && order.notes.trim() !== '' ? `
-<div class="divider"></div>
-<div class="info-row">
-  <span class="label">NOTAS DEL PEDIDO:</span>
-</div>
-<div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
+            <div class="divider"></div>
+            <div class="info-row">
+              <span class="label">NOTAS DEL PEDIDO:</span>
+            </div>
+            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
 ${order.notes.toUpperCase().split('\n').map(line => `- ${line}`).join('\n')}
-</div>
-` : ''}
+            </div>
+            ` : ''}
             
             <div class="divider"></div>
             
