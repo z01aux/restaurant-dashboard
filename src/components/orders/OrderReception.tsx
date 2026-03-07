@@ -2176,7 +2176,7 @@ const OrderReception: React.FC = React.memo(() => {
                     value={orderNotes}
                     onChange={(e) => setOrderNotes(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-3 py-2 text-sm font-medium text-left align-top border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                     placeholder="Ej: SIN CEBOLLA, BIEN COCIDO, LLAMAR ANTES DE LLEGAR, etc."
                   />
                 </div>
@@ -2560,7 +2560,7 @@ const OrderReception: React.FC = React.memo(() => {
                         value={orderNotes}
                         onChange={(e) => setOrderNotes(e.target.value)}
                         rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        className="w-full px-3 py-2 text-sm font-medium text-left align-top border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                         placeholder="Ej: SIN CEBOLLA, BIEN COCIDO, LLAMAR ANTES DE LLEGAR, etc."
                       />
                     </div>
@@ -2731,3 +2731,1756 @@ const OrderReception: React.FC = React.memo(() => {
 });
 
 export default OrderReception;
+
+----------------------------------------
+
+ARCHIVO: mr.03/src/components/orders/OrdersManager.tsx
+Tamaño: 35.05 KB
+Tipo: application/typescript+jsx
+Contenido:
+----------------------------------------
+//=================================================
+// ARCHIVO: src/components/orders/OrdersManager.tsx
+// ================================================
+
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Order } from '../../types';
+import { useOrders } from '../../hooks/useOrders';
+import { useAuth } from '../../hooks/useAuth';
+import { usePagination, isDesktopPagination, isMobilePagination } from '../../hooks/usePagination';
+import { PaginationControls } from '../ui/PaginationControls';
+import { OrderPreview } from './OrderPreview';
+import OrderTicket from './OrderTicket';
+import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
+import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
+import { useSalesClosure } from '../../hooks/useSalesClosure';
+import { CashRegisterModal } from '../sales/CashRegisterModal';
+import { SalesHistory } from '../sales/SalesHistory';
+import { PaymentMethodModal } from './PaymentMethodModal';
+import { DateRangeModal } from './DateRangeModal';
+
+// ============================================
+// COMPONENTE DE SELECCIÓN DE FECHA (ESTILO FULLDAY)
+// ============================================
+const DateSelector: React.FC<{
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+  showOnlyToday: boolean;
+  onToggleShowOnlyToday: () => void;
+}> = ({ selectedDate, onDateChange, showOnlyToday, onToggleShowOnlyToday }) => {
+  
+  const handlePrevDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    onDateChange(newDate);
+  };
+
+  const handleNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    onDateChange(newDate);
+  };
+
+  const handleToday = () => {
+    onDateChange(new Date());
+  };
+
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear();
+  };
+
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (showOnlyToday) {
+    return (
+      <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2">
+        <div className="flex items-center space-x-2">
+          <Calendar size={18} className="text-gray-500" />
+          <span className="font-medium text-gray-700">Hoy: {formatDate(new Date())}</span>
+        </div>
+        <button
+          onClick={onToggleShowOnlyToday}
+          className="text-sm text-red-600 hover:text-red-800 font-medium"
+        >
+          Ver todas las fechas
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        
+        {/* Selector de fecha con flechas */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handlePrevDay}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Día anterior"
+          >
+            <ChevronLeft size={20} className="text-gray-600" />
+          </button>
+
+          <div className="flex items-center space-x-2 px-4 py-2 bg-red-50 rounded-lg border border-red-200">
+            <Calendar size={18} className="text-red-600" />
+            <span className="font-medium text-red-800">
+              {formatDate(selectedDate)}
+            </span>
+          </div>
+
+          <button
+            onClick={handleNextDay}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Día siguiente"
+            disabled={isToday(selectedDate)}
+          >
+            <ChevronRight size={20} className={`${isToday(selectedDate) ? 'text-gray-300' : 'text-gray-600'}`} />
+          </button>
+        </div>
+
+        {/* Botones de acción */}
+        <div className="flex items-center space-x-2">
+          {!isToday(selectedDate) && (
+            <button
+              onClick={handleToday}
+              className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+            >
+              Ver Hoy
+            </button>
+          )}
+          <button
+            onClick={onToggleShowOnlyToday}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+          >
+            Volver a "Solo Hoy"
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
+// ============================================
+const OrderRow = React.memo(({
+  order,
+  onMouseEnter,
+  onMouseLeave,
+  onDelete,
+  onEditPayment,
+  user,
+  getDisplayNumber,
+  getNumberType,
+  getSourceText,
+  getPaymentColor,
+  getPaymentText,
+  getAreaIcon
+}: {
+  order: Order;
+  onMouseEnter: (e: React.MouseEvent) => void;
+  onMouseLeave: () => void;
+  onDelete: (orderId: string, displayNumber: string) => void;
+  onEditPayment: (order: Order) => void;
+  user: any;
+  getDisplayNumber: (order: Order) => string;
+  getNumberType: (order: Order) => string;
+  getSourceText: (type: string) => string;
+  getPaymentColor: (method?: string) => string;
+  getPaymentText: (method?: string) => string;
+  getAreaIcon: (type: string) => string;
+}) => {
+  const displayNumber = getDisplayNumber(order);
+  const numberType = getNumberType(order);
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onEditPayment(order);
+  };
+
+  return (
+    <tr
+      className="hover:bg-gray-50 cursor-pointer group relative"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <td className="px-4 sm:px-6 py-4">
+        <div className="flex items-center space-x-2 mb-1">
+          <div className={`text-sm font-medium ${
+            numberType === 'kitchen' ? 'text-green-600' : 'text-blue-600'
+          }`}>
+            {displayNumber}
+          </div>
+          {numberType === 'kitchen' ? (
+            <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">
+              COCINA
+            </span>
+          ) : (
+            <span className="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
+              NORMAL
+            </span>
+          )}
+        </div>
+        <div className="font-medium text-gray-900">{order.customerName}</div>
+        <div className="text-sm font-bold text-red-600">
+          S/ {order.total.toFixed(2)}
+        </div>
+      </td>
+      <td className="px-4 sm:px-6 py-4">
+        <div className="mb-1">
+          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 items-center space-x-1">
+            <span>{getAreaIcon(order.source.type)}</span>
+            <span>{getSourceText(order.source.type)}</span>
+          </span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.paymentMethod)}`}>
+            {getPaymentText(order.paymentMethod)}
+          </span>
+
+          {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'employee') && (
+            <button
+              onClick={handleEditClick}
+              className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
+              title="Cambiar método de pago"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+        </div>
+      </td>
+      <td className="px-4 sm:px-6 py-4">
+        <div className="text-sm text-gray-900">
+          {new Date(order.createdAt).toLocaleDateString()}
+        </div>
+        <div className="text-sm text-gray-500">
+          {new Date(order.createdAt).toLocaleTimeString()}
+        </div>
+      </td>
+      <td className="px-4 sm:px-6 py-4">
+        <div className="text-sm text-gray-900">
+          {order.items.length} producto(s)
+        </div>
+        <div className="text-xs text-gray-500 truncate max-w-xs">
+          {order.items.map((item: any) => item.menuItem.name).join(', ')}
+        </div>
+      </td>
+
+      {/* ✅ FIX: onMouseEnter={onMouseLeave} oculta el preview al entrar a la celda de Acciones */}
+      <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
+        <div className="flex space-x-2">
+          <OrderTicket order={order} />
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => onDelete(order.id, displayNumber)}
+              className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
+              title="Eliminar orden"
+            >
+              🗑️
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
+const OrdersManager: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [areaFilter, setAreaFilter] = useState<string>('');
+  const [paymentFilter, setPaymentFilter] = useState<string>('');
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [currentSort, setCurrentSort] = useState('status-time');
+  const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
+  const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  const [showHistory, setShowHistory] = useState(false);
+  const [showCashModal, setShowCashModal] = useState(false);
+  const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
+  const [showOnlyToday, setShowOnlyToday] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+
+  const [localOrders, setLocalOrders] = useState<Order[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const { user } = useAuth();
+  const {
+    orders,
+    loading,
+    deleteOrder,
+    updateOrderPayment,
+    exportOrdersToCSV,
+    getTodayOrders,
+    fetchOrders,
+    getRegularOrders
+  } = useOrders();
+
+  const {
+    cashRegister,
+    loading: salesLoading,
+    openCashRegister,
+    closeCashRegister,
+    getTodaySummary
+  } = useSalesClosure();
+
+  const regularOrders = useMemo(() => getRegularOrders(), [getRegularOrders, orders]);
+
+  useEffect(() => {
+    if (regularOrders.length > 0 && !isInitialized) {
+      setLocalOrders(regularOrders);
+      setIsInitialized(true);
+    }
+  }, [regularOrders, isInitialized]);
+
+  useEffect(() => {
+    const handleNewOrder = (event: CustomEvent) => {
+      const newOrder = event.detail;
+      if (newOrder.orderType !== 'fullday') {
+        setLocalOrders(prev => {
+          if (prev.some(o => o.id === newOrder.id)) return prev;
+          return [newOrder, ...prev];
+        });
+      }
+      setTimeout(() => fetchOrders(500), 100);
+    };
+    window.addEventListener('newOrderCreated', handleNewOrder as EventListener);
+    return () => window.removeEventListener('newOrderCreated', handleNewOrder as EventListener);
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    if (regularOrders.length > 0) {
+      setLocalOrders(prev => {
+        const merged = [...regularOrders];
+        const existingIds = new Set(merged.map(o => o.id));
+        prev.forEach(order => {
+          if (order.id.startsWith('temp-') && !existingIds.has(order.id)) merged.push(order);
+        });
+        return merged.sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
+    }
+  }, [regularOrders]);
+
+  const sortOptions = useMemo(() => [
+    { value: 'status-time',       label: '🔄 Estado + Tiempo' },
+    { value: 'waiting-time',      label: '⏱️ Tiempo Espera' },
+    { value: 'delivery-priority', label: '🚚 Delivery Priority' },
+    { value: 'total-desc',        label: '💰 Mayor Monto' },
+    { value: 'created-desc',      label: '📅 Más Recientes' },
+    { value: 'created-asc',       label: '📅 Más Antiguas' },
+  ], []);
+
+  const dateFilteredOrders = useMemo(() => {
+    if (showOnlyToday) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return localOrders.filter(order => {
+        const d = new Date(order.createdAt);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+      });
+    } else {
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      return localOrders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        return orderDate >= startOfDay && orderDate <= endOfDay;
+      });
+    }
+  }, [localOrders, showOnlyToday, selectedDate]);
+
+  const filteredAndSortedOrders = useMemo(() => {
+    if (!dateFilteredOrders.length) return [];
+    let filtered = dateFilteredOrders;
+
+    if (areaFilter) {
+      filtered = filtered.filter(o => o.source.type === areaFilter);
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(o =>
+        o.customerName?.toLowerCase().includes(term) ||
+        o.orderNumber?.toLowerCase().includes(term) ||
+        o.kitchenNumber?.toLowerCase().includes(term) ||
+        o.phone?.includes(term)
+      );
+    }
+
+    if (paymentFilter) {
+      filtered = filtered.filter(o => o.paymentMethod === paymentFilter);
+    }
+
+    if (filtered.length > 1) {
+      filtered = [...filtered].sort((a, b) => {
+        switch (currentSort) {
+          case 'status-time': {
+            const so: Record<string, number> = { pending: 1, preparing: 2, ready: 3, delivered: 4, cancelled: 5 };
+            if (so[a.status] !== so[b.status]) return so[a.status] - so[b.status];
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          }
+          case 'waiting-time':
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          case 'delivery-priority': {
+            const to: Record<string, number> = { delivery: 1, phone: 2, 'walk-in': 3 };
+            return to[a.source.type] - to[b.source.type];
+          }
+          case 'total-desc':      return b.total - a.total;
+          case 'created-desc':    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          case 'created-asc':     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          default: return 0;
+        }
+      });
+    }
+
+    return filtered;
+  }, [dateFilteredOrders, searchTerm, areaFilter, paymentFilter, currentSort]);
+
+  const pagination = usePagination({
+    items: filteredAndSortedOrders,
+    itemsPerPage,
+    mobileBreakpoint: 768
+  });
+
+  const getDisplayNumber = useCallback((order: Order) => {
+    if (order.source.type === 'phone') return order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`;
+    return order.orderNumber || `ORD-${order.id.slice(-8).toUpperCase()}`;
+  }, []);
+
+  const getNumberType   = useCallback((order: Order) => order.source.type === 'phone' ? 'kitchen' : 'order', []);
+  const getSourceText   = useCallback((t: string) => ({ phone: 'Teléfono', 'walk-in': 'Presencial', delivery: 'Delivery' }[t] || t), []);
+  const getAreaIcon     = useCallback((t: string) => ({ phone: '🍳', 'walk-in': '👤', delivery: '🚚' }[t] || '📋'), []);
+
+  const getPaymentColor = useCallback((m?: string) => ({
+    'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
+    'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
+    'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
+  }[m || ''] || 'bg-gray-100 text-gray-800 border-gray-200'), []);
+
+  const getPaymentText  = useCallback((m?: string) => ({ EFECTIVO: 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', TARJETA: 'TARJETA' }[m || ''] || 'NO APLICA'), []);
+
+  const handleRowMouseEnter = useCallback((order: Order, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPreviewOrder(order);
+    setPreviewPosition({ x: rect.left + rect.width / 2, y: rect.top });
+  }, []);
+
+  const handleRowMouseLeave = useCallback(() => setPreviewOrder(null), []);
+
+  const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
+    if (window.confirm(`¿Estás seguro de eliminar la orden ${orderNumber}?`)) {
+      setLocalOrders(prev => prev.filter(o => o.id !== orderId));
+      const result = await deleteOrder(orderId);
+      if (result.success) {
+        setDeletedOrder({ id: orderId, number: orderNumber });
+        setTimeout(() => setDeletedOrder(null), 3000);
+      }
+    }
+  }, [deleteOrder]);
+
+  const handleEditPayment = useCallback((order: Order) => {
+    setSelectedOrder(order);
+    setShowPaymentModal(true);
+  }, []);
+
+  const handleSavePaymentMethod = useCallback(async (orderId: string, newPaymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | undefined) => {
+    try {
+      const previousMethod = localOrders.find(o => o.id === orderId)?.paymentMethod;
+      setLocalOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentMethod: newPaymentMethod } : o));
+      const result = await updateOrderPayment(orderId, newPaymentMethod);
+      if (!result.success) {
+        setLocalOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentMethod: previousMethod } : o));
+        alert('❌ Error al actualizar el método de pago: ' + result.error);
+      } else {
+        alert('✅ Método de pago actualizado correctamente');
+      }
+      setShowPaymentModal(false);
+      setSelectedOrder(null);
+    } catch (error: any) {
+      alert('❌ Error inesperado: ' + error.message);
+    }
+  }, [updateOrderPayment, localOrders]);
+
+  const handleExportExcel = useCallback(async (startDate: Date, endDate: Date) => {
+    if (exporting) return;
+    setExporting(true);
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+    toast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando reporte...</span></div>';
+    document.body.appendChild(toast);
+    try {
+      const todaySummary = await getTodaySummary(regularOrders);
+      console.log('📊 Resumen:', todaySummary);
+      await exportOrdersByDateRange(regularOrders, startDate, endDate);
+    } catch (error: any) {
+      const errToast = document.createElement('div');
+      errToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      errToast.innerHTML = `<div>❌ Error: ${error.message}</div>`;
+      document.body.appendChild(errToast);
+      setTimeout(() => { if (document.body.contains(errToast)) document.body.removeChild(errToast); }, 3000);
+    } finally {
+      if (document.body.contains(toast)) document.body.removeChild(toast);
+      setExporting(false);
+    }
+  }, [regularOrders, getTodaySummary, exporting]);
+
+  const handlePrintTicket = useCallback((startDate: Date, endDate: Date) => {
+    const filtered = regularOrders.filter(o => {
+      const d = new Date(o.createdAt); d.setHours(0, 0, 0, 0);
+      const s = new Date(startDate);   s.setHours(0, 0, 0, 0);
+      const e = new Date(endDate);     e.setHours(23, 59, 59, 999);
+      return d >= s && d <= e;
+    });
+    if (!filtered.length) { alert('No hay órdenes en el rango seleccionado'); return; }
+    printResumenTicket(generateTicketSummary(filtered, startDate, endDate), startDate, endDate);
+  }, [regularOrders]);
+
+  const handleExportTodayCSV   = useCallback(() => exportOrdersToCSV(getTodayOrders().filter(o => o.orderType !== 'fullday')), [getTodayOrders, exportOrdersToCSV]);
+  const handleExportAllCSV     = useCallback(() => exportOrdersToCSV(regularOrders), [regularOrders, exportOrdersToCSV]);
+  const handleExportTodayExcel = useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
+  const handleExportAllExcel   = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
+
+  const handleOpenCashRegister  = useCallback(() => { setCashModalType('open');  setShowCashModal(true); }, []);
+  const handleCloseCashRegister = useCallback(() => { setCashModalType('close'); setShowCashModal(true); }, []);
+
+  const handleCashConfirm = useCallback(async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
+    if (cashModalType === 'open') {
+      const result = await openCashRegister(data.initialCash!);
+      if (result.success) { alert('✅ Caja abierta correctamente'); setShowCashModal(false); }
+      else alert('❌ Error al abrir caja: ' + result.error);
+    } else {
+      const result = await closeCashRegister(regularOrders, data.finalCash!, data.notes || '');
+      if (result.success) {
+        alert('✅ Caja cerrada correctamente');
+        setShowCashModal(false);
+        const t = document.createElement('div');
+        t.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+        t.innerHTML = `<div>✅ Cierre #${result.closure?.closure_number} guardado</div>`;
+        document.body.appendChild(t);
+        setTimeout(() => { if (document.body.contains(t)) document.body.removeChild(t); }, 3000);
+      } else {
+        alert('❌ Error al cerrar caja: ' + result.error);
+      }
+    }
+  }, [cashModalType, openCashRegister, closeCashRegister, regularOrders]);
+
+  const handleToggleHistory        = useCallback(() => setShowHistory(prev => !prev), []);
+  const handleToggleShowOnlyToday  = useCallback(() => setShowOnlyToday(prev => !prev), []);
+  const handleDateChange           = useCallback((date: Date) => setSelectedDate(date), []);
+
+  const handleClearFilters = useCallback(() => {
+    setAreaFilter('');
+    setPaymentFilter('');
+    setSearchTerm('');
+  }, []);
+
+  const desktopProps = isDesktopPagination(pagination) ? {
+    currentPage: pagination.currentPage,
+    totalPages: pagination.totalPages,
+    totalItems: pagination.totalItems,
+    startIndex: pagination.startIndex,
+    endIndex: pagination.endIndex,
+    hasNextPage: pagination.hasNextPage,
+    hasPrevPage: pagination.hasPrevPage,
+  } : {};
+
+  const mobileProps = isMobilePagination(pagination) ? {
+    hasMoreItems: pagination.hasMoreItems,
+    loadedItems: pagination.loadedItems,
+    onLoadMore: pagination.loadMore,
+  } : {};
+
+  const hasActiveFilters = areaFilter !== '' || paymentFilter !== '' || searchTerm !== '';
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+
+      {deletedOrder && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full">
+          <span>Orden {deletedOrder.number} eliminada</span>
+        </div>
+      )}
+
+      {previewOrder && (
+        <OrderPreview order={previewOrder} isVisible={true} position={previewPosition} />
+      )}
+
+      <PaymentMethodModal
+        isOpen={showPaymentModal}
+        onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
+        order={selectedOrder}
+        onSave={handleSavePaymentMethod}
+      />
+
+      <DateRangeModal
+        isOpen={showDateRangeModal}
+        onClose={() => setShowDateRangeModal(false)}
+        onConfirmExcel={handleExportExcel}
+        onConfirmTicket={handlePrintTicket}
+      />
+
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Gestión de Órdenes</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            {filteredAndSortedOrders.length} órdenes encontradas
+          </p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 shadow-sm border">
+            <div className={`w-2 h-2 rounded-full ${cashRegister?.is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+            <span className="text-sm font-medium">Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}</span>
+          </div>
+          {!cashRegister?.is_open ? (
+            <button onClick={handleOpenCashRegister} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors">Abrir Caja</button>
+          ) : (
+            <button onClick={handleCloseCashRegister} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors">Cerrar Caja</button>
+          )}
+          <button onClick={handleToggleHistory} className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700 transition-colors">
+            {showHistory ? 'Ocultar Historial' : 'Ver Historial'}
+          </button>
+        </div>
+      </div>
+
+      {/* SELECTOR DE FECHA */}
+      <DateSelector
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+        showOnlyToday={showOnlyToday}
+        onToggleShowOnlyToday={handleToggleShowOnlyToday}
+      />
+
+      {/* BOTONES DE ACCIÓN */}
+      <div className="flex flex-wrap gap-2">
+        <button onClick={handleExportTodayCSV} disabled={exporting} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1 disabled:opacity-50">
+          <Download size={16} /><span>CSV Hoy</span>
+        </button>
+        <button onClick={handleExportAllCSV} disabled={exporting} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1 disabled:opacity-50">
+          <Download size={16} /><span>CSV Todo</span>
+        </button>
+        <button onClick={handleExportTodayExcel} disabled={exporting} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50">
+          <Download size={16} /><span>Excel Hoy</span>
+        </button>
+        <button onClick={handleExportAllExcel} disabled={exporting} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1 disabled:opacity-50">
+          <Download size={16} /><span>Excel Todo</span>
+        </button>
+        <button onClick={() => setShowDateRangeModal(true)} disabled={exporting} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1 disabled:opacity-50">
+          <Download size={16} /><span>Reportes por Fechas</span>
+          {exporting && <div className="ml-2 animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
+        </button>
+        <button onClick={() => { window.location.hash = '#reception'; }} className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm hover:from-red-600 hover:to-amber-600 flex items-center space-x-1" disabled={exporting}>
+          <span>➕</span><span>Nueva Orden</span>
+        </button>
+      </div>
+
+      <CashRegisterModal
+        isOpen={showCashModal}
+        onClose={() => setShowCashModal(false)}
+        type={cashModalType}
+        cashRegister={cashRegister}
+        todaySummary={undefined}
+        onConfirm={handleCashConfirm}
+        loading={salesLoading}
+      />
+
+      {showHistory && <SalesHistory />}
+
+      {/* FILTROS */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por cliente, teléfono..."
+              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+              disabled={exporting}
+            />
+          </div>
+          <select
+            value={areaFilter}
+            onChange={(e) => setAreaFilter(e.target.value)}
+            className="px-3 py-2 border rounded-lg text-sm min-w-[140px]"
+            disabled={exporting}
+          >
+            <option value="">📋 Todas las áreas</option>
+            <option value="phone">🍳 Cocina</option>
+            <option value="walk-in">👤 Local</option>
+            <option value="delivery">🚚 Delivery</option>
+          </select>
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value)}
+            className="px-3 py-2 border rounded-lg text-sm min-w-[160px]"
+            disabled={exporting}
+          >
+            <option value="">💰 Todos los pagos</option>
+            <option value="EFECTIVO">💵 Efectivo</option>
+            <option value="YAPE/PLIN">📱 Yape/Plin</option>
+            <option value="TARJETA">💳 Tarjeta</option>
+          </select>
+        </div>
+
+        {hasActiveFilters && (
+          <div className="mt-3 flex items-center justify-between">
+            <div className="flex flex-wrap gap-2">
+              {areaFilter && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  📋 Área: {areaFilter === 'phone' ? 'Cocina' : areaFilter === 'walk-in' ? 'Local' : 'Delivery'}
+                </span>
+              )}
+              {paymentFilter && (
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPaymentColor(paymentFilter)}`}>
+                  {getPaymentText(paymentFilter)}
+                </span>
+              )}
+              {searchTerm && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  🔍 Búsqueda: "{searchTerm}"
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleClearFilters}
+              className="text-xs text-red-600 hover:text-red-800 font-medium"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        )}
+      </div>
+
+      <PaginationControls
+        {...desktopProps}
+        onPageChange={pagination.goToPage}
+        {...mobileProps}
+        isMobile={pagination.isMobile}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        onSortChange={setCurrentSort}
+        currentSort={currentSort}
+        sortOptions={sortOptions}
+      />
+
+      {/* TABLA */}
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        {loading && !isInitialized ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+            <p className="text-gray-600 mt-2">Cargando...</p>
+          </div>
+        ) : pagination.currentItems.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            {showOnlyToday
+              ? 'No hay órdenes regulares para hoy'
+              : `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente / Monto</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Área / Pago</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productos</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {pagination.currentItems.map((order) => (
+                  <OrderRow
+                    key={order.id}
+                    order={order}
+                    onMouseEnter={(e) => handleRowMouseEnter(order, e)}
+                    onMouseLeave={handleRowMouseLeave}
+                    onDelete={handleDeleteOrder}
+                    onEditPayment={handleEditPayment}
+                    user={user}
+                    getDisplayNumber={getDisplayNumber}
+                    getNumberType={getNumberType}
+                    getSourceText={getSourceText}
+                    getPaymentColor={getPaymentColor}
+                    getPaymentText={getPaymentText}
+                    getAreaIcon={getAreaIcon}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {filteredAndSortedOrders.length > 0 && (
+        <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="font-semibold">Mostrando:</span>{' '}
+              {isDesktopPagination(pagination) ? (
+                <>{pagination.startIndex || 0}-{pagination.endIndex || 0} de {filteredAndSortedOrders.length} órdenes</>
+              ) : (
+                <>{pagination.loadedItems || 0} de {filteredAndSortedOrders.length} órdenes</>
+              )}
+            </div>
+            <div>
+              <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}
+            </div>
+          </div>
+          {exporting && (
+            <div className="mt-2 text-xs text-blue-600 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+              Generando reporte, por favor espera...
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default OrdersManager;
+
+----------------------------------------
+
+ARCHIVO: mr.03/src/components/orders/OrderTicket.tsx
+Tamaño: 29.34 KB
+Tipo: application/typescript+jsx
+Contenido:
+----------------------------------------
+import React from 'react';
+import { Order } from '../../types';
+import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+
+interface OrderTicketProps {
+  order: Order;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+}
+
+const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseLeave }) => {
+  // Verificar si es un pedido por teléfono para ticket de cocina
+  const isPhoneOrder = order.source.type === 'phone';
+  
+  // Obtener el nombre del usuario actual desde localStorage
+  const getCurrentUserName = () => {
+    try {
+      const savedUser = localStorage.getItem('restaurant-user');
+      if (savedUser) {
+        const userData = JSON.parse(savedUser);
+        return userData.name || 'Sistema';
+      }
+    } catch (error) {
+      console.error('Error obteniendo usuario:', error);
+    }
+    return 'Sistema';
+  };
+
+  // Función para obtener número de orden para display
+  const getDisplayOrderNumber = () => {
+    return order.orderNumber ?? `ORD-${order.id.slice(-8).toUpperCase()}`;
+  };
+
+  // Función para obtener número de cocina para display
+  const getDisplayKitchenNumber = () => {
+    return order.kitchenNumber ?? `COM-${order.id.slice(-8).toUpperCase()}`;
+  };
+
+  // Función para obtener texto del método de pago
+  const getPaymentText = () => {
+    if (order.paymentMethod) {
+      const paymentMap: Record<string, string> = {
+        'EFECTIVO': 'EFECTIVO',
+        'YAPE/PLIN': 'YAPE/PLIN', 
+        'TARJETA': 'TARJETA'
+      };
+      return paymentMap[order.paymentMethod] || 'NO APLICA';
+    }
+    return 'NO APLICA';
+  };
+
+  // CONSTANTES PARA EL ANCHO DE IMPRESIÓN
+  const TICKET_WIDTH = 80;
+  const PAGE_WIDTH = TICKET_WIDTH * 2.83465;
+  
+  // TAMAÑOS DE FUENTE - AUMENTADOS PARA MEJOR LEGIBILIDAD
+  const FONT_SIZE_SMALL = 8;
+  const FONT_SIZE_NORMAL = 9;
+  const FONT_SIZE_LARGE = 10;
+  const FONT_SIZE_XLARGE = 11;
+  const FONT_SIZE_PRODUCT = 10;
+  
+  const PADDING = 8;
+
+  // Estilos para el PDF de COCINA
+  const kitchenStyles = StyleSheet.create({
+    page: {
+      flexDirection: 'column',
+      backgroundColor: '#FFFFFF',
+      padding: PADDING,
+      fontSize: FONT_SIZE_NORMAL,
+      fontFamily: 'Helvetica',
+      fontWeight: 'normal',
+      width: PAGE_WIDTH,
+    },
+    header: {
+      textAlign: 'center',
+      marginBottom: 6,
+      borderBottom: '1pt solid #000000',
+      paddingBottom: 4,
+    },
+    restaurantName: {
+      fontSize: FONT_SIZE_XLARGE,
+      fontWeight: 'bold',
+      marginBottom: 2,
+      textTransform: 'uppercase',
+    },
+    area: {
+      fontSize: FONT_SIZE_LARGE,
+      fontWeight: 'bold',
+      marginBottom: 3,
+      textTransform: 'uppercase',
+    },
+    divider: {
+      borderBottom: '1pt solid #000000',
+      marginVertical: 3,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 2,
+    },
+    infoSection: {
+      marginBottom: 6,
+    },
+    label: {
+      fontWeight: 'bold',
+      marginBottom: 1,
+      fontSize: FONT_SIZE_SMALL,
+    },
+    value: {
+      fontWeight: 'normal',
+      fontSize: FONT_SIZE_SMALL,
+      maxWidth: '60%',
+      flexWrap: 'wrap',
+    },
+    valueBold: {
+      fontWeight: 'bold',
+      fontSize: FONT_SIZE_SMALL,
+      maxWidth: '60%',
+      flexWrap: 'wrap',
+    },
+    productsHeader: {
+      textAlign: 'center',
+      fontWeight: 'bold',
+      marginBottom: 3,
+      textTransform: 'uppercase',
+      borderBottom: '1pt solid #000000',
+      paddingBottom: 2,
+      fontSize: FONT_SIZE_NORMAL,
+    },
+    productRow: {
+      flexDirection: 'row',
+      marginBottom: 3,
+    },
+    quantity: {
+      width: '15%',
+      fontWeight: 'bold',
+      fontSize: FONT_SIZE_PRODUCT,
+    },
+    productName: {
+      width: '85%',
+      fontWeight: 'bold',
+      textTransform: 'uppercase',
+      fontSize: FONT_SIZE_PRODUCT,
+      flexWrap: 'wrap',
+      lineHeight: 1.4,
+    },
+    notes: {
+      fontStyle: 'italic',
+      fontSize: FONT_SIZE_SMALL,
+      marginLeft: '15%',
+      marginBottom: 3,
+      flexWrap: 'wrap',
+      width: '85%',
+      fontWeight: 'normal',
+    },
+    productsContainer: {
+      marginBottom: 8,
+    },
+    footer: {
+      marginTop: 6,
+      textAlign: 'center',
+    },
+    asteriskLine: {
+      textAlign: 'center',
+      fontSize: FONT_SIZE_SMALL,
+      letterSpacing: 1,
+      marginBottom: 1,
+      fontWeight: 'normal',
+    }
+  });
+
+  // Estilos normales para otros tipos de pedido - SIN IGV
+  const normalStyles = StyleSheet.create({
+    page: {
+      flexDirection: 'column',
+      backgroundColor: '#FFFFFF',
+      padding: PADDING,
+      fontSize: FONT_SIZE_NORMAL,
+      fontFamily: 'Helvetica',
+      fontWeight: 'normal',
+      width: PAGE_WIDTH,
+    },
+    header: {
+      textAlign: 'center',
+      marginBottom: 6,
+    },
+    title: {
+      fontSize: FONT_SIZE_XLARGE,
+      fontWeight: 'bold',
+      marginBottom: 3,
+    },
+    subtitle: {
+      fontSize: FONT_SIZE_SMALL,
+      marginBottom: 1,
+      fontWeight: 'normal',
+    },
+    boldSubtitle: {
+      fontSize: FONT_SIZE_SMALL,
+      marginBottom: 1,
+      fontWeight: 'bold',
+    },
+    divider: {
+      borderBottom: '1pt solid #000000',
+      marginVertical: 3,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 2,
+    },
+    bold: {
+      fontWeight: 'bold',
+    },
+    section: {
+      marginBottom: 6,
+    },
+    table: {
+      marginBottom: 6,
+    },
+    tableHeader: {
+      flexDirection: 'row',
+      borderBottom: '1pt solid #000000',
+      paddingBottom: 2,
+      marginBottom: 2,
+    },
+    tableRow: {
+      flexDirection: 'row',
+      marginBottom: 3,
+    },
+    colQuantity: {
+      width: '15%',
+      fontSize: FONT_SIZE_PRODUCT,
+      fontWeight: 'bold',
+    },
+    colDescription: {
+      width: '50%',
+      fontSize: FONT_SIZE_PRODUCT,
+      fontWeight: 'normal',
+    },
+    colPrice: {
+      width: '35%',
+      textAlign: 'right',
+      fontSize: FONT_SIZE_PRODUCT,
+      fontWeight: 'normal',
+    },
+    quantity: {
+      fontWeight: 'bold',
+    },
+    productName: {
+      fontWeight: 'bold',
+      textTransform: 'uppercase',
+      fontSize: FONT_SIZE_PRODUCT,
+      flexWrap: 'wrap',
+      lineHeight: 1.4,
+    },
+    notes: {
+      fontStyle: 'italic',
+      fontSize: FONT_SIZE_SMALL,
+      marginLeft: 0,
+      marginTop: 1,
+      flexWrap: 'wrap',
+      fontWeight: 'normal',
+    },
+    footer: {
+      textAlign: 'center',
+      marginTop: 8,
+    },
+    footerDate: {
+      marginTop: 6,
+      fontSize: FONT_SIZE_SMALL - 1,
+      fontWeight: 'normal',
+    },
+    valueBold: {
+      fontWeight: 'bold',
+      fontSize: FONT_SIZE_SMALL,
+      maxWidth: '60%',
+      flexWrap: 'wrap',
+    },
+  });
+
+  // Componente del documento PDF para COCINA
+  const KitchenTicketDocument = () => (
+    <Document>
+      <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
+        <View style={kitchenStyles.header}>
+          <Text style={kitchenStyles.restaurantName}>{order.customerName.toUpperCase()}</Text>
+          <Text style={kitchenStyles.area}>** COCINA **</Text>
+        </View>
+
+        <View style={kitchenStyles.infoSection}>
+          <View style={kitchenStyles.row}>
+            <Text style={kitchenStyles.label}>CLIENTE:</Text>
+            <Text style={kitchenStyles.valueBold}>{order.customerName.toUpperCase()}</Text>
+          </View>
+          <View style={kitchenStyles.row}>
+            <Text style={kitchenStyles.label}>AREA:</Text>
+            <Text style={kitchenStyles.value}>COCINA</Text>
+          </View>
+          <View style={kitchenStyles.row}>
+            <Text style={kitchenStyles.label}>COMANDA:</Text>
+            <Text style={kitchenStyles.value}>#{getDisplayKitchenNumber()}</Text>
+          </View>
+          <View style={kitchenStyles.row}>
+            <Text style={kitchenStyles.label}>FECHA:</Text>
+            <Text style={kitchenStyles.value}>
+              {order.createdAt.toLocaleDateString('es-ES')} - {order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          </View>
+          <View style={kitchenStyles.row}>
+            <Text style={kitchenStyles.label}>ATENDIDO POR:</Text>
+            <Text style={kitchenStyles.value}>{getCurrentUserName().toUpperCase()}</Text>
+          </View>
+        </View>
+
+        <View style={kitchenStyles.divider} />
+
+        <Text style={kitchenStyles.productsHeader}>DESCRIPCION</Text>
+        
+        <View style={kitchenStyles.divider} />
+
+        <View style={kitchenStyles.productsContainer}>
+          {(order.items || []).map((item, index) => (
+            <View key={index}>
+              <View style={kitchenStyles.productRow}>
+                <Text style={kitchenStyles.quantity}>{item.quantity}x</Text>
+                <Text style={kitchenStyles.productName}>{item.menuItem.name.toUpperCase()}</Text>
+              </View>
+              {item.notes?.trim() && (
+                <Text style={kitchenStyles.notes}>- {item.notes}</Text>
+              )}
+            </View>
+          ))}
+        </View>
+
+        <View style={kitchenStyles.divider} />
+
+        <View style={kitchenStyles.footer}>
+          <Text style={kitchenStyles.asteriskLine}>********************************</Text>
+        </View>
+      </Page>
+    </Document>
+  );
+
+  // Componente del documento PDF normal - SIN IGV
+  const NormalTicketDocument = () => (
+    <Document>
+      <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
+        <View style={normalStyles.header}>
+          <Text style={normalStyles.title}>MARY'S RESTAURANT</Text>
+          <Text style={normalStyles.subtitle}>INVERSIONES AROMO S.A.C.</Text>
+          <Text style={normalStyles.subtitle}>RUC: 20505262086</Text>
+          <Text style={normalStyles.subtitle}>AV. ISABEL LA CATOLICA 1254</Text>
+          <Text style={normalStyles.subtitle}>Tel: 941 778 599</Text>
+          <View style={normalStyles.divider} />
+        </View>
+
+        <View style={normalStyles.section}>
+          <View style={normalStyles.row}>
+            <Text style={normalStyles.bold}>ORDEN:</Text>
+            <Text>{getDisplayOrderNumber()}</Text>
+          </View>
+          <View style={normalStyles.row}>
+            <Text style={normalStyles.bold}>TIPO:</Text>
+            <Text>{getSourceText(order.source.type)}</Text>
+          </View>
+          <View style={normalStyles.row}>
+            <Text style={normalStyles.bold}>FECHA:</Text>
+            <Text>{order.createdAt.toLocaleDateString()}</Text>
+          </View>
+          <View style={normalStyles.row}>
+            <Text style={normalStyles.bold}>HORA:</Text>
+            <Text>{order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</Text>
+          </View>
+          <View style={normalStyles.row}>
+            <Text style={normalStyles.bold}>PAGO:</Text>
+            <Text>{getPaymentText()}</Text>
+          </View>
+        </View>
+
+        <View style={normalStyles.divider} />
+
+        <View style={normalStyles.section}>
+          <View style={normalStyles.row}>
+            <Text style={normalStyles.bold}>CLIENTE:</Text>
+            <Text style={normalStyles.valueBold}>{order.customerName.toUpperCase()}</Text>
+          </View>
+          <View style={normalStyles.row}>
+            <Text style={normalStyles.bold}>TELÉFONO:</Text>
+            <Text>{order.phone}</Text>
+          </View>
+          {order.address && (
+            <View style={normalStyles.row}>
+              <Text style={normalStyles.bold}>DIRECCIÓN:</Text>
+              <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.address}</Text>
+            </View>
+          )}
+          {order.tableNumber && (
+            <View style={normalStyles.row}>
+              <Text style={normalStyles.bold}>MESA:</Text>
+              <Text>{order.tableNumber}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={normalStyles.divider} />
+
+        <View style={normalStyles.table}>
+          <View style={normalStyles.tableHeader}>
+            <Text style={normalStyles.colQuantity}>Cant</Text>
+            <Text style={normalStyles.colDescription}>Descripción</Text>
+            <Text style={normalStyles.colPrice}>Precio</Text>
+          </View>
+
+          {(order.items || []).map((item, index) => (
+            <View key={index}>
+              <View style={normalStyles.tableRow}>
+                <Text style={[normalStyles.colQuantity, normalStyles.quantity]}>{item.quantity}x</Text>
+                <View style={normalStyles.colDescription}>
+                  <Text style={normalStyles.productName}>{item.menuItem.name}</Text>
+                </View>
+                <Text style={normalStyles.colPrice}>
+                  S/ {(item.menuItem.price * item.quantity).toFixed(2)}
+                </Text>
+              </View>
+              {item.notes?.trim() && (
+                <View style={normalStyles.tableRow}>
+                  <Text style={normalStyles.colQuantity}></Text>
+                  <View style={normalStyles.colDescription}>
+                    <Text style={normalStyles.notes}>Nota: {item.notes}</Text>
+                  </View>
+                  <Text style={normalStyles.colPrice}></Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+
+        {/* SOLO TOTAL - SIN IGV */}
+        <View style={[normalStyles.row, normalStyles.bold, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#000000', paddingTop: 4 }]}>
+          <Text style={normalStyles.bold}>TOTAL:</Text>
+          <Text style={normalStyles.bold}>S/ {order.total.toFixed(2)}</Text>
+        </View>
+
+        <View style={normalStyles.divider} />
+
+        <View style={normalStyles.footer}>
+          <Text style={normalStyles.bold}>¡GRACIAS POR SU PEDIDO!</Text>
+          <Text>*** {getSourceText(order.source.type)} ***</Text>
+          <Text style={normalStyles.footerDate}>
+            {new Date().toLocaleString('es-ES', { 
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </Text>
+        </View>
+      </Page>
+    </Document>
+  );
+
+  // Función para descargar PDF
+  const handleDownloadPDF = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (!order || !order.items) {
+        console.error('Orden inválida para generar PDF');
+        return;
+      }
+      
+      const blob = await pdf(
+        isPhoneOrder ? <KitchenTicketDocument /> : <NormalTicketDocument />
+      ).toBlob();
+      
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      const fileName = generateFileName();
+      
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+    }
+  };
+
+  // Función para imprimir
+  const handlePrint = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    
+    document.body.appendChild(iframe);
+
+    const ticketContent = generateTicketContent();
+    
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Ticket ${isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}</title>
+            <style>
+              @media print {
+                @page {
+                  size: 80mm auto;
+                  margin: 0;
+                  padding: 0;
+                }
+                body {
+                  width: 80mm !important;
+                  margin: 0 auto !important;
+                  padding: 0 !important;
+                  font-family: "Courier New", monospace !important;
+                  font-weight: normal !important;
+                }
+                * {
+                  font-family: "Courier New", monospace !important;
+                }
+              }
+              body {
+                font-family: "Courier New", monospace;
+                font-weight: normal;
+                font-size: 12px;
+                line-height: 1.3;
+                width: 80mm;
+                margin: 0 auto;
+                padding: 8px;
+                background: white;
+                color: black;
+              }
+              .ticket, .ticket *, div, span, td, th {
+                font-family: "Courier New", monospace !important;
+              }
+              .center {
+                text-align: center;
+              }
+              .bold {
+                font-weight: bold !important;
+              }
+              .normal {
+                font-weight: normal !important;
+              }
+              .uppercase {
+                text-transform: uppercase;
+              }
+              .divider {
+                border-top: 1px solid #000;
+                margin: 6px 0;
+              }
+              .info-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 3px;
+                font-size: 11px;
+              }
+              .label {
+                font-weight: bold !important;
+              }
+              .value {
+                font-weight: normal !important;
+              }
+              .customer-name-bold {
+                font-weight: bold !important;
+                max-width: 60%;
+                word-wrap: break-word;
+                font-size: 12px;
+              }
+              .header-title {
+                font-weight: bold !important;
+                font-size: 13px;
+              }
+              .header-subtitle {
+                font-weight: normal !important;
+                font-size: 11px;
+              }
+              .notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 15%;
+                margin-bottom: 3px;
+                display: block;
+                width: 85%;
+                font-weight: normal !important;
+              }
+              .table-notes {
+                font-style: italic;
+                font-size: 10px;
+                margin-left: 0;
+                margin-top: 2px;
+                display: block;
+                font-weight: normal !important;
+              }
+              .products-header {
+                text-align: center;
+                font-weight: bold !important;
+                margin: 6px 0;
+                text-transform: uppercase;
+                border-bottom: 1px solid #000;
+                padding-bottom: 3px;
+                font-size: 12px;
+              }
+              .product-row {
+                display: flex;
+                margin-bottom: 4px;
+              }
+              .quantity {
+                width: 15%;
+                font-weight: bold !important;
+                font-size: 12px;
+              }
+              .product-name {
+                width: 85%;
+                font-weight: bold !important;
+                text-transform: uppercase;
+                font-size: 12px;
+                line-height: 1.4;
+              }
+              .asterisk-line {
+                text-align: center;
+                font-size: 10px;
+                letter-spacing: 1px;
+                margin: 3px 0;
+                font-weight: normal !important;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 5px 0;
+                font-size: 12px;
+              }
+              th, td {
+                padding: 2px 0;
+                text-align: left;
+                vertical-align: top;
+              }
+              th {
+                border-bottom: 1px solid #000;
+                font-weight: bold !important;
+                font-size: 11px;
+              }
+              td {
+                font-size: 12px;
+              }
+              .notes-row td {
+                padding-top: 0;
+                padding-bottom: 3px;
+              }
+            </style>
+          </head>
+          <body>
+            ${ticketContent}
+          </body>
+        </html>
+      `);
+      iframeDoc.close();
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 1000);
+        }, 500);
+      };
+    }
+  };
+
+  // Generar contenido HTML para impresión - SIN IGV
+  const generateTicketContent = () => {
+    if (isPhoneOrder) {
+      return `
+        <div class="ticket">
+          <div class="center">
+            <div class="header-title uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
+            <div class="header-title">** COCINA **</div>
+            <div class="divider"></div>
+          </div>
+          
+          <div class="info-row">
+            <span class="label">CLIENTE:</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">AREA:</span>
+            <span class="value">COCINA</span>
+          </div>
+          <div class="info-row">
+            <span class="label">COMANDA:</span>
+            <span class="value">#${getDisplayKitchenNumber()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">FECHA:</span>
+            <span class="value">${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">ATENDIDO POR:</span>
+            <span class="value">${getCurrentUserName().toUpperCase()}</span>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="products-header">DESCRIPCION</div>
+          
+          <div class="divider"></div>
+          
+          ${(order.items || []).map(item => `
+            <div class="product-row">
+              <div class="quantity">${item.quantity}x</div>
+              <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
+            </div>
+            ${item.notes?.trim() ? `<div class="notes">- ${item.notes}</div>` : ''}
+          `).join('')}
+          
+          <div class="divider"></div>
+          
+          <div class="center">
+            <div class="asterisk-line">********************************</div>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="ticket">
+          <div class="center">
+            <div class="header-title" style="font-size: 14px;">MARY'S RESTAURANT</div>
+            <div class="header-subtitle">INVERSIONES AROMO S.A.C.</div>
+            <div class="header-subtitle">RUC: 20505262086</div>
+            <div class="header-subtitle">AV. ISABEL LA CATOLICA 1254</div>
+            <div class="header-subtitle">Tel: 941 778 599</div>
+            <div class="divider"></div>
+          </div>
+          
+          <div class="info-row">
+            <span class="label">ORDEN:</span>
+            <span class="value">${getDisplayOrderNumber()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">TIPO:</span>
+            <span class="value">${getSourceText(order.source.type)}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">FECHA:</span>
+            <span class="value">${order.createdAt.toLocaleDateString()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">HORA:</span>
+            <span class="value">${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">PAGO:</span>
+            <span class="value">${getPaymentText()}</span>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="info-row">
+            <span class="label">CLIENTE:</span>
+            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">TELÉFONO:</span>
+            <span class="value">${order.phone}</span>
+          </div>
+          ${order.address ? `
+          <div class="info-row">
+            <span class="label">DIRECCIÓN:</span>
+            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
+          </div>
+          ` : ''}
+          ${order.tableNumber ? `
+          <div class="info-row">
+            <span class="label">MESA:</span>
+            <span class="value">${order.tableNumber}</span>
+          </div>
+          ` : ''}
+          
+          <div class="divider"></div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Cant</th>
+                <th>Descripción</th>
+                <th style="text-align: right;">Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(order.items || []).map(item => `
+                <tr>
+                  <td class="quantity" style="vertical-align: top; font-size: 12px;">${item.quantity}x</td>
+                  <td style="vertical-align: top; font-size: 12px;">
+                    <div class="product-name bold" style="font-size: 12px;">${item.menuItem.name}</div>
+                    ${item.notes?.trim() ? `<div class="table-notes" style="font-size: 10px;">Nota: ${item.notes}</div>` : ''}
+                  </td>
+                  <td style="text-align: right; vertical-align: top; font-size: 12px;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <!-- SOLO TOTAL - SIN IGV -->
+          <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
+            <span class="label">TOTAL:</span>
+            <span class="label">S/ ${order.total.toFixed(2)}</span>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="center">
+            <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
+            <div class="normal">*** ${getSourceText(order.source.type)} ***</div>
+            <div class="normal" style="margin-top: 10px; font-size: 10px;">
+              ${new Date().toLocaleString('es-ES', { 
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  };
+
+  // Funciones auxiliares
+  const getSourceText = (sourceType: Order['source']['type']) => {
+    const sourceMap: Record<Order['source']['type'], string> = {
+      'phone': 'COCINA',
+      'walk-in': 'LOCAL', 
+      'delivery': 'DELIVERY',
+      'fullDay': 'FULLDAY',
+      'oep': 'OEP',
+      'loncheritas': 'LONCHERITAS',
+    };
+    return sourceMap[sourceType] || sourceType;
+  };
+
+  const generateFileName = () => {
+    const orderNumber = isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber();
+    const customerName = order.customerName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    const date = order.createdAt.toISOString().split('T')[0];
+    const type = isPhoneOrder ? 'cocina' : 'cliente';
+    
+    return `comanda-${orderNumber}-${customerName}-${date}-${type}.pdf`;
+  };
+
+  return (
+    <div 
+      style={{ display: 'flex', gap: '10px', margin: '10px 0' }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <button
+        onClick={handlePrint}
+        data-order-id={order.id}
+        className="print-button"
+        style={{
+          padding: '10px 20px',
+          backgroundColor: isPhoneOrder ? '#10b981' : '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}
+      >
+        {isPhoneOrder ? '📋 Ticket Cocina' : '🧾 Ticket Cliente'} #{isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}
+      </button>
+
+      <button
+        onClick={handleDownloadPDF}
+        className="download-pdf-button"
+        style={{
+          padding: '10px 20px',
+          backgroundColor: '#28a745',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}
+      >
+        Descargar PDF
+      </button>
+    </div>
+  );
+};
