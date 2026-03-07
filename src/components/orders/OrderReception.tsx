@@ -2351,7 +2351,7 @@ const OrderReception: React.FC = React.memo(() => {
           )}
 
           <div className="hidden lg:block">
-            <div className="grid grid-cols-5 gap-6">
+            <div className="grid grid-cols-4 gap-6">
               <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
                   <div className="flex items-center justify-between mb-6">
@@ -2627,7 +2627,7 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">Pedido</h2>
                   
