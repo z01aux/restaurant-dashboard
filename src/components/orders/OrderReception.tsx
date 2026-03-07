@@ -1,5 +1,5 @@
 // =================================================
-// ARCHIVO: src/components/orders/OrderReception.tsx
+// ARCHIVO: src/components/orders/OrderReception.tsx 
 // =================================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -1323,7 +1323,7 @@ const OrderReception: React.FC = React.memo(() => {
               <span class="label">NOTAS DEL PEDIDO:</span>
             </div>
             <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
-              ${order.notes.toUpperCase().split('\n').map(line => `📌 ${line}`).join('\n')}
+              ${order.notes.toUpperCase().split('\n').map(line => `- ${line}`).join('\n')}
             </div>
             <div class="divider"></div>
             ` : ''}
@@ -1459,7 +1459,7 @@ const OrderReception: React.FC = React.memo(() => {
               <span class="label">NOTAS DEL PEDIDO:</span>
             </div>
             <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
-              ${order.notes.toUpperCase().split('\n').map(line => `📌 ${line}`).join('\n')}
+              ${order.notes.toUpperCase().split('\n').map(line => `- ${line}`).join('\n')}
             </div>
             ` : ''}
             
