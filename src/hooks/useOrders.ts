@@ -107,7 +107,7 @@ export const useOrders = () => {
     }
   }, []);
 
-  // 馃煝 Funci贸n para recargar una orden espec铆fica (usada despu茅s de INSERT/UPDATE)
+  // ?? Función para recargar una orden específica (usada después de INSERT/UPDATE)
   const refreshOrder = useCallback(async (orderId: string) => {
     try {
       const { data: orderData, error: orderError } = await supabase
@@ -135,7 +135,7 @@ export const useOrders = () => {
     }
   }, []);
 
-  // 馃煝 Suscripci贸n en tiempo real para 贸rdenes
+  // ?? Suscripción en tiempo real para órdenes
   const handleOrderInsert = useCallback((newOrder: any) => {
     refreshOrder(newOrder.id);
   }, [refreshOrder]);
@@ -157,14 +157,14 @@ export const useOrders = () => {
     enabled: true
   });
 
-  // 馃煝 Suscripci贸n en tiempo real para items de 贸rdenes
+  // ?? Suscripción en tiempo real para items de órdenes
   useRealtimeSubscription({
     table: 'order_items',
     onInsert: (newItem: any) => refreshOrder(newItem.order_id),
     onUpdate: (updatedItem: any) => refreshOrder(updatedItem.order_id),
-    onDelete: (deletedId: string) => {
+    onDelete: (_deletedId: string) => {
       // Para DELETE necesitamos buscar la orden afectada
-      // Esto es m谩s complejo, podr铆amos simplemente recargar todo
+      // Esto es más complejo, podríamos simplemente recargar todo
       fetchOrders();
     },
     enabled: true
@@ -219,7 +219,7 @@ export const useOrders = () => {
       if (itemsError) throw itemsError;
 
       // No necesitamos actualizar setOrders manualmente
-      // La suscripci贸n lo har谩 autom谩ticamente
+      // La suscripción lo hará automáticamente
 
       return { success: true, order };
     } catch (error: any) {
@@ -237,7 +237,7 @@ export const useOrders = () => {
 
       if (error) throw error;
       
-      // No necesitamos actualizar setOrders, la suscripci贸n lo har谩
+      // No necesitamos actualizar setOrders, la suscripción lo hará
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -255,7 +255,7 @@ export const useOrders = () => {
       
       return { success: true };
     } catch (error: any) {
-      console.error('Error actualizando m茅todo de pago:', error);
+      console.error('Error actualizando método de pago:', error);
       return { success: false, error: error.message };
     }
   };
@@ -276,7 +276,7 @@ export const useOrders = () => {
 
       if (orderError) throw orderError;
 
-      // No necesitamos actualizar setOrders, la suscripci贸n lo har谩
+      // No necesitamos actualizar setOrders, la suscripción lo hará
       return { success: true };
     } catch (error: any) {
       console.error('Error al eliminar:', error);
@@ -286,20 +286,20 @@ export const useOrders = () => {
 
   const exportOrdersToCSV = (ordersToExport: Order[]) => {
     if (ordersToExport.length === 0) {
-      alert('No hay 贸rdenes para exportar');
+      alert('No hay órdenes para exportar');
       return;
     }
 
     const headers = [
       'CLIENTE',
       'MONTO TOTAL',
-      'M脡TODO DE PAGO',
+      'MéTODO DE PAGO',
       'TIPO DE PEDIDO',
       'FECHA',
       'HORA',
-      'N掳 ORDEN',
-      'N掳 COMANDA',
-      'TEL脡FONO',
+      'N° ORDEN',
+      'N° COMANDA',
+      'TELéFONO',
       'PRODUCTOS',
       'TIPO'
     ];
