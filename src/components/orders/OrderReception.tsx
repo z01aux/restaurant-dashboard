@@ -2351,7 +2351,7 @@ const OrderReception: React.FC = React.memo(() => {
           )}
 
           <div className="hidden lg:block">
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-5 gap-6">
               <div className="col-span-1">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
                   <div className="flex items-center justify-between mb-6">
@@ -2565,7 +2565,7 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               </div>
 
-              <div className="col-span-1">
+              <div className="col-span-2">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-gray-900">Menú</h2>
@@ -2608,7 +2608,7 @@ const OrderReception: React.FC = React.memo(() => {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-1">
                     {currentItems.map((item: MenuItem) => {
                       const cartItem = cart.find(cartItem => cartItem.menuItem.id === item.id);
                       const quantityInCart = cartItem ? cartItem.quantity : 0;
@@ -2627,7 +2627,7 @@ const OrderReception: React.FC = React.memo(() => {
                 </div>
               </div>
 
-              <div className="col-span-1">
+              <div className="col-span-2">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">Pedido</h2>
                   
