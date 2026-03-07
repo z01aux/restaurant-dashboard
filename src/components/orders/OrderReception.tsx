@@ -1,5 +1,5 @@
 // =================================================
-// ARCHIVO: src/components/orders/OrderReception.tsx 
+// ARCHIVO: src/components/orders/OrderReception.tsx
 // =================================================
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -15,7 +15,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useStudents } from '../../hooks/useStudents';
 import { useFullDay } from '../../hooks/useFullDay';
 import { useCategories } from '../../hooks/useCategories';
-// <-- AGREGADO PARA OEP
 import { useOEP } from '../../hooks/useOEP';
 import { useLoncheritas } from '../../hooks/useLoncheritas';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
@@ -359,7 +358,6 @@ const MenuProduct: React.FC<{
 
   return (
     <div className="bg-white rounded-lg p-3 border border-gray-200 product-card group">
-      {/* CONTADOR MEJORADO - MÁS VISIBLE EN DESKTOP */}
       {quantityInCart > 0 && (
         <div className="product-counter">
           {quantityInCart}
@@ -404,9 +402,6 @@ const MenuProduct: React.FC<{
   );
 });
 
-// ============================================
-// MODAL DE GESTIÓN DE CATEGORÍAS
-// ============================================
 const CategoryManagerModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -633,9 +628,6 @@ const CategoryManagerModal: React.FC<{
   );
 };
 
-// ============================================
-// MODAL DE GESTIÓN RÁPIDA DE MENÚ
-// ============================================
 const QuickMenuManager: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -1022,22 +1014,15 @@ const QuickMenuManager: React.FC<{
   );
 };
 
-// ============================================
-// FUNCIÓN PARA MOSTRAR APELLIDOS Y PRIMER NOMBRE
-// ============================================
 const formatName = (fullName: string): string => {
   if (!fullName) return '';
   
-  // Dividir el nombre completo por espacios
   const parts = fullName.trim().split(/\s+/);
   
-  if (parts.length === 1) return parts[0]; // Solo un nombre
-  
-  if (parts.length === 2) return fullName; // Nombre y apellido
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return fullName;
   
   if (parts.length >= 3) {
-    // Para nombres con 3 o más partes: asumimos que el primero es el nombre
-    // y los siguientes son los apellidos
     const firstName = parts[0];
     const lastNames = parts.slice(1).join(' ');
     return `${firstName} ${lastNames}`;
@@ -1046,11 +1031,7 @@ const formatName = (fullName: string): string => {
   return fullName;
 };
 
-// ============================================
-// COMPONENTE PRINCIPAL ORDER RECEPTION
-// ============================================
 const OrderReception: React.FC = React.memo(() => {
-  // <-- AGREGADO 'oep' AL TIPO DE activeTab
   const [activeTab, setActiveTab] = useState<'phone' | 'walk-in' | 'delivery' | 'fullDay' | 'oep' | 'loncheritas'>('phone');
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -1089,9 +1070,7 @@ const OrderReception: React.FC = React.memo(() => {
   const { categories: dbCategories, refreshCategories } = useCategories();
   const { createOrder } = useOrders();
   const { createOrder: createFullDayOrder } = useFullDay();
-  // <-- AGREGADO PARA OEP
   const { createOrder: createOEPOrder } = useOEP();
-  // <-- AGREGADO PARA LONCHERITAS
   const { createOrder: createLoncheritasOrder } = useLoncheritas();
   const { searchStudents, searchResults } = useStudents();
 
@@ -1253,7 +1232,6 @@ const OrderReception: React.FC = React.memo(() => {
   const handleCategoryChange = useCallback((category: string) => setActiveCategory(category), []);
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value), []);
   
-  // Manejador para el método de pago (ahora con fondos de color)
   const handlePaymentMethodChange = useCallback((method: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA') => {
     setPaymentMethod(method);
   }, []);
@@ -1267,9 +1245,6 @@ const OrderReception: React.FC = React.memo(() => {
     }
   }, [cart.length, showToast]);
 
-  // ============================================
-  // FUNCIÓN PARA IMPRIMIR TICKET INMEDIATAMENTE (SIN IGV)
-  // ============================================
   const printOrderImmediately = useCallback((order: Order) => {
     const isPhoneOrder = order.source.type === 'phone';
     
@@ -1283,7 +1258,6 @@ const OrderReception: React.FC = React.memo(() => {
     
     document.body.appendChild(iframe);
 
-    // Función para generar el contenido del ticket (SIN IGV)
     const generateTicketContent = (order: Order, isKitchenTicket: boolean) => {
       const getCurrentUserName = () => {
         try {
@@ -1299,7 +1273,6 @@ const OrderReception: React.FC = React.memo(() => {
       };
 
       if (isKitchenTicket) {
-        // TICKET DE COCINA (con notas del pedido antes del footer)
         return `
           <div class="ticket">
             <div class="center">
@@ -1331,27 +1304,26 @@ const OrderReception: React.FC = React.memo(() => {
             
             <div class="divider"></div>
             
-            <div class="products-header">DESCRIPCION</div>
+            <div class="products-header">DESCRIPCIÓN</div>
             
             <div class="divider"></div>
             
             ${order.items.map(item => `
               <div class="product-row">
-                <div class="quantity">${item.quantity}x</div>
+                <div class="quantity">${item.quantity}X</div>
                 <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
               </div>
-              ${item.notes && item.notes.trim() !== '' ? `<div class="notes">- ${item.notes}</div>` : ''}
+              ${item.notes && item.notes.trim() !== '' ? `<div class="notes">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
             `).join('')}
             
             <div class="divider"></div>
 
-            <!-- SECCIÓN DE NOTAS DEL PEDIDO (ANTES DEL FOOTER) -->
             ${order.notes && order.notes.trim() !== '' ? `
             <div class="info-row">
-              <span class="label">NOTAS:</span>
+              <span class="label">NOTAS DEL PEDIDO:</span>
             </div>
-            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px;">
-              ${order.notes}
+            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
+              ${order.notes.toUpperCase().split('\n').map(line => `📌 ${line}`).join('\n')}
             </div>
             <div class="divider"></div>
             ` : ''}
@@ -1362,7 +1334,6 @@ const OrderReception: React.FC = React.memo(() => {
           </div>
         `;
       } else {
-        // TICKET DE CLIENTE (SIN IGV)
         let customerInfo = '';
         
         if ((order.source.type === 'fullDay' || order.source.type === 'loncheritas') && order.studentInfo) {
@@ -1402,7 +1373,6 @@ const OrderReception: React.FC = React.memo(() => {
           `;
         }
         
-        // HTML del ticket sin líneas de IGV, con notas del pedido antes del footer
         return `
           <div class="ticket">
             <div class="center">
@@ -1442,7 +1412,7 @@ const OrderReception: React.FC = React.memo(() => {
             ${order.address ? `
             <div class="info-row">
               <span class="label">DIRECCIÓN:</span>
-              <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
+              <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address.toUpperCase()}</span>
             </div>
             ` : ''}
             ${order.tableNumber ? `
@@ -1457,18 +1427,18 @@ const OrderReception: React.FC = React.memo(() => {
             <table>
               <thead>
                 <tr>
-                  <th>Cant</th>
-                  <th>Descripción</th>
-                  <th style="text-align: right;">Precio</th>
+                  <th>CANT</th>
+                  <th>DESCRIPCIÓN</th>
+                  <th style="text-align: right;">PRECIO</th>
                 </tr>
               </thead>
               <tbody>
                 ${order.items.map(item => `
                   <tr>
-                    <td class="quantity" style="vertical-align: top;">${item.quantity}x</td>
+                    <td class="quantity" style="vertical-align: top;">${item.quantity}X</td>
                     <td style="vertical-align: top;">
-                      <div class="product-name bold">${item.menuItem.name}</div>
-                      ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes">Nota: ${item.notes}</div>` : ''}
+                      <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
+                      ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
                     </td>
                     <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
                   </tr>
@@ -1478,20 +1448,18 @@ const OrderReception: React.FC = React.memo(() => {
             
             <div class="divider"></div>
             
-            <!-- SOLO TOTAL - SIN IGV -->
             <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
               <span class="label">TOTAL:</span>
               <span class="label">S/ ${order.total.toFixed(2)}</span>
             </div>
 
-            <!-- SECCIÓN DE NOTAS DEL PEDIDO (ANTES DEL FOOTER) -->
             ${order.notes && order.notes.trim() !== '' ? `
             <div class="divider"></div>
             <div class="info-row">
               <span class="label">NOTAS DEL PEDIDO:</span>
             </div>
-            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px;">
-              ${order.notes}
+            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
+              ${order.notes.toUpperCase().split('\n').map(line => `📌 ${line}`).join('\n')}
             </div>
             ` : ''}
             
@@ -1537,15 +1505,15 @@ const OrderReception: React.FC = React.memo(() => {
                   margin: 0 auto !important;
                   padding: 0 !important;
                   font-size: 12px !important;
-                  font-family: "Helvetica", "Arial", sans-serif !important;
+                  font-family: "Courier New", monospace !important;
                   font-weight: normal !important;
                 }
                 * {
-                  font-family: inherit !important;
+                  font-family: "Courier New", monospace !important;
                 }
               }
               body {
-                font-family: "Helvetica", "Arial", sans-serif;
+                font-family: "Courier New", monospace;
                 font-weight: normal;
                 font-size: 12px;
                 line-height: 1.2;
@@ -1556,7 +1524,7 @@ const OrderReception: React.FC = React.memo(() => {
                 color: black;
               }
               .ticket, .ticket *, div, span, td, th {
-                font-family: "Helvetica", "Arial", sans-serif !important;
+                font-family: "Courier New", monospace !important;
               }
               .center {
                 text-align: center;
@@ -1597,21 +1565,23 @@ const OrderReception: React.FC = React.memo(() => {
                 font-weight: normal !important;
               }
               .notes {
-                font-style: italic;
+                font-style: normal;
                 font-size: 10px;
-                margin-left: 15%;
+                margin-left: 0;
                 margin-bottom: 3px;
                 display: block;
-                width: 85%;
-                font-weight: normal !important;
+                width: 100%;
+                font-weight: bold !important;
+                white-space: pre-wrap;
+                word-wrap: break-word;
               }
               .table-notes {
-                font-style: italic;
+                font-style: normal;
                 font-size: 10px;
                 margin-left: 0;
                 margin-top: 2px;
                 display: block;
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               .products-header {
                 text-align: center;
@@ -1655,10 +1625,6 @@ const OrderReception: React.FC = React.memo(() => {
                 border-bottom: 1px solid #000;
                 font-weight: bold !important;
               }
-              .notes-row td {
-                padding-top: 0;
-                padding-bottom: 3px;
-              }
             </style>
           </head>
           <body>
@@ -1677,7 +1643,7 @@ const OrderReception: React.FC = React.memo(() => {
         }, 1000);
       }, 50);
     }
-  }, []); // Dependencias vacías porque las funciones dentro son estables
+  }, []);
 
   const handleCreateOrder = useCallback(async () => {
     if (cart.length === 0) {
@@ -1690,7 +1656,7 @@ const OrderReception: React.FC = React.memo(() => {
         showToast('Completa los datos del alumno', 'error');
         return;
       }
-    } else if (activeTab !== 'phone') { // Para todos excepto phone (que no necesita pago)
+    } else if (activeTab !== 'phone') {
       if (!customerName || !phone) {
         showToast('Completa los datos del cliente', 'error');
         return;
@@ -1702,7 +1668,6 @@ const OrderReception: React.FC = React.memo(() => {
       return;
     }
 
-    // Los pedidos que requieren pago ahora usan el método seleccionado en el carrito
     if ((activeTab === 'walk-in' || activeTab === 'delivery' || activeTab === 'fullDay' || activeTab === 'oep' || activeTab === 'loncheritas') && !paymentMethod) {
       showToast('Selecciona un método de pago', 'error');
       return;
@@ -1739,7 +1704,6 @@ const OrderReception: React.FC = React.memo(() => {
         if (result.success && result.data) {
           showToast('✅ Pedido FullDay guardado', 'success');
           
-          // Usar los datos reales de la orden creada para imprimir
           const createdOrder = result.data;
           const orderForTicket: Order = {
             id: createdOrder.id,
@@ -1768,7 +1732,6 @@ const OrderReception: React.FC = React.memo(() => {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
       } 
-      // BLOQUE PARA LONCHERITAS
       else if (activeTab === 'loncheritas') {
         const result = await createLoncheritasOrder({
           student_id: selectedStudentId,
@@ -1821,7 +1784,6 @@ const OrderReception: React.FC = React.memo(() => {
           showToast('❌ Error al guardar: ' + result.error, 'error');
         }
       }
-      // BLOQUE PARA OEP
       else if (activeTab === 'oep') {
         const result = await createOEPOrder({
           customer_name: customerName,
@@ -1894,7 +1856,6 @@ const OrderReception: React.FC = React.memo(() => {
         if (result.success && result.order) {
           showToast('✅ Orden guardada', 'success');
           
-          // Usar los datos reales de la orden creada para imprimir
           const createdOrder = result.order;
           const orderForTicket: Order = {
             id: createdOrder.id,
@@ -1939,7 +1900,6 @@ const OrderReception: React.FC = React.memo(() => {
     } finally {
       setIsCreatingOrder(false);
     }
-  // <-- AGREGADO createOEPOrder A LAS DEPENDENCIAS
   }, [
     cart, customerName, phone, activeTab, tableNumber, address, orderNotes, 
     paymentMethod, createOrder, createFullDayOrder, createOEPOrder, createLoncheritasOrder,
@@ -1962,7 +1922,6 @@ const OrderReception: React.FC = React.memo(() => {
       return customerName && phone && address;
     }
     
-    // <-- AGREGADO PARA OEP
     if (activeTab === 'oep') {
       return customerName && phone;
     }
@@ -1996,7 +1955,6 @@ const OrderReception: React.FC = React.memo(() => {
         />
 
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-          {/* Header Móvil */}
           <div className="lg:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-lg border-b border-red-200">
             <div className="px-3 py-3">
               <div className="flex items-center justify-between">
@@ -2047,7 +2005,6 @@ const OrderReception: React.FC = React.memo(() => {
             </div>
           </div>
 
-          {/* Contenido Móvil */}
           <div className="lg:hidden px-3 pt-4">
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4">
               <h3 className="text-sm font-bold text-gray-900 mb-3">
@@ -2198,7 +2155,6 @@ const OrderReception: React.FC = React.memo(() => {
                       />
                     )}
 
-                    {/* <-- AGREGADO OEP A LA CONDICIÓN DE DIRECCIÓN */}
                     {(activeTab === 'delivery' || activeTab === 'oep') && (
                       <input
                         type="text"
@@ -2211,7 +2167,6 @@ const OrderReception: React.FC = React.memo(() => {
                   </>
                 )}
 
-                {/* Campo para notas del pedido */}
                 <div className="mt-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Notas del pedido
@@ -2221,7 +2176,7 @@ const OrderReception: React.FC = React.memo(() => {
                     onChange={(e) => setOrderNotes(e.target.value)}
                     rows={2}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Ej: Sin cebolla, bien cocido, etc."
+                    placeholder="Ej: SIN CEBOLLA, BIEN COCIDO, LLAMAR ANTES DE LLEGAR, etc."
                   />
                 </div>
               </div>
@@ -2249,7 +2204,6 @@ const OrderReception: React.FC = React.memo(() => {
                 placeholder="Buscar productos..."
               />
 
-              {/* BARRA DE CATEGORÍAS MEJORADA */}
               {!searchTerm && categories.length > 0 && (
                 <div className="categories-container">
                   <div className="categories-scroll">
@@ -2326,7 +2280,6 @@ const OrderReception: React.FC = React.memo(() => {
                         ))}
                       </div>
 
-                      {/* SELECTOR DE MÉTODO DE PAGO EN EL CARRITO */}
                       {shouldShowPayment && (
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2505,7 +2458,7 @@ const OrderReception: React.FC = React.memo(() => {
                             value={guardianName}
                             onChange={(e) => setGuardianName(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                            placeholder="Ej: María Pérez"
+                            placeholder="Ej: MARÍA PÉREZ"
                             required
                           />
                         </div>
@@ -2586,7 +2539,6 @@ const OrderReception: React.FC = React.memo(() => {
                           />
                         )}
 
-                        {/* <-- AGREGADO OEP A LA CONDICIÓN DE DIRECCIÓN */}
                         {(activeTab === 'delivery' || activeTab === 'oep') && (
                           <input
                             type="text"
@@ -2599,7 +2551,6 @@ const OrderReception: React.FC = React.memo(() => {
                       </>
                     )}
 
-                    {/* Campo para notas del pedido */}
                     <div className="mt-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Notas del pedido
@@ -2609,7 +2560,7 @@ const OrderReception: React.FC = React.memo(() => {
                         onChange={(e) => setOrderNotes(e.target.value)}
                         rows={2}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        placeholder="Ej: Sin cebolla, bien cocido, etc."
+                        placeholder="Ej: SIN CEBOLLA, BIEN COCIDO, LLAMAR ANTES DE LLEGAR, etc."
                       />
                     </div>
                   </div>
@@ -2639,7 +2590,6 @@ const OrderReception: React.FC = React.memo(() => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
                   />
 
-                  {/* BARRA DE CATEGORÍAS MEJORADA EN DESKTOP */}
                   {!searchTerm && categories.length > 0 && (
                     <div className="categories-container">
                       <div className="categories-scroll">
@@ -2702,7 +2652,6 @@ const OrderReception: React.FC = React.memo(() => {
                         ))}
                       </div>
 
-                      {/* SELECTOR DE MÉTODO DE PAGO EN EL CARRITO */}
                       {shouldShowPayment && (
                         <div className="mb-4 pt-2 border-t border-gray-200">
                           <label className="block text-sm font-medium text-gray-700 mb-2">
