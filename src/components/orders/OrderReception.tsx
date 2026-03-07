@@ -1313,7 +1313,7 @@ const OrderReception: React.FC = React.memo(() => {
                 <div class="quantity">${item.quantity}X</div>
                 <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
               </div>
-              ${item.notes && item.notes.trim() !== '' ? `<div class="notes">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
+              ${item.notes && item.notes.trim() !== '' ? `<div class="notes" style="margin-left: 0; width: 100%;">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
             `).join('')}
             
             <div class="divider"></div>
@@ -1438,7 +1438,7 @@ const OrderReception: React.FC = React.memo(() => {
                     <td class="quantity" style="vertical-align: top;">${item.quantity}X</td>
                     <td style="vertical-align: top;">
                       <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
-                      ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
+                      ${item.notes && item.notes.trim() !== '' ? `<div class="table-notes" style="margin-left: 0; width: 100%;">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
                     </td>
                     <td style="text-align: right; vertical-align: top;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
                   </tr>
