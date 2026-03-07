@@ -1323,9 +1323,7 @@ const OrderReception: React.FC = React.memo(() => {
             <div class="info-row">
               <span class="label">NOTAS DEL PEDIDO:</span>
             </div>
-            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
-              ${order.notes.toUpperCase().split('\n').map(line => `- ${line}`).join('\n')}
-            </div>
+            <div class="notes">${order.notes.toUpperCase().trim().split('\n').map(line => `- ${line.trim()}`).join('\n')}</div>
             <div class="divider"></div>
             ` : ''}
             
@@ -1459,9 +1457,7 @@ const OrderReception: React.FC = React.memo(() => {
             <div class="info-row">
               <span class="label">NOTAS DEL PEDIDO:</span>
             </div>
-            <div class="notes" style="margin-left: 0; width: 100%; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; font-weight: bold;">
-              ${order.notes.toUpperCase().split('\n').map(line => `- ${line}`).join('\n')}
-            </div>
+            <div class="notes">${order.notes.toUpperCase().trim().split('\n').map(line => `- ${line.trim()}`).join('\n')}</div>
             ` : ''}
             
             <div class="divider"></div>
@@ -1567,7 +1563,7 @@ const OrderReception: React.FC = React.memo(() => {
               }
               .notes {
                 font-style: normal;
-                font-size: 10px;
+                font-size: 12px;
                 margin-left: 0;
                 margin-bottom: 3px;
                 display: block;
@@ -1575,6 +1571,7 @@ const OrderReception: React.FC = React.memo(() => {
                 font-weight: bold !important;
                 white-space: pre-wrap;
                 word-wrap: break-word;
+                text-align: left;
               }
               .table-notes {
                 font-style: normal;
