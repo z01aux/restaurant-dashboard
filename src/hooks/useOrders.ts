@@ -5,11 +5,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Order, OrderItem, DatabaseOrder, DatabaseOrderItem } from '../types';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const convertDatabaseOrdersToOrders = async (dbOrders: DatabaseOrder[]): Promise<Order[]> => {
     if (!dbOrders.length) return [];
@@ -71,7 +73,7 @@ export const useOrders = () => {
         createdAt: new Date(dbOrder.created_at),
         updatedAt: new Date(dbOrder.updated_at),
         studentId: dbOrder.student_id,
-        orderType: dbOrder.order_type as 'regular' | 'fullday' // NUEVO CAMPO
+        orderType: dbOrder.order_type as 'regular' | 'fullday'
       };
     });
   };
@@ -79,18 +81,11 @@ export const useOrders = () => {
   const fetchOrders = useCallback(async (limit = 1000) => {
     try {
       setLoading(true);
+      setError(null);
       
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      const { count, error: countError } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', thirtyDaysAgo.toISOString());
-
-      if (countError) throw countError;
-      setTotalCount(count || 0);
-
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
@@ -99,50 +94,93 @@ export const useOrders = () => {
         .limit(limit);
 
       if (ordersError) throw ordersError;
-      if (!ordersData || ordersData.length === 0) {
-        setOrders([]);
-        return;
-      }
-
-      const convertedOrders = await convertDatabaseOrdersToOrders(ordersData);
+      
+      const convertedOrders = await convertDatabaseOrdersToOrders(ordersData || []);
       setOrders(convertedOrders);
+      setTotalCount(convertedOrders.length);
       
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setError('Error al cargar pedidos');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const createOrder = async (orderData: {
-    customerName: string;
-    phone: string;
-    address?: string;
-    tableNumber?: string;
-    source: {
-      type: 'phone' | 'walk-in' | 'delivery' | 'fullDay';
-      deliveryAddress?: string;
-    };
-    notes?: string;
-    paymentMethod?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
-    items: Array<{
-      menuItem: {
-        id: string;
-        name: string;
-        price: number;
-      };
-      quantity: number;
-      notes?: string;
-    }>;
-    studentId?: string;
-  }) => {
+  // 🟢 Función para recargar una orden específica (usada después de INSERT/UPDATE)
+  const refreshOrder = useCallback(async (orderId: string) => {
+    try {
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) throw orderError;
+      if (!orderData) return;
+
+      const converted = await convertDatabaseOrdersToOrders([orderData]);
+      if (converted.length > 0) {
+        setOrders(prev => {
+          const exists = prev.some(o => o.id === orderId);
+          if (exists) {
+            return prev.map(o => o.id === orderId ? converted[0] : o);
+          } else {
+            return [converted[0], ...prev];
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing order:', error);
+    }
+  }, []);
+
+  // 🟢 Suscripción en tiempo real para órdenes
+  const handleOrderInsert = useCallback((newOrder: any) => {
+    refreshOrder(newOrder.id);
+  }, [refreshOrder]);
+
+  const handleOrderUpdate = useCallback((updatedOrder: any) => {
+    refreshOrder(updatedOrder.id);
+  }, [refreshOrder]);
+
+  const handleOrderDelete = useCallback((deletedId: string) => {
+    setOrders(prev => prev.filter(order => order.id !== deletedId));
+    setTotalCount(prev => prev - 1);
+  }, []);
+
+  useRealtimeSubscription({
+    table: 'orders',
+    onInsert: handleOrderInsert,
+    onUpdate: handleOrderUpdate,
+    onDelete: handleOrderDelete,
+    enabled: true
+  });
+
+  // 🟢 Suscripción en tiempo real para items de órdenes
+  useRealtimeSubscription({
+    table: 'order_items',
+    onInsert: (newItem: any) => refreshOrder(newItem.order_id),
+    onUpdate: (updatedItem: any) => refreshOrder(updatedItem.order_id),
+    onDelete: (deletedId: string) => {
+      // Para DELETE necesitamos buscar la orden afectada
+      // Esto es más complejo, podríamos simplemente recargar todo
+      fetchOrders();
+    },
+    enabled: true
+  });
+
+  useEffect(() => {
+    fetchOrders(500);
+  }, []);
+
+  const createOrder = async (orderData: any) => {
     try {
       const total = orderData.items.reduce(
-        (sum, item) => sum + (item.menuItem.price * item.quantity), 
+        (sum: number, item: any) => sum + (item.menuItem.price * item.quantity), 
         0
       );
 
-      // Determinar order_type basado en source.type
       const orderType = orderData.source.type === 'fullDay' ? 'fullday' : 'regular';
 
       const { data: order, error: orderError } = await supabase
@@ -158,14 +196,14 @@ export const useOrders = () => {
           total: total,
           status: 'pending',
           student_id: orderData.studentId || null,
-          order_type: orderType // NUEVO CAMPO
+          order_type: orderType
         }])
         .select('*, order_number, kitchen_number')
         .single();
 
       if (orderError) throw orderError;
 
-      const orderItems = orderData.items.map(item => ({
+      const orderItems = orderData.items.map((item: any) => ({
         order_id: order.id,
         menu_item_id: item.menuItem.id,
         menu_item_name: item.menuItem.name,
@@ -180,41 +218,10 @@ export const useOrders = () => {
 
       if (itemsError) throw itemsError;
 
-      const newOrder: Order = {
-        id: order.id,
-        orderNumber: order.order_number,
-        kitchenNumber: order.kitchen_number,
-        customerName: orderData.customerName,
-        phone: orderData.phone,
-        address: orderData.address,
-        tableNumber: orderData.tableNumber,
-        source: orderData.source,
-        status: 'pending',
-        total: total,
-        notes: orderData.notes,
-        paymentMethod: orderData.paymentMethod,
-        items: orderData.items.map(item => ({
-          menuItem: {
-            id: item.menuItem.id,
-            name: item.menuItem.name,
-            price: item.menuItem.price,
-            category: '',
-            type: 'food',
-            available: true,
-            isDailySpecial: false
-          },
-          quantity: item.quantity,
-          notes: item.notes
-        })),
-        createdAt: new Date(order.created_at),
-        updatedAt: new Date(order.updated_at),
-        studentId: orderData.studentId,
-        orderType: orderType
-      };
+      // No necesitamos actualizar setOrders manualmente
+      // La suscripción lo hará automáticamente
 
-      setOrders(prev => [newOrder, ...prev]);
-      
-      return { success: true, order: newOrder };
+      return { success: true, order };
     } catch (error: any) {
       console.error('Error en createOrder:', error);
       return { success: false, error: error.message };
@@ -223,64 +230,30 @@ export const useOrders = () => {
 
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
     try {
-      setOrders(prev => prev.map(order => 
-        order.id === orderId ? { ...order, status } : order
-      ));
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('orders')
-        .update({ 
-          status, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', orderId)
-        .select()
-        .single();
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
 
-      if (error) {
-        setOrders(prev => prev.map(order => 
-          order.id === orderId ? { ...order, status: order.status } : order
-        ));
-        throw error;
-      }
+      if (error) throw error;
       
-      return { success: true, data };
+      // No necesitamos actualizar setOrders, la suscripción lo hará
+      return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
   };
 
-  const updateOrderPayment = async (
-    orderId: string, 
-    paymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | undefined
-  ) => {
+  const updateOrderPayment = async (orderId: string, paymentMethod: Order['paymentMethod']) => {
     try {
-      const previousOrder = orders.find(o => o.id === orderId);
-      
-      setOrders(prev => prev.map(order => 
-        order.id === orderId ? { ...order, paymentMethod } : order
-      ));
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('orders')
-        .update({ 
-          payment_method: paymentMethod,
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', orderId)
-        .select()
-        .single();
+        .update({ payment_method: paymentMethod, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
 
-      if (error) {
-        if (previousOrder) {
-          setOrders(prev => prev.map(order => 
-            order.id === orderId ? { ...order, paymentMethod: previousOrder.paymentMethod } : order
-          ));
-        }
-        throw error;
-      }
+      if (error) throw error;
       
-      return { success: true, data };
+      return { success: true };
     } catch (error: any) {
       console.error('Error actualizando método de pago:', error);
       return { success: false, error: error.message };
@@ -289,33 +262,21 @@ export const useOrders = () => {
 
   const deleteOrder = async (orderId: string) => {
     try {
-      const orderToDelete = orders.find(o => o.id === orderId);
-      setOrders(prev => prev.filter(order => order.id !== orderId));
-
       const { error: itemsError } = await supabase
         .from('order_items')
         .delete()
         .eq('order_id', orderId);
 
-      if (itemsError) {
-        if (orderToDelete) {
-          setOrders(prev => [...prev, orderToDelete]);
-        }
-        throw itemsError;
-      }
+      if (itemsError) throw itemsError;
 
       const { error: orderError } = await supabase
         .from('orders')
         .delete()
         .eq('id', orderId);
 
-      if (orderError) {
-        if (orderToDelete) {
-          setOrders(prev => [...prev, orderToDelete]);
-        }
-        throw orderError;
-      }
+      if (orderError) throw orderError;
 
+      // No necesitamos actualizar setOrders, la suscripción lo hará
       return { success: true };
     } catch (error: any) {
       console.error('Error al eliminar:', error);
@@ -340,7 +301,7 @@ export const useOrders = () => {
       'N° COMANDA',
       'TELÉFONO',
       'PRODUCTOS',
-      'TIPO' // Nuevo campo para diferenciar regular/fullday
+      'TIPO'
     ];
 
     const csvData = ordersToExport.map(order => {
@@ -396,7 +357,6 @@ export const useOrders = () => {
     });
   }, [orders]);
 
-  // NUEVAS FUNCIONES PARA FILTRAR POR TIPO
   const getRegularOrders = useCallback(() => {
     return orders.filter(order => order.orderType === 'regular');
   }, [orders]);
@@ -405,14 +365,11 @@ export const useOrders = () => {
     return orders.filter(order => order.orderType === 'fullday');
   }, [orders]);
 
-  useEffect(() => {
-    fetchOrders(500);
-  }, []);
-
   return {
     orders,
     loading,
     totalCount,
+    error,
     fetchOrders,
     createOrder,
     updateOrderStatus,
@@ -420,7 +377,7 @@ export const useOrders = () => {
     deleteOrder,
     exportOrdersToCSV,
     getTodayOrders,
-    getRegularOrders, // NUEVO
-    getFullDayOrders // NUEVO
+    getRegularOrders,
+    getFullDayOrders
   };
 };
