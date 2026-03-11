@@ -47,7 +47,7 @@ const Login: React.FC = () => {
           <img
             src="/logo_marys.png"
             alt="Mary's Restaurant"
-            className="w-40 h-40 mx-auto mb-4 object-contain"
+            className="w-52 h-52 mx-auto mb-4 object-contain"
           />
           <p className="text-gray-600">Sistema de Gestión - Restaurante</p>
         </div>
