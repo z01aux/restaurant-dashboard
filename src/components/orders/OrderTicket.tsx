@@ -727,6 +727,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           `).join('')}
           
           <div class="divider"></div>
+
+          ${order.notes && order.notes.trim() !== '' ? `
+          <div class="info-row">
+            <span class="label">NOTAS DEL PEDIDO:</span>
+          </div>
+          <div class="notes">${order.notes.toUpperCase().trim().split('\n').map((line: string) => `- ${line.trim()}`).join('\n')}</div>
+          <div class="divider"></div>
+          ` : ''}
           
           <div class="center">
             <div class="asterisk-line">********************************</div>
@@ -820,6 +828,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
             <span class="label">TOTAL:</span>
             <span class="label">S/ ${order.total.toFixed(2)}</span>
           </div>
+
+          ${order.notes && order.notes.trim() !== '' ? `
+          <div class="divider"></div>
+          <div class="info-row">
+            <span class="label">NOTAS DEL PEDIDO:</span>
+          </div>
+          <div class="notes">${order.notes.toUpperCase().trim().split('\n').map((line: string) => `- ${line.trim()}`).join('\n')}</div>
+          ` : ''}
           
           <div class="divider"></div>
           
