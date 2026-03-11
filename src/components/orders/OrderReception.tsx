@@ -1503,7 +1503,7 @@ const OrderReception: React.FC = React.memo(() => {
                   padding: 0 !important;
                   font-size: 12px !important;
                   font-family: "Courier New", monospace !important;
-                  font-weight: normal !important;
+                  font-weight: bold !important;
                 }
                 * {
                   font-family: "Courier New", monospace !important;
@@ -1511,7 +1511,7 @@ const OrderReception: React.FC = React.memo(() => {
               }
               body {
                 font-family: "Courier New", monospace;
-                font-weight: normal;
+                font-weight: bold;
                 font-size: 12px;
                 line-height: 1.2;
                 width: 80mm;
@@ -1530,7 +1530,7 @@ const OrderReception: React.FC = React.memo(() => {
                 font-weight: bold !important;
               }
               .normal {
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               .uppercase {
                 text-transform: uppercase;
@@ -1548,7 +1548,7 @@ const OrderReception: React.FC = React.memo(() => {
                 font-weight: bold !important;
               }
               .value {
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               .customer-name-bold {
                 font-weight: bold !important;
@@ -1559,7 +1559,7 @@ const OrderReception: React.FC = React.memo(() => {
                 font-weight: bold !important;
               }
               .header-subtitle {
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               .notes {
                 font-style: normal;
@@ -1607,7 +1607,7 @@ const OrderReception: React.FC = React.memo(() => {
                 font-size: 9px;
                 letter-spacing: 1px;
                 margin: 3px 0;
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               table {
                 width: 100%;
