@@ -173,7 +173,147 @@ const FullDayDashboard: React.FC = () => {
     }
   };
 
-  // ── RENDER ────────────────────────────────────────────
+  // ── IMPRIMIR TICKETERA TÉRMICA ────────────────────────
+  const handlePrintTicket = () => {
+    const dateLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-PE', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    const productRows = productCounts.map(p =>
+      `<div class="product-row">
+        <span class="product-name">${p.name.toUpperCase()}</span>
+        <span class="product-qty">${p.total}</span>
+      </div>`
+    ).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+      <title>Ticket Producción FullDay</title>
+      <style>
+        @media print {
+          @page { size: 80mm auto; margin: 0; }
+          body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; }
+          * { box-sizing: border-box !important; }
+        }
+        * { box-sizing: border-box; font-family: 'Courier New', monospace; }
+        body {
+          width: 80mm;
+          margin: 0 auto;
+          padding: 0;
+          background: white;
+          color: black;
+          font-size: 12px;
+          line-height: 1.3;
+        }
+        .ticket { padding: 8px; width: 100%; }
+        .center { text-align: center; }
+        .divider { border-top: 1px solid #000; margin: 6px 0; }
+        .divider-dashed { border-top: 1px dashed #000; margin: 4px 0; }
+        .header-title { font-size: 14px; font-weight: 900; }
+        .header-sub { font-size: 10px; font-weight: bold; }
+        .date-label { font-size: 10px; font-weight: bold; margin: 3px 0; }
+        .stats-row { display: flex; justify-content: space-between; margin: 4px 0; }
+        .stat-box { text-align: center; flex: 1; }
+        .stat-num { font-size: 18px; font-weight: 900; }
+        .stat-lbl { font-size: 9px; font-weight: bold; text-transform: uppercase; }
+        .section-header {
+          text-align: center;
+          font-weight: 900;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin: 6px 0 4px;
+          border-top: 2px solid #000;
+          border-bottom: 2px solid #000;
+          padding: 3px 0;
+        }
+        .product-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          padding: 3px 0;
+          border-bottom: 1px dashed #ccc;
+        }
+        .product-name {
+          font-size: 11px;
+          font-weight: bold;
+          flex: 1;
+          padding-right: 4px;
+          word-break: break-word;
+        }
+        .product-qty {
+          font-size: 16px;
+          font-weight: 900;
+          flex-shrink: 0;
+          min-width: 24px;
+          text-align: right;
+        }
+        .total-row {
+          display: flex;
+          justify-content: space-between;
+          border-top: 2px solid #000;
+          padding-top: 4px;
+          margin-top: 4px;
+          font-weight: 900;
+          font-size: 13px;
+        }
+        .footer { text-align: center; font-size: 9px; font-weight: bold; margin-top: 6px; }
+      </style></head>
+      <body><div class="ticket">
+        <div class="center">
+          <div class="header-title">MARY'S RESTAURANT</div>
+          <div class="header-sub">PRODUCCIÓN FULLDAY</div>
+          <div class="divider"></div>
+          <div class="date-label">${dateLabel.toUpperCase()}</div>
+        </div>
+        <div class="divider"></div>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-num">${totalOrders}</div>
+            <div class="stat-lbl">Pedidos</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num">${totalProducts}</div>
+            <div class="stat-lbl">Unidades</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num">${productCounts.length}</div>
+            <div class="stat-lbl">Ítems</div>
+          </div>
+        </div>
+        <div class="section-header">★ CANTIDAD POR PRODUCTO ★</div>
+        ${productRows}
+        <div class="total-row">
+          <span>TOTAL</span>
+          <span>${totalProducts}</span>
+        </div>
+        <div class="divider"></div>
+        <div class="footer">
+          ${new Date().toLocaleString('es-PE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+        </div>
+        <div class="center" style="font-size:9px;font-weight:bold;margin-top:4px;">*** FIN DE PRODUCCIÓN ***</div>
+      </div></body></html>`;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 300);
+    }
+  };
+
+
   const isToday = selectedDate === todayStr();
   const selectedDateObj = new Date(selectedDate + 'T12:00:00');
 
@@ -210,9 +350,19 @@ const FullDayDashboard: React.FC = () => {
               <RefreshCw className={`h-4 w-4 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button
+              onClick={handlePrintTicket}
+              disabled={productCounts.length === 0}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-gray-700 to-gray-800 text-white text-sm font-semibold hover:from-gray-800 hover:to-gray-900 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Imprimir en ticketera térmica"
+            >
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">Ticketera</span>
+            </button>
+            <button
               onClick={handlePrint}
               disabled={productCounts.length === 0}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-semibold hover:from-red-600 hover:to-red-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Imprimir hoja completa"
             >
               <Printer className="h-4 w-4" />
               <span className="hidden sm:inline">Imprimir</span>
