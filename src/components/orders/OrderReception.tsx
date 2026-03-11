@@ -1857,11 +1857,11 @@ const OrderReception: React.FC = React.memo(() => {
           const createdOrder = result.order;
           const orderForTicket: Order = {
             id: createdOrder.id,
-            orderNumber: createdOrder.orderNumber,
-            kitchenNumber: createdOrder.kitchenNumber,
+            orderNumber: createdOrder.order_number,
+            kitchenNumber: createdOrder.kitchen_number,
             items: cart,
             status: 'pending',
-            createdAt: new Date(createdOrder.createdAt),
+            createdAt: new Date(createdOrder.created_at),
             total: total,
             customerName: customerName,
             phone: phone,
