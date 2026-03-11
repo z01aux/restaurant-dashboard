@@ -1,6 +1,7 @@
 import React from 'react';
 import DashboardLayout from './components/layout/DashboardLayout';
 import StatsCards from './components/dashboard/StatsCards';
+import FullDayDashboard from './components/dashboard/FullDayDashboard';
 import OrdersManager from './components/orders/OrdersManager';
 import MenuManager from './components/menu/MenuManager';
 import OrderReception from './components/orders/OrderReception';
@@ -92,26 +93,7 @@ function App() {
           {activeTab === 'dashboard' && (
             <div>
               <StatsCards />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-                <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-                    Órdenes Recientes
-                  </h3>
-                  <div className="text-center text-gray-500 py-6 sm:py-8">
-                    <div className="text-sm sm:text-lg mb-2">No hay órdenes recientes</div>
-                    <div className="text-xs sm:text-sm">Las órdenes aparecerán aquí</div>
-                  </div>
-                </div>
-                <div className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-white/20">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-                    Productos Populares
-                  </h3>
-                  <div className="text-center text-gray-500 py-6 sm:py-8">
-                    <div className="text-sm sm:text-lg mb-2">No hay datos disponibles</div>
-                    <div className="text-xs sm:text-sm">Los productos populares aparecerán aquí</div>
-                  </div>
-                </div>
-              </div>
+              <FullDayDashboard />
             </div>
           )}
 
@@ -131,3 +113,4 @@ function App() {
 }
 
 export default App;
+
