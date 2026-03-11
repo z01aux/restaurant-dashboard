@@ -526,7 +526,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                   margin: 0 auto !important;
                   padding: 0 !important;
                   font-family: "Courier New", monospace !important;
-                  font-weight: normal !important;
+                  font-weight: bold !important;
                 }
                 * {
                   font-family: "Courier New", monospace !important;
@@ -534,7 +534,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
               }
               body {
                 font-family: "Courier New", monospace;
-                font-weight: normal;
+                font-weight: bold;
                 font-size: 12px;
                 line-height: 1.3;
                 width: 80mm;
@@ -553,7 +553,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 font-weight: bold !important;
               }
               .normal {
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               .uppercase {
                 text-transform: uppercase;
@@ -572,7 +572,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 font-weight: bold !important;
               }
               .value {
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               .customer-name-bold {
                 font-weight: bold !important;
@@ -585,7 +585,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 font-size: 13px;
               }
               .header-subtitle {
-                font-weight: normal !important;
+                font-weight: bold !important;
                 font-size: 11px;
               }
               .notes {
@@ -595,7 +595,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 margin-bottom: 3px;
                 display: block;
                 width: 85%;
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               .table-notes {
                 font-style: italic;
@@ -603,7 +603,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 margin-left: 0;
                 margin-top: 2px;
                 display: block;
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               .products-header {
                 text-align: center;
@@ -635,7 +635,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 font-size: 10px;
                 letter-spacing: 1px;
                 margin: 3px 0;
-                font-weight: normal !important;
+                font-weight: bold !important;
               }
               table {
                 width: 100%;
@@ -911,3 +911,4 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 };
 
 export default OrderTicket;
+----------------------------------------
