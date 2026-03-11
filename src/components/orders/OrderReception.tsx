@@ -1504,9 +1504,11 @@ const OrderReception: React.FC = React.memo(() => {
                   font-size: 12px !important;
                   font-family: "Courier New", monospace !important;
                   font-weight: bold !important;
+                  box-sizing: border-box !important;
                 }
                 * {
                   font-family: "Courier New", monospace !important;
+                  box-sizing: border-box !important;
                 }
               }
               body {
@@ -1516,9 +1518,17 @@ const OrderReception: React.FC = React.memo(() => {
                 line-height: 1.2;
                 width: 80mm;
                 margin: 0 auto;
-                padding: 8px;
+                padding: 0;
                 background: white;
                 color: black;
+                box-sizing: border-box;
+              }
+              * {
+                box-sizing: border-box;
+              }
+              .ticket {
+                padding: 8px;
+                width: 100%;
               }
               .ticket, .ticket *, div, span, td, th {
                 font-family: "Courier New", monospace !important;
