@@ -1,11 +1,24 @@
 // ============================================
-// ARCHIVO: src/components/orders/OrderTicket.tsx (MODIFICADO)
+// ARCHIVO: src/components/orders/OrderTicket.tsx (VERSIÓN FINAL)
 // AHORA EL PDF TIENE EL MISMO DISEÑO QUE LA IMPRESIÓN HTML
+// Y EN RECEPCIÓN SE IMPRIME DIRECTAMENTE EL PDF
 // ============================================
 
 import React from 'react';
 import { Order } from '../../types';
-import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { pdf, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+
+// Registrar fuentes para que coincidan con el HTML
+Font.register({
+  family: 'Courier New',
+  fonts: [
+    { src: 'https://fonts.gstatic.com/s/courierprime/v9/u-450q2lgwslOqpF_6gQ8kELWwZjW-8t.ttf', fontWeight: 400 },
+    { src: 'https://fonts.gstatic.com/s/courierprime/v9/u-460q2lgwslOqpF_6gQ8kELN35s3a9Rj9A.ttf', fontWeight: 700 },
+  ],
+});
+
+// Fuente de respaldo
+Font.registerHyphenationCallback(word => [word]);
 
 interface OrderTicketProps {
   order: Order;
@@ -54,9 +67,22 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     return 'NO APLICA';
   };
 
+  // Función auxiliar para obtener texto del tipo de pedido
+  const getSourceText = (sourceType: Order['source']['type']) => {
+    const sourceMap: Record<Order['source']['type'], string> = {
+      'phone': 'COCINA',
+      'walk-in': 'LOCAL', 
+      'delivery': 'DELIVERY',
+      'fullDay': 'FULLDAY',
+      'oep': 'OEP',
+      'loncheritas': 'LONCHERITAS',
+    };
+    return sourceMap[sourceType] || sourceType;
+  };
+
   // CONSTANTES PARA EL ANCHO DE IMPRESIÓN
   const TICKET_WIDTH = 80;
-  const PAGE_WIDTH = TICKET_WIDTH * 2.83465;
+  const PAGE_WIDTH = TICKET_WIDTH * 2.83465; // 80mm a puntos (72 dpi)
   
   // TAMAÑOS DE FUENTE
   const FONT_SIZE_SMALL = 8;
@@ -68,7 +94,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   const PADDING = 8;
 
   // ============================================
-  // ESTILOS PARA TICKET DE COCINA (PDF) - IGUAL AL HTML
+  // ESTILOS PARA TICKET DE COCINA (PDF)
   // ============================================
   const kitchenStyles = StyleSheet.create({
     page: {
@@ -76,7 +102,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       backgroundColor: '#FFFFFF',
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
-      fontFamily: 'Helvetica',
+      fontFamily: 'Courier New',
       fontWeight: 'normal',
       width: PAGE_WIDTH,
     },
@@ -160,7 +186,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       flexWrap: 'wrap',
       width: '85%',
       fontWeight: 'normal',
-      fontStyle: 'normal',
     },
     productsContainer: {
       marginBottom: 8,
@@ -179,7 +204,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   });
 
   // ============================================
-  // ESTILOS PARA TICKET NORMAL (PDF) - IDÉNTICO AL HTML
+  // ESTILOS PARA TICKET NORMAL (PDF)
   // ============================================
   const normalStyles = StyleSheet.create({
     page: {
@@ -187,7 +212,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       backgroundColor: '#FFFFFF',
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
-      fontFamily: 'Helvetica',
+      fontFamily: 'Courier New',
       fontWeight: 'normal',
       width: PAGE_WIDTH,
     },
@@ -204,11 +229,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       fontSize: FONT_SIZE_SMALL,
       marginBottom: 1,
       fontWeight: 'normal',
-    },
-    boldSubtitle: {
-      fontSize: FONT_SIZE_SMALL,
-      marginBottom: 1,
-      fontWeight: 'bold',
     },
     divider: {
       borderBottom: '1pt solid #000000',
@@ -270,7 +290,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       marginTop: 1,
       flexWrap: 'wrap',
       fontWeight: 'normal',
-      fontStyle: 'normal',
     },
     footer: {
       textAlign: 'center',
@@ -290,18 +309,24 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   });
 
   // ============================================
-  // DOCUMENTO PDF PARA COCINA (CON MISMO DISEÑO QUE HTML)
+  // DOCUMENTO PDF PARA COCINA
   // ============================================
   const KitchenTicketDocument = () => (
-    <Document>
-      <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
-        {/* HEADER - IDÉNTICO AL HTML */}
+    <Document
+      author="MARY'S RESTAURANT"
+      creator="Sistema de Gestión"
+      producer="React PDF"
+      subject="Ticket de Cocina"
+      title={`Cocina-${getDisplayKitchenNumber()}`}
+    >
+      <Page size={[PAGE_WIDTH]} style={kitchenStyles.page} wrap={false}>
+        {/* HEADER */}
         <View style={kitchenStyles.header}>
           <Text style={kitchenStyles.restaurantName}>{order.customerName.toUpperCase()}</Text>
           <Text style={kitchenStyles.area}>** COCINA **</Text>
         </View>
 
-        {/* INFORMACIÓN - IDÉNTICA AL HTML */}
+        {/* INFORMACIÓN */}
         <View style={kitchenStyles.infoSection}>
           <View style={kitchenStyles.row}>
             <Text style={kitchenStyles.label}>CLIENTE:</Text>
@@ -329,7 +354,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 
         <View style={kitchenStyles.divider} />
 
-        {/* PRODUCTOS - IDÉNTICO AL HTML */}
+        {/* PRODUCTOS */}
         <Text style={kitchenStyles.productsHeader}>DESCRIPCION</Text>
         
         <View style={kitchenStyles.divider} />
@@ -338,7 +363,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           {(order.items || []).map((item, index) => (
             <View key={index}>
               <View style={kitchenStyles.productRow}>
-                <Text style={kitchenStyles.quantity}>{item.quantity}x</Text>
+                <Text style={kitchenStyles.quantity}>{item.quantity}X</Text>
                 <Text style={kitchenStyles.productName}>{item.menuItem.name.toUpperCase()}</Text>
               </View>
               {item.notes?.trim() && (
@@ -348,7 +373,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           ))}
         </View>
 
-        {/* NOTAS DEL PEDIDO (si existen) - COMO EN HTML */}
+        {/* NOTAS DEL PEDIDO */}
         {order.notes && order.notes.trim() !== '' && (
           <>
             <View style={kitchenStyles.divider} />
@@ -363,7 +388,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 
         <View style={kitchenStyles.divider} />
 
-        {/* FOOTER - IDÉNTICO AL HTML */}
+        {/* FOOTER */}
         <View style={kitchenStyles.footer}>
           <Text style={kitchenStyles.asteriskLine}>********************************</Text>
         </View>
@@ -372,12 +397,18 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   );
 
   // ============================================
-  // DOCUMENTO PDF NORMAL (CON MISMO DISEÑO QUE HTML)
+  // DOCUMENTO PDF NORMAL
   // ============================================
   const NormalTicketDocument = () => (
-    <Document>
-      <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
-        {/* HEADER - IDÉNTICO AL HTML */}
+    <Document
+      author="MARY'S RESTAURANT"
+      creator="Sistema de Gestión"
+      producer="React PDF"
+      subject="Ticket de Cliente"
+      title={`Ticket-${getDisplayOrderNumber()}`}
+    >
+      <Page size={[PAGE_WIDTH]} style={normalStyles.page} wrap={false}>
+        {/* HEADER */}
         <View style={normalStyles.header}>
           <Text style={normalStyles.title}>MARY'S RESTAURANT</Text>
           <Text style={normalStyles.subtitle}>INVERSIONES AROMO S.A.C.</Text>
@@ -426,7 +457,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           {order.address && (
             <View style={normalStyles.row}>
               <Text style={normalStyles.bold}>DIRECCIÓN:</Text>
-              <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.address}</Text>
+              <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.address.toUpperCase()}</Text>
             </View>
           )}
           {order.tableNumber && (
@@ -442,15 +473,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
         {/* TABLA DE PRODUCTOS */}
         <View style={normalStyles.table}>
           <View style={normalStyles.tableHeader}>
-            <Text style={normalStyles.colQuantity}>Cant</Text>
-            <Text style={normalStyles.colDescription}>Descripción</Text>
-            <Text style={normalStyles.colPrice}>Precio</Text>
+            <Text style={normalStyles.colQuantity}>CANT</Text>
+            <Text style={normalStyles.colDescription}>DESCRIPCIÓN</Text>
+            <Text style={normalStyles.colPrice}>PRECIO</Text>
           </View>
 
           {(order.items || []).map((item, index) => (
             <View key={index}>
               <View style={normalStyles.tableRow}>
-                <Text style={[normalStyles.colQuantity, normalStyles.quantity]}>{item.quantity}x</Text>
+                <Text style={[normalStyles.colQuantity, normalStyles.quantity]}>{item.quantity}X</Text>
                 <View style={normalStyles.colDescription}>
                   <Text style={normalStyles.productName}>{item.menuItem.name.toUpperCase()}</Text>
                 </View>
@@ -512,19 +543,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     </Document>
   );
 
-  // Función auxiliar para obtener texto del tipo de pedido
-  const getSourceText = (sourceType: Order['source']['type']) => {
-    const sourceMap: Record<Order['source']['type'], string> = {
-      'phone': 'COCINA',
-      'walk-in': 'LOCAL', 
-      'delivery': 'DELIVERY',
-      'fullDay': 'FULLDAY',
-      'oep': 'OEP',
-      'loncheritas': 'LONCHERITAS',
-    };
-    return sourceMap[sourceType] || sourceType;
-  };
-
   // Función para generar nombre de archivo
   const generateFileName = () => {
     const orderNumber = isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber();
@@ -540,37 +558,74 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     return `ticket-${orderNumber}-${customerName}-${date}-${type}.pdf`;
   };
 
-  // Handler para descargar PDF
-  const handleDownloadPDF = async (e: React.MouseEvent) => {
+  // Handler para imprimir (USA PDF EN VEZ DE HTML)
+  const handlePrint = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
     try {
-      if (!order || !order.items) {
-        console.error('Orden inválida para generar PDF');
-        return;
-      }
-      
+      // Mostrar indicador de carga
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      toast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando PDF para impresión...</span></div>';
+      document.body.appendChild(toast);
+
+      // Generar el PDF
       const blob = await pdf(
         isPhoneOrder ? <KitchenTicketDocument /> : <NormalTicketDocument />
       ).toBlob();
       
+      // Crear URL del blob
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
       
-      link.href = url;
-      link.download = generateFileName();
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Crear iframe oculto con el PDF
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.src = url;
+      
+      document.body.appendChild(iframe);
+      
+      // Quitar toast de carga
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+      
+      // Cuando el iframe cargue, imprimir
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(url);
+          }, 1000);
+        }, 500);
+      };
+      
     } catch (error) {
       console.error('Error generando PDF:', error);
+      
+      // Mostrar error
+      const errorToast = document.createElement('div');
+      errorToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      errorToast.innerHTML = 'Error al generar PDF. Usando impresión HTML.';
+      document.body.appendChild(errorToast);
+      setTimeout(() => {
+        if (document.body.contains(errorToast)) {
+          document.body.removeChild(errorToast);
+        }
+      }, 3000);
+      
+      // Fallback: usar el método HTML original
+      fallbackPrintHTML();
     }
   };
 
-  // Handler para imprimir
-  const handlePrint = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Usar el mismo método de impresión HTML que ya funciona bien
+  // Función de fallback (mantener el método HTML original)
+  const fallbackPrintHTML = () => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -657,7 +712,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   };
 
-  // Generar contenido HTML para impresión (se mantiene igual)
+  // Generar contenido HTML para impresión (fallback)
   const generateTicketContent = () => {
     if (isPhoneOrder) {
       return `
@@ -697,7 +752,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           
           ${(order.items || []).map(item => `
             <div class="product-row">
-              <div class="quantity">${item.quantity}x</div>
+              <div class="quantity">${item.quantity}X</div>
               <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
             </div>
             ${item.notes?.trim() ? `<div class="notes">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
@@ -764,7 +819,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           ${order.address ? `
           <div class="info-row">
             <span class="label">DIRECCIÓN:</span>
-            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
+            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address.toUpperCase()}</span>
           </div>
           ` : ''}
           ${order.tableNumber ? `
@@ -779,15 +834,15 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           <table>
             <thead>
               <tr>
-                <th>Cant</th>
-                <th>Descripción</th>
-                <th style="text-align: right;">Precio</th>
+                <th>CANT</th>
+                <th>DESCRIPCIÓN</th>
+                <th style="text-align: right;">PRECIO</th>
               </tr>
             </thead>
             <tbody>
               ${(order.items || []).map(item => `
                 <tr>
-                  <td class="quantity" style="vertical-align: top; font-size: 12px;">${item.quantity}x</td>
+                  <td class="quantity" style="vertical-align: top; font-size: 12px;">${item.quantity}X</td>
                   <td style="vertical-align: top; font-size: 12px;">
                     <div class="product-name bold" style="font-size: 12px;">${item.menuItem.name.toUpperCase()}</div>
                     ${item.notes?.trim() ? `<div class="table-notes" style="font-size: 10px;">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
@@ -830,6 +885,33 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           </div>
         </div>
       `;
+    }
+  };
+
+  // Handler para descargar PDF
+  const handleDownloadPDF = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (!order || !order.items) {
+        console.error('Orden inválida para generar PDF');
+        return;
+      }
+      
+      const blob = await pdf(
+        isPhoneOrder ? <KitchenTicketDocument /> : <NormalTicketDocument />
+      ).toBlob();
+      
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      link.href = url;
+      link.download = generateFileName();
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generando PDF:', error);
     }
   };
 
