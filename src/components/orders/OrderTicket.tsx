@@ -589,16 +589,19 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 font-size: 11px;
               }
               .notes {
-                font-style: italic;
-                font-size: 10px;
-                margin-left: 15%;
+                font-style: normal;
+                font-size: 12px;
+                margin-left: 0;
                 margin-bottom: 3px;
                 display: block;
-                width: 85%;
+                width: 100%;
                 font-weight: bold !important;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                text-align: left;
               }
               .table-notes {
-                font-style: italic;
+                font-style: normal;
                 font-size: 10px;
                 margin-left: 0;
                 margin-top: 2px;
