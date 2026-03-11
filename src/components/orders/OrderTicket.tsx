@@ -911,4 +911,3 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 };
 
 export default OrderTicket;
-----------------------------------------
