@@ -1,4 +1,3 @@
-// ============================================
 // ARCHIVO: src/components/fullday/FullDayTicket.tsx
 // Ticket FullDay — mismo diseño que OrderTicket (sin emoticonos)
 // Nombres: apellidos y primer nombre
@@ -230,11 +229,15 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
       <div class="info-row" style="border-top:2px solid #000;padding-top:5px;margin-top:5px;">
         <span class="label">TOTAL:</span><span class="label">S/ ${order.total.toFixed(2)}</span>
       </div>
+      ${order.notes && order.notes.trim() !== '' ? `
+      <div class="divider"></div>
+      <div class="info-row"><span class="label">NOTAS DEL PEDIDO:</span></div>
+      <div class="notes">${order.notes.toUpperCase().trim().split('\n').map(line => `- ${line.trim()}`).join('\n')}</div>
+      ` : ''}
       <div class="divider"></div>
       <div class="center">
         <div class="header-title">GRACIAS POR SU PEDIDO!</div>
         <div class="normal">*** FULLDAY ***</div>
-        ${order.notes ? `<div class="normal" style="font-style:italic;margin-top:4px;font-size:10px;">Nota: ${order.notes}</div>` : ''}
         <div class="normal" style="margin-top:10px;font-size:10px;">
           ${new Date().toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
         </div>
@@ -265,24 +268,24 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
             <style>
               @media print {
                 @page { size: 80mm auto; margin: 0; padding: 0; }
-                body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; font-family: "Courier New", monospace !important; font-weight: normal !important; }
+                body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; font-family: "Courier New", monospace !important; font-weight: bold !important; }
                 * { font-family: "Courier New", monospace !important; }
               }
-              body { font-family: "Courier New", monospace; font-weight: normal; font-size: 12px; line-height: 1.3; width: 80mm; margin: 0 auto; padding: 8px; background: white; color: black; }
+              body { font-family: "Courier New", monospace; font-weight: bold; font-size: 12px; line-height: 1.3; width: 80mm; margin: 0 auto; padding: 8px; background: white; color: black; }
               .ticket, .ticket *, div, span, td, th { font-family: "Courier New", monospace !important; }
               .center { text-align: center; }
               .bold { font-weight: bold !important; }
-              .normal { font-weight: normal !important; }
+              .normal { font-weight: bold !important; }
               .uppercase { text-transform: uppercase; }
               .divider { border-top: 1px solid #000; margin: 6px 0; }
               .info-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; }
               .label { font-weight: bold !important; }
-              .value { font-weight: normal !important; }
+              .value { font-weight: bold !important; }
               .customer-name-bold { font-weight: bold !important; max-width: 60%; word-wrap: break-word; font-size: 12px; }
               .header-title { font-weight: bold !important; font-size: 13px; }
-              .header-subtitle { font-weight: normal !important; font-size: 11px; }
-              .notes { font-style: italic; font-size: 10px; margin-left: 15%; margin-bottom: 3px; display: block; width: 85%; font-weight: normal !important; }
-              .table-notes { font-style: italic; font-size: 10px; margin-left: 0; margin-top: 2px; display: block; font-weight: normal !important; }
+              .header-subtitle { font-weight: bold !important; font-size: 11px; }
+              .notes { font-style: normal; font-size: 12px; margin-left: 0; margin-bottom: 3px; display: block; width: 100%; font-weight: bold !important; white-space: pre-wrap; word-wrap: break-word; text-align: left; }
+              .table-notes { font-style: normal; font-size: 10px; margin-left: 0; margin-top: 2px; display: block; font-weight: bold !important; }
               .product-row { display: flex; margin-bottom: 4px; }
               .quantity { width: 15%; font-weight: bold !important; font-size: 12px; }
               .product-name { width: 85%; font-weight: bold !important; text-transform: uppercase; font-size: 12px; line-height: 1.4; }
