@@ -1,3 +1,10 @@
+// ============================================
+// ARCHIVO: src/components/orders/OrderTicket.tsx (MODIFICADO)
+// - TODO EN NEGRITA para mejor legibilidad
+// - Corregido problema de fechas
+// - Números de orden consistentes con la pestaña Órdenes
+// ============================================
+
 import React from 'react';
 import { Order } from '../../types';
 import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
@@ -26,14 +33,50 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     return 'Sistema';
   };
 
-  // Función para obtener número de orden para display
-  const getDisplayOrderNumber = () => {
-    return order.orderNumber ?? `ORD-${order.id.slice(-8).toUpperCase()}`;
+  // Función para formatear fecha correctamente (CORREGIDO)
+  const formatDate = (date: Date) => {
+    try {
+      return date.toLocaleDateString('es-PE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Fecha no válida';
+    }
   };
 
-  // Función para obtener número de cocina para display
+  // Función para formatear hora correctamente (CORREGIDO)
+  const formatTime = (date: Date) => {
+    try {
+      return date.toLocaleTimeString('es-PE', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    } catch (error) {
+      console.error('Error formateando hora:', error);
+      return '--:--';
+    }
+  };
+
+  // Función para obtener número de orden para display (CORREGIDO - igual que en OrdersManager)
+  const getDisplayOrderNumber = () => {
+    if (order.orderNumber) {
+      return order.orderNumber;
+    }
+    // Si no tiene orderNumber, usar el formato de OrdersManager
+    return `ORD-${order.id.slice(-8).toUpperCase()}`;
+  };
+
+  // Función para obtener número de cocina para display (CORREGIDO - igual que en OrdersManager)
   const getDisplayKitchenNumber = () => {
-    return order.kitchenNumber ?? `COM-${order.id.slice(-8).toUpperCase()}`;
+    if (order.kitchenNumber) {
+      return order.kitchenNumber;
+    }
+    // Si no tiene kitchenNumber, usar el formato de OrdersManager
+    return `COM-${order.id.slice(-8).toUpperCase()}`;
   };
 
   // Función para obtener texto del método de pago
@@ -49,20 +92,33 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     return 'NO APLICA';
   };
 
+  // Función auxiliar para obtener texto del tipo de pedido
+  const getSourceText = (sourceType: Order['source']['type']) => {
+    const sourceMap: Record<Order['source']['type'], string> = {
+      'phone': 'COCINA',
+      'walk-in': 'LOCAL', 
+      'delivery': 'DELIVERY',
+      'fullDay': 'FULLDAY',
+      'oep': 'OEP',
+      'loncheritas': 'LONCHERITAS',
+    };
+    return sourceMap[sourceType] || sourceType;
+  };
+
   // CONSTANTES PARA EL ANCHO DE IMPRESIÓN
   const TICKET_WIDTH = 80;
   const PAGE_WIDTH = TICKET_WIDTH * 2.83465;
   
-  // TAMAÑOS DE FUENTE - AUMENTADOS PARA MEJOR LEGIBILIDAD
-  const FONT_SIZE_SMALL = 8;
-  const FONT_SIZE_NORMAL = 9;
-  const FONT_SIZE_LARGE = 10;
-  const FONT_SIZE_XLARGE = 11;
-  const FONT_SIZE_PRODUCT = 10;
+  // TAMAÑOS DE FUENTE - TODOS EN NEGRITA
+  const FONT_SIZE_SMALL = 9;      // Aumentado para mejor legibilidad
+  const FONT_SIZE_NORMAL = 10;     // Aumentado
+  const FONT_SIZE_LARGE = 11;      // Aumentado
+  const FONT_SIZE_XLARGE = 12;     // Aumentado
+  const FONT_SIZE_PRODUCT = 10;    // Aumentado
   
   const PADDING = 8;
 
-  // Estilos para el PDF de COCINA
+  // Estilos para el PDF de COCINA - TODO EN NEGRITA
   const kitchenStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
@@ -70,7 +126,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
       fontFamily: 'Helvetica',
-      fontWeight: 'normal',
+      fontWeight: 'bold', // TODO EN NEGRITA
       width: PAGE_WIDTH,
     },
     header: {
@@ -109,14 +165,14 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       fontSize: FONT_SIZE_SMALL,
     },
     value: {
-      fontWeight: 'normal',
+      fontWeight: 'bold', // NEGRITA
       fontSize: FONT_SIZE_SMALL,
       maxWidth: '60%',
       flexWrap: 'wrap',
     },
     valueBold: {
       fontWeight: 'bold',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_LARGE, // Más grande para el nombre del cliente
       maxWidth: '60%',
       flexWrap: 'wrap',
     },
@@ -147,13 +203,12 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       lineHeight: 1.4,
     },
     notes: {
-      fontStyle: 'italic',
+      fontWeight: 'bold', // NEGRITA
       fontSize: FONT_SIZE_SMALL,
       marginLeft: '15%',
       marginBottom: 3,
       flexWrap: 'wrap',
       width: '85%',
-      fontWeight: 'normal',
     },
     productsContainer: {
       marginBottom: 8,
@@ -167,11 +222,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       fontSize: FONT_SIZE_SMALL,
       letterSpacing: 1,
       marginBottom: 1,
-      fontWeight: 'normal',
+      fontWeight: 'bold', // NEGRITA
     }
   });
 
-  // Estilos normales para otros tipos de pedido - SIN IGV
+  // Estilos normales para otros tipos de pedido - TODO EN NEGRITA
   const normalStyles = StyleSheet.create({
     page: {
       flexDirection: 'column',
@@ -179,7 +234,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       padding: PADDING,
       fontSize: FONT_SIZE_NORMAL,
       fontFamily: 'Helvetica',
-      fontWeight: 'normal',
+      fontWeight: 'bold', // TODO EN NEGRITA
       width: PAGE_WIDTH,
     },
     header: {
@@ -194,12 +249,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     subtitle: {
       fontSize: FONT_SIZE_SMALL,
       marginBottom: 1,
-      fontWeight: 'normal',
-    },
-    boldSubtitle: {
-      fontSize: FONT_SIZE_SMALL,
-      marginBottom: 1,
-      fontWeight: 'bold',
+      fontWeight: 'bold', // NEGRITA
     },
     divider: {
       borderBottom: '1pt solid #000000',
@@ -237,13 +287,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     colDescription: {
       width: '50%',
       fontSize: FONT_SIZE_PRODUCT,
-      fontWeight: 'normal',
+      fontWeight: 'bold', // NEGRITA
     },
     colPrice: {
       width: '35%',
       textAlign: 'right',
       fontSize: FONT_SIZE_PRODUCT,
-      fontWeight: 'normal',
+      fontWeight: 'bold', // NEGRITA
     },
     quantity: {
       fontWeight: 'bold',
@@ -256,12 +306,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       lineHeight: 1.4,
     },
     notes: {
-      fontStyle: 'italic',
+      fontWeight: 'bold', // NEGRITA
       fontSize: FONT_SIZE_SMALL,
       marginLeft: 0,
       marginTop: 1,
       flexWrap: 'wrap',
-      fontWeight: 'normal',
     },
     footer: {
       textAlign: 'center',
@@ -270,11 +319,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     footerDate: {
       marginTop: 6,
       fontSize: FONT_SIZE_SMALL - 1,
-      fontWeight: 'normal',
+      fontWeight: 'bold', // NEGRITA
     },
     valueBold: {
       fontWeight: 'bold',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_LARGE, // Más grande para el nombre del cliente
       maxWidth: '60%',
       flexWrap: 'wrap',
     },
@@ -305,7 +354,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           <View style={kitchenStyles.row}>
             <Text style={kitchenStyles.label}>FECHA:</Text>
             <Text style={kitchenStyles.value}>
-              {order.createdAt.toLocaleDateString('es-ES')} - {order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+              {formatDate(order.createdAt)} - {formatTime(order.createdAt)}
             </Text>
           </View>
           <View style={kitchenStyles.row}>
@@ -324,15 +373,28 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           {(order.items || []).map((item, index) => (
             <View key={index}>
               <View style={kitchenStyles.productRow}>
-                <Text style={kitchenStyles.quantity}>{item.quantity}x</Text>
+                <Text style={kitchenStyles.quantity}>{item.quantity}X</Text>
                 <Text style={kitchenStyles.productName}>{item.menuItem.name.toUpperCase()}</Text>
               </View>
               {item.notes?.trim() && (
-                <Text style={kitchenStyles.notes}>- {item.notes}</Text>
+                <Text style={kitchenStyles.notes}>NOTA: {item.notes.toUpperCase()}</Text>
               )}
             </View>
           ))}
         </View>
+
+        {/* NOTAS DEL PEDIDO */}
+        {order.notes && order.notes.trim() !== '' && (
+          <>
+            <View style={kitchenStyles.divider} />
+            <View style={kitchenStyles.row}>
+              <Text style={kitchenStyles.label}>NOTAS DEL PEDIDO:</Text>
+            </View>
+            {order.notes.toUpperCase().trim().split('\n').map((line, i) => (
+              <Text key={i} style={kitchenStyles.notes}>- {line.trim()}</Text>
+            ))}
+          </>
+        )}
 
         <View style={kitchenStyles.divider} />
 
@@ -343,7 +405,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     </Document>
   );
 
-  // Componente del documento PDF normal - SIN IGV
+  // Componente del documento PDF normal
   const NormalTicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
@@ -367,11 +429,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           </View>
           <View style={normalStyles.row}>
             <Text style={normalStyles.bold}>FECHA:</Text>
-            <Text>{order.createdAt.toLocaleDateString()}</Text>
+            <Text>{formatDate(order.createdAt)}</Text>
           </View>
           <View style={normalStyles.row}>
             <Text style={normalStyles.bold}>HORA:</Text>
-            <Text>{order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</Text>
+            <Text>{formatTime(order.createdAt)}</Text>
           </View>
           <View style={normalStyles.row}>
             <Text style={normalStyles.bold}>PAGO:</Text>
@@ -393,7 +455,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           {order.address && (
             <View style={normalStyles.row}>
               <Text style={normalStyles.bold}>DIRECCIÓN:</Text>
-              <Text style={{ maxWidth: '60%', flexWrap: 'wrap' }}>{order.address}</Text>
+              <Text style={{ maxWidth: '60%', flexWrap: 'wrap', fontWeight: 'bold' }}>{order.address.toUpperCase()}</Text>
             </View>
           )}
           {order.tableNumber && (
@@ -408,17 +470,17 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 
         <View style={normalStyles.table}>
           <View style={normalStyles.tableHeader}>
-            <Text style={normalStyles.colQuantity}>Cant</Text>
-            <Text style={normalStyles.colDescription}>Descripción</Text>
-            <Text style={normalStyles.colPrice}>Precio</Text>
+            <Text style={normalStyles.colQuantity}>CANT</Text>
+            <Text style={normalStyles.colDescription}>DESCRIPCIÓN</Text>
+            <Text style={normalStyles.colPrice}>PRECIO</Text>
           </View>
 
           {(order.items || []).map((item, index) => (
             <View key={index}>
               <View style={normalStyles.tableRow}>
-                <Text style={[normalStyles.colQuantity, normalStyles.quantity]}>{item.quantity}x</Text>
+                <Text style={[normalStyles.colQuantity, normalStyles.quantity]}>{item.quantity}X</Text>
                 <View style={normalStyles.colDescription}>
-                  <Text style={normalStyles.productName}>{item.menuItem.name}</Text>
+                  <Text style={normalStyles.productName}>{item.menuItem.name.toUpperCase()}</Text>
                 </View>
                 <Text style={normalStyles.colPrice}>
                   S/ {(item.menuItem.price * item.quantity).toFixed(2)}
@@ -428,7 +490,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
                 <View style={normalStyles.tableRow}>
                   <Text style={normalStyles.colQuantity}></Text>
                   <View style={normalStyles.colDescription}>
-                    <Text style={normalStyles.notes}>Nota: {item.notes}</Text>
+                    <Text style={normalStyles.notes}>NOTA: {item.notes.toUpperCase()}</Text>
                   </View>
                   <Text style={normalStyles.colPrice}></Text>
                 </View>
@@ -437,11 +499,26 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
           ))}
         </View>
 
-        {/* SOLO TOTAL - SIN IGV */}
-        <View style={[normalStyles.row, normalStyles.bold, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#000000', paddingTop: 4 }]}>
+        <View style={normalStyles.divider} />
+
+        {/* TOTAL */}
+        <View style={[normalStyles.row, normalStyles.bold, { marginTop: 4, borderTopWidth: 1, borderTopColor: '#000000', paddingTop: 4 }]}>
           <Text style={normalStyles.bold}>TOTAL:</Text>
           <Text style={normalStyles.bold}>S/ {order.total.toFixed(2)}</Text>
         </View>
+
+        {/* NOTAS DEL PEDIDO */}
+        {order.notes && order.notes.trim() !== '' && (
+          <>
+            <View style={normalStyles.divider} />
+            <View style={normalStyles.row}>
+              <Text style={normalStyles.bold}>NOTAS DEL PEDIDO:</Text>
+            </View>
+            {order.notes.toUpperCase().trim().split('\n').map((line, i) => (
+              <Text key={i} style={normalStyles.notes}>- {line.trim()}</Text>
+            ))}
+          </>
+        )}
 
         <View style={normalStyles.divider} />
 
@@ -462,7 +539,85 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     </Document>
   );
 
-  // Función para descargar PDF
+  // Función para generar nombre de archivo
+  const generateFileName = () => {
+    const orderNumber = isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber();
+    const customerName = order.customerName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    const date = order.createdAt.toISOString().split('T')[0];
+    const type = isPhoneOrder ? 'cocina' : 'cliente';
+    
+    return `ticket-${orderNumber}-${customerName}-${date}-${type}.pdf`;
+  };
+
+  // Handler para imprimir (USA PDF EN VEZ DE HTML)
+  const handlePrint = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      // Mostrar indicador de carga
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      toast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando ticket...</span></div>';
+      document.body.appendChild(toast);
+
+      // Generar el PDF
+      const blob = await pdf(
+        isPhoneOrder ? <KitchenTicketDocument /> : <NormalTicketDocument />
+      ).toBlob();
+      
+      // Crear URL del blob
+      const url = URL.createObjectURL(blob);
+      
+      // Quitar toast de carga
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+      
+      // Crear iframe oculto con el PDF para imprimir
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.src = url;
+      
+      document.body.appendChild(iframe);
+      
+      // Cuando el iframe cargue, imprimir
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(url);
+          }, 1000);
+        }, 500);
+      };
+      
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      
+      // Mostrar error
+      const errorToast = document.createElement('div');
+      errorToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      errorToast.innerHTML = 'Error al generar ticket';
+      document.body.appendChild(errorToast);
+      setTimeout(() => {
+        if (document.body.contains(errorToast)) {
+          document.body.removeChild(errorToast);
+        }
+      }, 3000);
+    }
+  };
+
+  // Handler para descargar PDF
   const handleDownloadPDF = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -478,10 +633,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       
-      const fileName = generateFileName();
-      
       link.href = url;
-      link.download = fileName;
+      link.download = generateFileName();
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -491,420 +644,52 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     }
   };
 
-  // Función para imprimir
-  const handlePrint = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    
-    document.body.appendChild(iframe);
-
-    const ticketContent = generateTicketContent();
-    
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Ticket ${isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}</title>
-            <style>
-              @media print {
-                @page {
-                  size: 80mm auto;
-                  margin: 0;
-                  padding: 0;
-                }
-                body {
-                  width: 80mm !important;
-                  margin: 0 auto !important;
-                  padding: 0 !important;
-                  font-family: "Courier New", monospace !important;
-                  font-weight: normal !important;
-                }
-                * {
-                  font-family: "Courier New", monospace !important;
-                }
-              }
-              body {
-                font-family: "Courier New", monospace;
-                font-weight: normal;
-                font-size: 12px;
-                line-height: 1.3;
-                width: 80mm;
-                margin: 0 auto;
-                padding: 8px;
-                background: white;
-                color: black;
-              }
-              .ticket, .ticket *, div, span, td, th {
-                font-family: "Courier New", monospace !important;
-              }
-              .center {
-                text-align: center;
-              }
-              .bold {
-                font-weight: bold !important;
-              }
-              .normal {
-                font-weight: normal !important;
-              }
-              .uppercase {
-                text-transform: uppercase;
-              }
-              .divider {
-                border-top: 1px solid #000;
-                margin: 6px 0;
-              }
-              .info-row {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 3px;
-                font-size: 11px;
-              }
-              .label {
-                font-weight: bold !important;
-              }
-              .value {
-                font-weight: normal !important;
-              }
-              .customer-name-bold {
-                font-weight: bold !important;
-                max-width: 60%;
-                word-wrap: break-word;
-                font-size: 12px;
-              }
-              .header-title {
-                font-weight: bold !important;
-                font-size: 13px;
-              }
-              .header-subtitle {
-                font-weight: normal !important;
-                font-size: 11px;
-              }
-              .notes {
-                font-style: italic;
-                font-size: 10px;
-                margin-left: 15%;
-                margin-bottom: 3px;
-                display: block;
-                width: 85%;
-                font-weight: normal !important;
-              }
-              .table-notes {
-                font-style: italic;
-                font-size: 10px;
-                margin-left: 0;
-                margin-top: 2px;
-                display: block;
-                font-weight: normal !important;
-              }
-              .products-header {
-                text-align: center;
-                font-weight: bold !important;
-                margin: 6px 0;
-                text-transform: uppercase;
-                border-bottom: 1px solid #000;
-                padding-bottom: 3px;
-                font-size: 12px;
-              }
-              .product-row {
-                display: flex;
-                margin-bottom: 4px;
-              }
-              .quantity {
-                width: 15%;
-                font-weight: bold !important;
-                font-size: 12px;
-              }
-              .product-name {
-                width: 85%;
-                font-weight: bold !important;
-                text-transform: uppercase;
-                font-size: 12px;
-                line-height: 1.4;
-              }
-              .asterisk-line {
-                text-align: center;
-                font-size: 10px;
-                letter-spacing: 1px;
-                margin: 3px 0;
-                font-weight: normal !important;
-              }
-              table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 5px 0;
-                font-size: 12px;
-              }
-              th, td {
-                padding: 2px 0;
-                text-align: left;
-                vertical-align: top;
-              }
-              th {
-                border-bottom: 1px solid #000;
-                font-weight: bold !important;
-                font-size: 11px;
-              }
-              td {
-                font-size: 12px;
-              }
-              .notes-row td {
-                padding-top: 0;
-                padding-bottom: 3px;
-              }
-            </style>
-          </head>
-          <body>
-            ${ticketContent}
-          </body>
-        </html>
-      `);
-      iframeDoc.close();
-
-      iframe.onload = () => {
-        setTimeout(() => {
-          iframe.contentWindow?.print();
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-          }, 1000);
-        }, 500);
-      };
-    }
-  };
-
-  // Generar contenido HTML para impresión - SIN IGV
-  const generateTicketContent = () => {
-    if (isPhoneOrder) {
-      return `
-        <div class="ticket">
-          <div class="center">
-            <div class="header-title uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
-            <div class="header-title">** COCINA **</div>
-            <div class="divider"></div>
-          </div>
-          
-          <div class="info-row">
-            <span class="label">CLIENTE:</span>
-            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">AREA:</span>
-            <span class="value">COCINA</span>
-          </div>
-          <div class="info-row">
-            <span class="label">COMANDA:</span>
-            <span class="value">#${getDisplayKitchenNumber()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">FECHA:</span>
-            <span class="value">${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">ATENDIDO POR:</span>
-            <span class="value">${getCurrentUserName().toUpperCase()}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="products-header">DESCRIPCION</div>
-          
-          <div class="divider"></div>
-          
-          ${(order.items || []).map(item => `
-            <div class="product-row">
-              <div class="quantity">${item.quantity}x</div>
-              <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
-            </div>
-            ${item.notes?.trim() ? `<div class="notes">- ${item.notes}</div>` : ''}
-          `).join('')}
-          
-          <div class="divider"></div>
-          
-          <div class="center">
-            <div class="asterisk-line">********************************</div>
-          </div>
-        </div>
-      `;
-    } else {
-      return `
-        <div class="ticket">
-          <div class="center">
-            <div class="header-title" style="font-size: 14px;">MARY'S RESTAURANT</div>
-            <div class="header-subtitle">INVERSIONES AROMO S.A.C.</div>
-            <div class="header-subtitle">RUC: 20505262086</div>
-            <div class="header-subtitle">AV. ISABEL LA CATOLICA 1254</div>
-            <div class="header-subtitle">Tel: 941 778 599</div>
-            <div class="divider"></div>
-          </div>
-          
-          <div class="info-row">
-            <span class="label">ORDEN:</span>
-            <span class="value">${getDisplayOrderNumber()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">TIPO:</span>
-            <span class="value">${getSourceText(order.source.type)}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">FECHA:</span>
-            <span class="value">${order.createdAt.toLocaleDateString()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">HORA:</span>
-            <span class="value">${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">PAGO:</span>
-            <span class="value">${getPaymentText()}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="info-row">
-            <span class="label">CLIENTE:</span>
-            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">TELÉFONO:</span>
-            <span class="value">${order.phone}</span>
-          </div>
-          ${order.address ? `
-          <div class="info-row">
-            <span class="label">DIRECCIÓN:</span>
-            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address}</span>
-          </div>
-          ` : ''}
-          ${order.tableNumber ? `
-          <div class="info-row">
-            <span class="label">MESA:</span>
-            <span class="value">${order.tableNumber}</span>
-          </div>
-          ` : ''}
-          
-          <div class="divider"></div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>Cant</th>
-                <th>Descripción</th>
-                <th style="text-align: right;">Precio</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(order.items || []).map(item => `
-                <tr>
-                  <td class="quantity" style="vertical-align: top; font-size: 12px;">${item.quantity}x</td>
-                  <td style="vertical-align: top; font-size: 12px;">
-                    <div class="product-name bold" style="font-size: 12px;">${item.menuItem.name}</div>
-                    ${item.notes?.trim() ? `<div class="table-notes" style="font-size: 10px;">Nota: ${item.notes}</div>` : ''}
-                  </td>
-                  <td style="text-align: right; vertical-align: top; font-size: 12px;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <div class="divider"></div>
-          
-          <!-- SOLO TOTAL - SIN IGV -->
-          <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
-            <span class="label">TOTAL:</span>
-            <span class="label">S/ ${order.total.toFixed(2)}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="center">
-            <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
-            <div class="normal">*** ${getSourceText(order.source.type)} ***</div>
-            <div class="normal" style="margin-top: 10px; font-size: 10px;">
-              ${new Date().toLocaleString('es-ES', { 
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-  };
-
-  // Funciones auxiliares
-  const getSourceText = (sourceType: Order['source']['type']) => {
-    const sourceMap: Record<Order['source']['type'], string> = {
-      'phone': 'COCINA',
-      'walk-in': 'LOCAL', 
-      'delivery': 'DELIVERY',
-      'fullDay': 'FULLDAY',
-      'oep': 'OEP',
-      'loncheritas': 'LONCHERITAS',
-    };
-    return sourceMap[sourceType] || sourceType;
-  };
-
-  const generateFileName = () => {
-    const orderNumber = isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber();
-    const customerName = order.customerName
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    
-    const date = order.createdAt.toISOString().split('T')[0];
-    const type = isPhoneOrder ? 'cocina' : 'cliente';
-    
-    return `comanda-${orderNumber}-${customerName}-${date}-${type}.pdf`;
-  };
-
   return (
     <div 
-      style={{ display: 'flex', gap: '10px', margin: '10px 0' }}
+      style={{ display: 'flex', gap: '8px', margin: '5px 0' }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       <button
         onClick={handlePrint}
-        data-order-id={order.id}
         className="print-button"
         style={{
-          padding: '10px 20px',
+          padding: '8px 16px',
           backgroundColor: isPhoneOrder ? '#10b981' : '#007bff',
           color: 'white',
           border: 'none',
           borderRadius: '4px',
           cursor: 'pointer',
-          fontWeight: 'bold'
+          fontSize: '13px',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
         }}
       >
-        {isPhoneOrder ? '📋 Ticket Cocina' : '🧾 Ticket Cliente'} #{isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}
+        <span>🖨️</span>
+        {isPhoneOrder ? 'Ticket Cocina' : 'Ticket Cliente'}
       </button>
 
       <button
         onClick={handleDownloadPDF}
         className="download-pdf-button"
         style={{
-          padding: '10px 20px',
+          padding: '8px 16px',
           backgroundColor: '#28a745',
           color: 'white',
           border: 'none',
           borderRadius: '4px',
           cursor: 'pointer',
-          fontWeight: 'bold'
+          fontSize: '13px',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
         }}
       >
-        Descargar PDF
+        <span>📥</span>
+        PDF
       </button>
     </div>
   );
