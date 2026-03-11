@@ -1,4 +1,3 @@
-// ============================================
 // ARCHIVO: src/hooks/useStudents.ts
 // ============================================
 
@@ -38,7 +37,7 @@ export const useStudents = () => {
       const { data, error } = await supabase
         .from('students')
         .select('*')
-        .or(`full_name.ilike.%${searchTerm}%,guardian_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+        .ilike('full_name', `%${searchTerm}%`)
         .order('full_name', { ascending: true })
         .limit(10);
 
