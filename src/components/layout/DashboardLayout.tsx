@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Bell, Settings, User, ChefHat, Sparkles, Menu, X, LogOut } from 'lucide-react';
+import { Bell, Settings, User, Sparkles, Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface DashboardLayoutProps {
@@ -34,8 +35,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
               <div className="flex items-center space-x-3">
                 <div className="relative">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-red-500 to-amber-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-md">
-                    <ChefHat className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden shadow-md flex items-center justify-center">
+                    <img
+                      src="/logo_marys.png"
+                      alt="Mary's Restaurant"
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                   <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
                     <Sparkles className="h-1 w-1 sm:h-2 sm:w-2 text-white" />
@@ -155,3 +160,4 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 };
 
 export default DashboardLayout;
+

@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { ChefHat, Coffee, Loader, Eye, EyeOff } from 'lucide-react';
+import { Coffee, Loader, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 const Login: React.FC = () => {
@@ -43,25 +44,13 @@ const Login: React.FC = () => {
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div 
-            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl shadow-lg mb-4"
-            style={{
-              background: 'linear-gradient(135deg, #dc2626 0%, #d97706 100%)'
-            }}
-          >
-            <ChefHat className="h-10 w-10 text-white" />
+          <div className="flex justify-center mb-4">
+            <img
+              src="/logo_marys.png"
+              alt="Mary's Restaurant"
+              className="w-36 h-36 object-contain drop-shadow-xl"
+            />
           </div>
-          <h1 
-            className="text-3xl font-black mb-2"
-            style={{
-              background: 'linear-gradient(135deg, #dc2626 0%, #d97706 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}
-          >
-            MARY'S RESTAURANT
-          </h1>
           <p className="text-gray-600">Sistema de Gestión - Restaurante</p>
         </div>
 
@@ -162,3 +151,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+
