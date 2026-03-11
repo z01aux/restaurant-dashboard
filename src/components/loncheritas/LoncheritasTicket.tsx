@@ -246,10 +246,12 @@ const LoncheritasTicket: React.FC<LoncheritasTicketProps> = ({ order, onMouseEnt
             <style>
               @media print {
                 @page { size: 80mm auto; margin: 0; }
-                body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; font-family: "Courier New", monospace !important; }
-                * { font-family: "Courier New", monospace !important; }
+                body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; font-family: "Courier New", monospace !important; box-sizing: border-box !important; }
+                * { font-family: "Courier New", monospace !important; box-sizing: border-box !important; }
               }
-              body { font-family: "Courier New", monospace; font-size: 12px; width: 80mm; margin: 0 auto; padding: 8px; }
+              body { font-family: "Courier New", monospace; font-size: 12px; width: 80mm; margin: 0 auto; padding: 0; box-sizing: border-box; }
+              * { box-sizing: border-box; }
+              .ticket { padding: 8px; width: 100%; }
               .center { text-align: center; }
               .bold { font-weight: bold !important; }
               .normal { font-weight: bold !important; }
@@ -338,3 +340,5 @@ const LoncheritasTicket: React.FC<LoncheritasTicketProps> = ({ order, onMouseEnt
 };
 
 export default LoncheritasTicket;
+
+

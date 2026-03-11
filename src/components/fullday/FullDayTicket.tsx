@@ -268,10 +268,12 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
             <style>
               @media print {
                 @page { size: 80mm auto; margin: 0; padding: 0; }
-                body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; font-family: "Courier New", monospace !important; font-weight: bold !important; }
-                * { font-family: "Courier New", monospace !important; }
+                body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; font-family: "Courier New", monospace !important; font-weight: bold !important; box-sizing: border-box !important; }
+                * { font-family: "Courier New", monospace !important; box-sizing: border-box !important; }
               }
-              body { font-family: "Courier New", monospace; font-weight: bold; font-size: 12px; line-height: 1.3; width: 80mm; margin: 0 auto; padding: 8px; background: white; color: black; }
+              body { font-family: "Courier New", monospace; font-weight: bold; font-size: 12px; line-height: 1.3; width: 80mm; margin: 0 auto; padding: 0; background: white; color: black; box-sizing: border-box; }
+              * { box-sizing: border-box; }
+              .ticket { padding: 8px; width: 100%; }
               .ticket, .ticket *, div, span, td, th { font-family: "Courier New", monospace !important; }
               .center { text-align: center; }
               .bold { font-weight: bold !important; }
@@ -372,3 +374,5 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
 };
 
 export default FullDayTicket;
+
+
