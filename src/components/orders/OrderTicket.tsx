@@ -1,14 +1,13 @@
 // ============================================
-// ARCHIVO: src/components/orders/OrderTicket.tsx (VERSIÓN FINAL)
-// AHORA EL PDF TIENE EL MISMO DISEÑO QUE LA IMPRESIÓN HTML
-// Y EN RECEPCIÓN SE IMPRIME DIRECTAMENTE EL PDF
+// ARCHIVO: src/components/orders/OrderTicket.tsx (MODIFICADO)
+// AHORA USA PDF PARA IMPRIMIR EN VEZ DE HTML
 // ============================================
 
 import React from 'react';
 import { Order } from '../../types';
 import { pdf, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 
-// Registrar fuentes para que coincidan con el HTML
+// Registrar fuente Courier New para que coincida con el diseño
 Font.register({
   family: 'Courier New',
   fonts: [
@@ -16,9 +15,6 @@ Font.register({
     { src: 'https://fonts.gstatic.com/s/courierprime/v9/u-460q2lgwslOqpF_6gQ8kELN35s3a9Rj9A.ttf', fontWeight: 700 },
   ],
 });
-
-// Fuente de respaldo
-Font.registerHyphenationCallback(word => [word]);
 
 interface OrderTicketProps {
   order: Order;
@@ -82,13 +78,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 
   // CONSTANTES PARA EL ANCHO DE IMPRESIÓN
   const TICKET_WIDTH = 80;
-  const PAGE_WIDTH = TICKET_WIDTH * 2.83465; // 80mm a puntos (72 dpi)
+  const PAGE_WIDTH = TICKET_WIDTH * 2.83465;
   
   // TAMAÑOS DE FUENTE
   const FONT_SIZE_SMALL = 8;
   const FONT_SIZE_NORMAL = 9;
   const FONT_SIZE_LARGE = 10;
-  const FONT_SIZE_XLARGE = 11;
+  const FONT_SIZE_XLARGE = 12; // Aumentado para el nombre del cliente/alumno
   const FONT_SIZE_PRODUCT = 10;
   
   const PADDING = 8;
@@ -149,7 +145,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     },
     valueBold: {
       fontWeight: 'bold',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_LARGE, // Más grande para el nombre del cliente
       maxWidth: '60%',
       flexWrap: 'wrap',
     },
@@ -302,7 +298,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
     },
     valueBold: {
       fontWeight: 'bold',
-      fontSize: FONT_SIZE_SMALL,
+      fontSize: FONT_SIZE_LARGE, // Más grande para el nombre del cliente
       maxWidth: '60%',
       flexWrap: 'wrap',
     },
@@ -312,17 +308,11 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   // DOCUMENTO PDF PARA COCINA
   // ============================================
   const KitchenTicketDocument = () => (
-    <Document
-      author="MARY'S RESTAURANT"
-      creator="Sistema de Gestión"
-      producer="React PDF"
-      subject="Ticket de Cocina"
-      title={`Cocina-${getDisplayKitchenNumber()}`}
-    >
-      <Page size={[PAGE_WIDTH]} style={kitchenStyles.page} wrap={false}>
+    <Document>
+      <Page size={[PAGE_WIDTH]} style={kitchenStyles.page}>
         {/* HEADER */}
         <View style={kitchenStyles.header}>
-          <Text style={kitchenStyles.restaurantName}>{order.customerName.toUpperCase()}</Text>
+          <Text style={kitchenStyles.restaurantName}>MARY'S RESTAURANT</Text>
           <Text style={kitchenStyles.area}>** COCINA **</Text>
         </View>
 
@@ -354,7 +344,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 
         <View style={kitchenStyles.divider} />
 
-        {/* PRODUCTOS */}
         <Text style={kitchenStyles.productsHeader}>DESCRIPCION</Text>
         
         <View style={kitchenStyles.divider} />
@@ -388,7 +377,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 
         <View style={kitchenStyles.divider} />
 
-        {/* FOOTER */}
         <View style={kitchenStyles.footer}>
           <Text style={kitchenStyles.asteriskLine}>********************************</Text>
         </View>
@@ -400,14 +388,8 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   // DOCUMENTO PDF NORMAL
   // ============================================
   const NormalTicketDocument = () => (
-    <Document
-      author="MARY'S RESTAURANT"
-      creator="Sistema de Gestión"
-      producer="React PDF"
-      subject="Ticket de Cliente"
-      title={`Ticket-${getDisplayOrderNumber()}`}
-    >
-      <Page size={[PAGE_WIDTH]} style={normalStyles.page} wrap={false}>
+    <Document>
+      <Page size={[PAGE_WIDTH]} style={normalStyles.page}>
         {/* HEADER */}
         <View style={normalStyles.header}>
           <Text style={normalStyles.title}>MARY'S RESTAURANT</Text>
@@ -525,7 +507,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
 
         <View style={normalStyles.divider} />
 
-        {/* FOOTER */}
         <View style={normalStyles.footer}>
           <Text style={normalStyles.bold}>¡GRACIAS POR SU PEDIDO!</Text>
           <Text>*** {getSourceText(order.source.type)} ***</Text>
@@ -566,7 +547,7 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       // Mostrar indicador de carga
       const toast = document.createElement('div');
       toast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
-      toast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando PDF para impresión...</span></div>';
+      toast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando ticket...</span></div>';
       document.body.appendChild(toast);
 
       // Generar el PDF
@@ -577,7 +558,12 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       // Crear URL del blob
       const url = URL.createObjectURL(blob);
       
-      // Crear iframe oculto con el PDF
+      // Quitar toast de carga
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+      
+      // Crear iframe oculto con el PDF para imprimir
       const iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
       iframe.style.right = '0';
@@ -588,11 +574,6 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       iframe.src = url;
       
       document.body.appendChild(iframe);
-      
-      // Quitar toast de carga
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast);
-      }
       
       // Cuando el iframe cargue, imprimir
       iframe.onload = () => {
@@ -611,280 +592,13 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
       // Mostrar error
       const errorToast = document.createElement('div');
       errorToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
-      errorToast.innerHTML = 'Error al generar PDF. Usando impresión HTML.';
+      errorToast.innerHTML = 'Error al generar ticket';
       document.body.appendChild(errorToast);
       setTimeout(() => {
         if (document.body.contains(errorToast)) {
           document.body.removeChild(errorToast);
         }
       }, 3000);
-      
-      // Fallback: usar el método HTML original
-      fallbackPrintHTML();
-    }
-  };
-
-  // Función de fallback (mantener el método HTML original)
-  const fallbackPrintHTML = () => {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    
-    document.body.appendChild(iframe);
-
-    const ticketContent = generateTicketContent();
-    
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Ticket ${isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}</title>
-            <style>
-              @media print {
-                @page {
-                  size: 80mm auto;
-                  margin: 0;
-                  padding: 0;
-                }
-                body {
-                  width: 80mm !important;
-                  margin: 0 auto !important;
-                  padding: 0 !important;
-                  font-family: "Courier New", monospace !important;
-                  font-weight: normal !important;
-                }
-                * {
-                  font-family: "Courier New", monospace !important;
-                }
-              }
-              body {
-                font-family: "Courier New", monospace;
-                font-weight: normal;
-                font-size: 12px;
-                line-height: 1.3;
-                width: 80mm;
-                margin: 0 auto;
-                padding: 8px;
-                background: white;
-                color: black;
-              }
-              .center { text-align: center; }
-              .bold { font-weight: bold !important; }
-              .normal { font-weight: normal !important; }
-              .divider { border-top: 1px solid #000; margin: 6px 0; }
-              .info-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; }
-              .label { font-weight: bold !important; }
-              .value { font-weight: normal !important; }
-              .customer-name-bold { font-weight: bold !important; max-width: 60%; word-wrap: break-word; font-size: 12px; }
-              .header-title { font-weight: bold !important; font-size: 13px; }
-              .header-subtitle { font-weight: normal !important; font-size: 11px; }
-              .notes { font-size: 10px; margin-left: 15%; margin-bottom: 3px; display: block; width: 85%; font-weight: normal !important; }
-              .table-notes { font-size: 10px; margin-left: 0; margin-top: 2px; display: block; font-weight: normal !important; }
-              .products-header { text-align: center; font-weight: bold !important; margin: 6px 0; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 3px; font-size: 12px; }
-              .product-row { display: flex; margin-bottom: 4px; }
-              .quantity { width: 15%; font-weight: bold !important; font-size: 12px; }
-              .product-name { width: 85%; font-weight: bold !important; text-transform: uppercase; font-size: 12px; line-height: 1.4; }
-              table { width: 100%; border-collapse: collapse; margin: 5px 0; font-size: 12px; }
-              th, td { padding: 2px 0; text-align: left; vertical-align: top; }
-              th { border-bottom: 1px solid #000; font-weight: bold !important; font-size: 11px; }
-            </style>
-          </head>
-          <body>
-            ${ticketContent}
-          </body>
-        </html>
-      `);
-      iframeDoc.close();
-
-      setTimeout(() => {
-        iframe.contentWindow?.print();
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-      }, 500);
-    }
-  };
-
-  // Generar contenido HTML para impresión (fallback)
-  const generateTicketContent = () => {
-    if (isPhoneOrder) {
-      return `
-        <div class="ticket">
-          <div class="center">
-            <div class="header-title uppercase" style="font-size: 16px; margin-bottom: 5px;">${order.customerName.toUpperCase()}</div>
-            <div class="header-title">** COCINA **</div>
-            <div class="divider"></div>
-          </div>
-          
-          <div class="info-row">
-            <span class="label">CLIENTE:</span>
-            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">AREA:</span>
-            <span class="value">COCINA</span>
-          </div>
-          <div class="info-row">
-            <span class="label">COMANDA:</span>
-            <span class="value">#${getDisplayKitchenNumber()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">FECHA:</span>
-            <span class="value">${order.createdAt.toLocaleDateString('es-ES')} - ${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">ATENDIDO POR:</span>
-            <span class="value">${getCurrentUserName().toUpperCase()}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="products-header">DESCRIPCION</div>
-          
-          <div class="divider"></div>
-          
-          ${(order.items || []).map(item => `
-            <div class="product-row">
-              <div class="quantity">${item.quantity}X</div>
-              <div class="product-name bold">${item.menuItem.name.toUpperCase()}</div>
-            </div>
-            ${item.notes?.trim() ? `<div class="notes">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
-          `).join('')}
-          
-          ${order.notes && order.notes.trim() !== '' ? `
-            <div class="divider"></div>
-            <div class="info-row">
-              <span class="label">NOTAS DEL PEDIDO:</span>
-            </div>
-            ${order.notes.toUpperCase().trim().split('\n').map(line => `<div class="notes">- ${line.trim()}</div>`).join('')}
-          ` : ''}
-          
-          <div class="divider"></div>
-          
-          <div class="center">
-            <div class="asterisk-line">********************************</div>
-          </div>
-        </div>
-      `;
-    } else {
-      return `
-        <div class="ticket">
-          <div class="center">
-            <div class="header-title" style="font-size: 14px;">MARY'S RESTAURANT</div>
-            <div class="header-subtitle">INVERSIONES AROMO S.A.C.</div>
-            <div class="header-subtitle">RUC: 20505262086</div>
-            <div class="header-subtitle">AV. ISABEL LA CATOLICA 1254</div>
-            <div class="header-subtitle">Tel: 941 778 599</div>
-            <div class="divider"></div>
-          </div>
-          
-          <div class="info-row">
-            <span class="label">ORDEN:</span>
-            <span class="value">${getDisplayOrderNumber()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">TIPO:</span>
-            <span class="value">${getSourceText(order.source.type)}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">FECHA:</span>
-            <span class="value">${order.createdAt.toLocaleDateString()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">HORA:</span>
-            <span class="value">${order.createdAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">PAGO:</span>
-            <span class="value">${getPaymentText()}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="info-row">
-            <span class="label">CLIENTE:</span>
-            <span class="customer-name-bold">${order.customerName.toUpperCase()}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">TELÉFONO:</span>
-            <span class="value">${order.phone}</span>
-          </div>
-          ${order.address ? `
-          <div class="info-row">
-            <span class="label">DIRECCIÓN:</span>
-            <span class="value" style="max-width: 60%; word-wrap: break-word;">${order.address.toUpperCase()}</span>
-          </div>
-          ` : ''}
-          ${order.tableNumber ? `
-          <div class="info-row">
-            <span class="label">MESA:</span>
-            <span class="value">${order.tableNumber}</span>
-          </div>
-          ` : ''}
-          
-          <div class="divider"></div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>CANT</th>
-                <th>DESCRIPCIÓN</th>
-                <th style="text-align: right;">PRECIO</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(order.items || []).map(item => `
-                <tr>
-                  <td class="quantity" style="vertical-align: top; font-size: 12px;">${item.quantity}X</td>
-                  <td style="vertical-align: top; font-size: 12px;">
-                    <div class="product-name bold" style="font-size: 12px;">${item.menuItem.name.toUpperCase()}</div>
-                    ${item.notes?.trim() ? `<div class="table-notes" style="font-size: 10px;">NOTA: ${item.notes.toUpperCase()}</div>` : ''}
-                  </td>
-                  <td style="text-align: right; vertical-align: top; font-size: 12px;">S/ ${(item.menuItem.price * item.quantity).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <div class="divider"></div>
-          
-          <div class="info-row" style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
-            <span class="label">TOTAL:</span>
-            <span class="label">S/ ${order.total.toFixed(2)}</span>
-          </div>
-          
-          ${order.notes && order.notes.trim() !== '' ? `
-            <div class="divider"></div>
-            <div class="info-row">
-              <span class="label">NOTAS DEL PEDIDO:</span>
-            </div>
-            ${order.notes.toUpperCase().trim().split('\n').map(line => `<div class="notes" style="margin-left: 0;">- ${line.trim()}</div>`).join('')}
-          ` : ''}
-          
-          <div class="divider"></div>
-          
-          <div class="center">
-            <div class="header-title">¡GRACIAS POR SU PEDIDO!</div>
-            <div class="normal">*** ${getSourceText(order.source.type)} ***</div>
-            <div class="normal" style="margin-top: 10px; font-size: 10px;">
-              ${new Date().toLocaleString('es-ES', { 
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-          </div>
-        </div>
-      `;
     }
   };
 
