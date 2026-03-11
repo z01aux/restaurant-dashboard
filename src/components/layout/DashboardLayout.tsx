@@ -35,13 +35,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
               <div className="flex items-center space-x-3">
                 <div className="relative">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden shadow-md flex items-center justify-center">
-                    <img
-                      src="/logo_marys.png"
-                      alt="Mary's Restaurant"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
+                  <img
+                    src="/logo_marys.png"
+                    alt="Mary's Restaurant"
+                    className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+                  />
                   <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
                     <Sparkles className="h-1 w-1 sm:h-2 sm:w-2 text-white" />
                   </div>

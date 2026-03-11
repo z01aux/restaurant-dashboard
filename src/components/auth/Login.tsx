@@ -44,13 +44,11 @@ const Login: React.FC = () => {
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <img
-              src="/logo_marys.png"
-              alt="Mary's Restaurant"
-              className="w-36 h-36 object-contain drop-shadow-xl"
-            />
-          </div>
+          <img
+            src="/logo_marys.png"
+            alt="Mary's Restaurant"
+            className="w-40 h-40 mx-auto mb-4 object-contain"
+          />
           <p className="text-gray-600">Sistema de Gestión - Restaurante</p>
         </div>
 
