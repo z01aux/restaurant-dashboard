@@ -1,5 +1,6 @@
 // ============================================
-// ARCHIVO: src/types/index.ts (ACTUALIZADO CON OEP + LONCHERITAS)
+// ARCHIVO: src/types/index.ts
+// ACTUALIZADO: Soporte para pago MIXTO
 // ============================================
 
 export interface MenuItem {
@@ -24,6 +25,13 @@ export interface OrderSource {
   deliveryAddress?: string;
 }
 
+// ✅ NUEVO: Detalle de pago mixto
+export interface MixedPaymentDetail {
+  efectivo: number;
+  yape_plin: number;
+  tarjeta: number;
+}
+
 export interface Order {
   id: string;
   orderNumber?: string;
@@ -38,7 +46,10 @@ export interface Order {
   source: OrderSource;
   notes?: string;
   tableNumber?: string;
-  paymentMethod?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
+  // ✅ ACTUALIZADO: Añadido 'MIXTO'
+  paymentMethod?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO';
+  // ✅ NUEVO: Detalle cuando es MIXTO
+  mixedPaymentDetail?: MixedPaymentDetail;
   updatedAt?: Date;
   studentId?: string;
   studentInfo?: {
@@ -64,7 +75,12 @@ export interface DatabaseOrder {
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   total: number;
   notes?: string;
-  payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
+  // ✅ ACTUALIZADO: Añadido 'MIXTO'
+  payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO';
+  // ✅ NUEVO: Columnas de desglose mixto en BD
+  mixed_efectivo?: number;
+  mixed_yape_plin?: number;
+  mixed_tarjeta?: number;
   created_at: string;
   updated_at: string;
   student_id?: string;

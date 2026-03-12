@@ -1,9 +1,7 @@
 // ============================================
 // ARCHIVO: src/types/fullday.ts
-// Tipos para pedidos FullDay
+// ACTUALIZADO: Soporte para pago MIXTO
 // ============================================
-
-// Eliminada importación no usada de Student
 
 export interface FullDayMenuItem {
   id: string;
@@ -21,7 +19,9 @@ export interface FullDayOrderItem {
 }
 
 export type FullDayOrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
-export type FullDayPaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null;
+
+// ✅ ACTUALIZADO: Añadido 'MIXTO'
+export type FullDayPaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO' | null;
 
 export interface FullDayOrder {
   id: string;
@@ -36,6 +36,10 @@ export interface FullDayOrder {
   status: FullDayOrderStatus;
   total: number;
   payment_method: FullDayPaymentMethod;
+  // ✅ NUEVO: Desglose de pago mixto
+  mixed_efectivo?: number;
+  mixed_yape_plin?: number;
+  mixed_tarjeta?: number;
   notes: string | null;
   created_at: Date;
   updated_at: Date;
@@ -50,10 +54,14 @@ export interface FullDayDatabaseOrder {
   section: string;
   guardian_name: string;
   phone: string | null;
-  items: any; // JSONB en la BD
+  items: any;
   status: string;
   total: number;
   payment_method: string | null;
+  // ✅ NUEVO
+  mixed_efectivo?: number;
+  mixed_yape_plin?: number;
+  mixed_tarjeta?: number;
   notes: string | null;
   created_at: string;
   updated_at: string;

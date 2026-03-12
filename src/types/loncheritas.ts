@@ -1,5 +1,6 @@
 // ============================================
 // ARCHIVO: src/types/loncheritas.ts
+// ACTUALIZADO: Soporte para pago MIXTO
 // ============================================
 
 export interface LoncheritasOrderItem {
@@ -11,7 +12,9 @@ export interface LoncheritasOrderItem {
 }
 
 export type LoncheritasOrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
-export type LoncheritasPaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null;
+
+// ✅ ACTUALIZADO: Añadido 'MIXTO'
+export type LoncheritasPaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO' | null;
 
 export interface LoncheritasOrder {
   id: string;
@@ -26,6 +29,10 @@ export interface LoncheritasOrder {
   status: LoncheritasOrderStatus;
   total: number;
   payment_method: LoncheritasPaymentMethod;
+  // ✅ NUEVO: Desglose de pago mixto
+  mixed_efectivo?: number;
+  mixed_yape_plin?: number;
+  mixed_tarjeta?: number;
   notes: string | null;
   created_at: Date;
   updated_at: Date;
@@ -40,10 +47,14 @@ export interface LoncheritasDatabaseOrder {
   section: string;
   guardian_name: string;
   phone: string | null;
-  items: any; // JSONB en la BD
+  items: any;
   status: string;
   total: number;
   payment_method: string | null;
+  // ✅ NUEVO
+  mixed_efectivo?: number;
+  mixed_yape_plin?: number;
+  mixed_tarjeta?: number;
   notes: string | null;
   created_at: string;
   updated_at: string;
