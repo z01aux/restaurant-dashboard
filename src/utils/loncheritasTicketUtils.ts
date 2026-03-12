@@ -60,62 +60,62 @@ export const generateLoncheritasTicketHTML = (
       : `PERIODO: ${formatDate(startDate)} AL ${formatDate(endDate)}`;
 
   return `
-    <div class="ticket" style="font-family:'Courier New',monospace;width:80mm;padding:8px;margin:0 auto;background:white;color:black;font-size:12px;line-height:1.3;">
+    <div class="ticket" style="font-family:'Courier New',monospace;width:80mm;padding:8px;margin:0 auto;background:white;color:black;font-size:12px;line-height:1.3;font-weight:bold;">
       
       <div style="text-align:center;margin-bottom:8px;">
         <div style="font-size:14px;font-weight:bold;">MARY'S RESTAURANT</div>
-        <div style="font-size:10px;">LONCHERITAS - RESUMEN</div>
+        <div style="font-size:10px;font-weight:bold;">LONCHERITAS - RESUMEN</div>
         <div style="font-size:10px;font-weight:bold;">${periodText}</div>
-        <div style="font-size:9px;">EMITIDO: ${formatDate(new Date())} ${formatTime(new Date())}</div>
-        <div style="font-size:9px;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
-        <div style="border-top:1px solid #000;margin:8px 0;"></div>
+        <div style="font-size:9px;font-weight:bold;">EMITIDO: ${formatDate(new Date())} ${formatTime(new Date())}</div>
+        <div style="font-size:9px;font-weight:bold;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
+        <div style="border-top:2px solid #000;margin:8px 0;"></div>
       </div>
 
       <div style="margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px;">
-          <span style="font-weight:bold;">TOTAL PEDIDOS:</span>
-          <span style="font-weight:bold;">${summary.totalOrders}</span>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px;font-weight:bold;">
+          <span>TOTAL PEDIDOS:</span>
+          <span>${summary.totalOrders}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px;">
-          <span style="font-weight:bold;">TOTAL VENTAS:</span>
-          <span style="font-weight:bold;">${fmt(summary.totalAmount)}</span>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px;font-weight:bold;">
+          <span>TOTAL VENTAS:</span>
+          <span>${fmt(summary.totalAmount)}</span>
         </div>
       </div>
 
-      <div style="border-top:1px solid #000;margin:8px 0;"></div>
+      <div style="border-top:2px solid #000;margin:8px 0;"></div>
 
       <div style="margin-bottom:8px;">
         <div style="text-align:center;font-weight:bold;margin-bottom:4px;font-size:12px;">METODO DE PAGO</div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;font-weight:bold;">
           <span>EFECTIVO:</span><span>${fmt(summary.byPaymentMethod.EFECTIVO)}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;font-weight:bold;">
           <span>YAPE/PLIN:</span><span>${fmt(summary.byPaymentMethod.YAPE_PLIN)}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;font-weight:bold;">
           <span>TARJETA:</span><span>${fmt(summary.byPaymentMethod.TARJETA)}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;font-weight:bold;">
           <span>NO APLICA:</span><span>${fmt(summary.byPaymentMethod.NO_APLICA)}</span>
         </div>
       </div>
 
-      <div style="border-top:1px solid #000;margin:8px 0;"></div>
+      <div style="border-top:2px solid #000;margin:8px 0;"></div>
 
       ${summary.topProducts.length > 0 ? `
         <div style="margin-bottom:8px;">
           <div style="text-align:center;font-weight:bold;margin-bottom:4px;font-size:12px;">TODOS LOS PRODUCTOS</div>
           ${summary.topProducts.map((p, i) => `
-            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;margin-bottom:3px;">
               <span>${i+1}. ${p.name}</span>
               <span>${p.quantity}x ${fmt(p.total)}</span>
             </div>
           `).join('')}
         </div>
-        <div style="border-top:1px solid #000;margin:8px 0;"></div>
+        <div style="border-top:2px solid #000;margin:8px 0;"></div>
       ` : ''}
 
-      <div style="text-align:center;font-size:10px;">
+      <div style="text-align:center;font-size:10px;font-weight:bold;">
         <div>GRACIAS POR SU TRABAJO</div>
         <div style="margin-top:4px;">********************************</div>
       </div>
@@ -140,11 +140,12 @@ export const printLoncheritasResumenTicket = (summary: LoncheritasTicketSummary,
           <style>
             @media print {
               @page { size: 80mm auto; margin: 0; padding: 0; }
-              body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; background: white !important; font-family: 'Courier New', monospace !important; font-weight: normal !important; }
-              * { font-family: 'Courier New', monospace !important; }
+              body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; background: white !important; font-family: 'Courier New', monospace !important; font-weight: bold !important; }
+              * { font-family: 'Courier New', monospace !important; font-weight: bold !important; }
               .ticket { width: 80mm !important; padding: 8px !important; margin: 0 !important; }
             }
-            body { margin: 0; padding: 0; background: white; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.3; width: 80mm; margin: 0 auto; }
+            body { margin: 0; padding: 0; background: white; font-family: 'Courier New', monospace; font-weight: bold; font-size: 12px; line-height: 1.3; width: 80mm; margin: 0 auto; }
+            * { font-weight: bold; }
           </style>
         </head>
         <body>${ticketContent}</body>
