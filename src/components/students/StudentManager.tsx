@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO: src/components/students/StudentManager.tsx
-// MODAL FIJO EN LA PARTE SUPERIOR - VERSIÓN CORREGIDA
+// MODAL FIJO EN LA PARTE SUPERIOR - CORREGIDO PARA EMPLEADOS
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -104,15 +104,8 @@ const StudentManager: React.FC = () => {
     }
   };
 
-  if (user?.role !== 'admin') {
-    return (
-      <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-8 text-center">
-        <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Acceso Restringido</h2>
-        <p className="text-gray-600">Solo administradores pueden gestionar alumnos</p>
-      </div>
-    );
-  }
+  // ✅ CORREGIDO: Ya no hay restricción de admin, todos los usuarios autenticados pueden acceder
+  // El componente ahora siempre se renderiza para usuarios autenticados
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
@@ -124,6 +117,11 @@ const StudentManager: React.FC = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">🎒 Gestión de Alumnos FullDay</h1>
               <p className="text-gray-600 mt-1">Administra los alumnos para pedidos FullDay</p>
+              {user && (
+                <p className="text-xs text-purple-600 mt-1">
+                  Conectado como: {user.name} ({user.role === 'admin' ? 'Administrador' : 'Empleado'})
+                </p>
+              )}
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
@@ -139,11 +137,15 @@ const StudentManager: React.FC = () => {
                 />
               </div>
               
-              {/* Botones de importación */}
-              <StudentImport />
-              <StudentJSONImport />
+              {/* Botones de importación - Solo para administradores */}
+              {user?.role === 'admin' && (
+                <>
+                  <StudentImport />
+                  <StudentJSONImport />
+                </>
+              )}
               
-              {/* Botón nuevo alumno */}
+              {/* Botón nuevo alumno - VISIBLE PARA TODOS */}
               <button 
                 onClick={handleNewStudent}
                 className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 hover:shadow-md transition-all duration-300 font-medium"
@@ -310,6 +312,7 @@ const StudentManager: React.FC = () => {
                   key={student.id} 
                   className="bg-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all duration-200 relative group"
                 >
+                  {/* Botones de acción - VISIBLES PARA TODOS */}
                   <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button 
                       onClick={() => handleEditStudent(student)}
@@ -318,6 +321,7 @@ const StudentManager: React.FC = () => {
                     >
                       <Edit size={16} />
                     </button>
+                    {/* Botón eliminar - AHORA TAMBIÉN VISIBLE PARA EMPLEADOS (opcional, comenta si prefieres que solo admin elimine) */}
                     <button 
                       onClick={() => handleDeleteStudent(student.id, student.full_name)}
                       className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors bg-white shadow-sm border border-gray-200"
