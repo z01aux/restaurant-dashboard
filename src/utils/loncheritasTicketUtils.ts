@@ -106,9 +106,9 @@ export const generateLoncheritasTicketHTML = (
         <div style="margin-bottom:8px;">
           <div style="text-align:center;font-weight:bold;margin-bottom:4px;font-size:12px;">TODOS LOS PRODUCTOS</div>
           ${summary.topProducts.map((p, i) => `
-            <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;margin-bottom:3px;">
-              <span>${i+1}. ${p.name}</span>
-              <span>${p.quantity}x ${fmt(p.total)}</span>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;font-size:11px;font-weight:bold;margin-bottom:3px;gap:6px;">
+              <span style="flex:1;min-width:0;word-break:break-word;">${i+1}. ${p.name.toUpperCase()}</span>
+              <span style="flex-shrink:0;white-space:nowrap;text-align:right;">${p.quantity}x ${fmt(p.total)}</span>
             </div>
           `).join('')}
         </div>
