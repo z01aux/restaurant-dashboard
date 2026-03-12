@@ -2,6 +2,7 @@ import React from 'react';
 import DashboardLayout from './components/layout/DashboardLayout';
 import StatsCards from './components/dashboard/StatsCards';
 import FullDayDashboard from './components/dashboard/FullDayDashboard';
+import LoncheritasDashboard from './components/dashboard/LoncheritasDashboard';
 import OrdersManager from './components/orders/OrdersManager';
 import MenuManager from './components/menu/MenuManager';
 import OrderReception from './components/orders/OrderReception';
@@ -11,7 +12,6 @@ import UserManager from './components/users/UserManager';
 import StudentManager from './components/students/StudentManager';
 import { FullDayOrdersManager } from './components/fullday/FullDayOrdersManager';
 import { OEPOrdersManager } from './components/oep/OEPOrdersManager';
-// ✅ NUEVO: Loncheritas
 import { LoncheritasOrdersManager } from './components/loncheritas/LoncheritasOrdersManager';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
@@ -37,7 +37,7 @@ function App() {
     { id: 'reception',    name: '🎯 Recepción' },
     { id: 'orders',       name: '📋 Órdenes' },
     { id: 'fullday',      name: '🎒 FullDay' },
-    { id: 'loncheritas',  name: '🍱 Loncheritas' }, // ✅ NUEVO
+    { id: 'loncheritas',  name: '🍱 Loncheritas' },
     { id: 'oep',          name: '📦 OEP' },
     { id: 'menu',         name: '🍽️ Menú' },
     { id: 'kitchen',      name: '👨‍🍳 Cocina' },
@@ -91,15 +91,16 @@ function App() {
           {activeTab === 'reception' && <OrderReception />}
 
           {activeTab === 'dashboard' && (
-            <div>
+            <div className="space-y-6">
               <StatsCards />
               <FullDayDashboard />
+              <LoncheritasDashboard />
             </div>
           )}
 
           {activeTab === 'orders'      && <OrdersManager />}
           {activeTab === 'fullday'     && <FullDayOrdersManager />}
-          {activeTab === 'loncheritas' && <LoncheritasOrdersManager />} {/* ✅ NUEVO */}
+          {activeTab === 'loncheritas' && <LoncheritasOrdersManager />}
           {activeTab === 'oep'         && <OEPOrdersManager />}
           {activeTab === 'menu'        && <MenuManager />}
           {activeTab === 'kitchen'     && <KitchenManager />}
@@ -113,4 +114,3 @@ function App() {
 }
 
 export default App;
-
