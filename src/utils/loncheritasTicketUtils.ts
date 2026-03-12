@@ -399,12 +399,3 @@ export const printLoncheritasA4 = ({ orders, selectedDate }: LoncheritasA4Data) 
     setTimeout(() => win.print(), 400);
   }
 };
-
-// helper duplicado necesario dentro del módulo
-function getCurrentUserName(): string {
-  try {
-    const saved = localStorage.getItem('restaurant-user');
-    if (saved) return JSON.parse(saved).name || 'Sistema';
-  } catch {}
-  return 'Sistema';
-}
