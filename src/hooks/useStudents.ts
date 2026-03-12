@@ -34,19 +34,32 @@ export const useStudents = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .ilike('full_name', `%${searchTerm}%`)
-        .order('full_name', { ascending: true })
-        .limit(10);
+      // Dividir el término en palabras individuales y normalizar
+      const words = searchTerm
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // quitar tildes para comparar
+        .split(/\s+/)
+        .filter(w => w.length > 0);
 
-      if (error) throw error;
-      setSearchResults(data || []);
+      // Filtrar localmente sobre la lista completa ya cargada:
+      // el alumno debe contener TODAS las palabras escritas, en cualquier orden
+      const results = students
+        .filter(student => {
+          const normalizedName = student.full_name
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+          return words.every(word => normalizedName.includes(word));
+        })
+        .slice(0, 10);
+
+      setSearchResults(results);
     } catch (error) {
       console.error('Error searching students:', error);
     }
-  }, []);
+  }, [students]); // depende de students para buscar en memoria
 
   const createStudent = useCallback(async (studentData: StudentFormData) => {
     try {
