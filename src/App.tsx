@@ -32,7 +32,7 @@ function App() {
     window.dispatchEvent(event);
   };
 
-  // Pestañas base para todos los usuarios
+  // Pestañas base para todos los usuarios (AHORA INCLUYE 'students')
   const baseTabs = [
     { id: 'reception',    name: '🎯 Recepción' },
     { id: 'orders',       name: '📋 Órdenes' },
@@ -43,16 +43,17 @@ function App() {
     { id: 'kitchen',      name: '👨‍🍳 Cocina' },
     { id: 'dashboard',    name: '📊 Dashboard' },
     { id: 'customers',    name: '👥 Clientes' },
+    { id: 'students',     name: '🎒 Alumnos' }, // <-- MOVIDA AQUÍ PARA TODOS
   ];
 
-  // Solo administradores ven Alumnos y Usuarios
+  // Solo administradores ven la pestaña de Usuarios (AHORA ES LA ÚNICA EXCLUSIVA)
   const adminTabs = user?.role === 'admin'
     ? [
-        { id: 'students', name: '🎒 Alumnos' },
-        { id: 'users',    name: '🔧 Usuarios' },
+        { id: 'users',    name: '🔧 Usuarios' }, // Solo 'users' queda como admin
       ]
     : [];
 
+  // Se combinan las pestañas base (que ahora incluye 'students') con las exclusivas de admin
   const tabs = [...baseTabs, ...adminTabs];
 
   return (
@@ -105,8 +106,8 @@ function App() {
           {activeTab === 'menu'        && <MenuManager />}
           {activeTab === 'kitchen'     && <KitchenManager />}
           {activeTab === 'customers'   && <CustomersManager />}
-          {activeTab === 'students'    && <StudentManager />}
-          {activeTab === 'users'       && <UserManager />}
+          {activeTab === 'students'    && <StudentManager />}    {/* <-- AHORA ACCESIBLE PARA TODOS */}
+          {activeTab === 'users'       && <UserManager />}       {/* <-- SOLO ADMIN */}
         </DashboardLayout>
       </OrderProvider>
     </ProtectedRoute>
