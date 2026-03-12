@@ -62,7 +62,7 @@ export const generateLoncheritasTicketHTML = (
       : `PERIODO: ${formatDate(startDate)} AL ${formatDate(endDate)}`;
 
   return `
-    <div class="ticket" style="font-family:'Courier New',monospace;width:80mm;padding:8px;margin:0 auto;background:white;color:black;font-size:12px;line-height:1.3;font-weight:bold;">
+    <div class="ticket" style="font-family:'Courier New',monospace;width:100%;padding:8px;margin:0;background:white;color:black;font-size:12px;line-height:1.3;font-weight:bold;">
       
       <div style="text-align:center;margin-bottom:8px;">
         <div style="font-size:14px;font-weight:bold;">MARY'S RESTAURANT</div>
@@ -141,13 +141,14 @@ export const printLoncheritasResumenTicket = (summary: LoncheritasTicketSummary,
           <title>Loncheritas ${formatDate(startDate)}</title>
           <style>
             @media print {
-              @page { size: 80mm auto; margin: 0; padding: 0; }
-              body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; background: white !important; font-family: 'Courier New', monospace !important; font-weight: bold !important; }
-              * { font-family: 'Courier New', monospace !important; font-weight: bold !important; }
-              .ticket { width: 80mm !important; padding: 8px !important; margin: 0 !important; }
+              @page { size: 80mm auto; margin: 0; }
+              html, body { width: 80mm !important; margin: 0 !important; padding: 0 !important; background: white !important; }
+              * { font-family: 'Courier New', monospace !important; font-weight: bold !important; box-sizing: border-box !important; }
+              .ticket { width: 80mm !important; margin: 0 !important; padding: 8px !important; }
             }
-            body { margin: 0; padding: 0; background: white; font-family: 'Courier New', monospace; font-weight: bold; font-size: 12px; line-height: 1.3; width: 80mm; margin: 0 auto; }
-            * { font-weight: bold; }
+            * { box-sizing: border-box; font-family: 'Courier New', monospace; font-weight: bold; }
+            html, body { margin: 0; padding: 0; background: white; font-size: 12px; line-height: 1.3; width: 80mm; }
+            .ticket { width: 80mm; margin: 0; padding: 8px; }
           </style>
         </head>
         <body>${ticketContent}</body>
@@ -403,4 +404,3 @@ export const printLoncheritasA4 = ({ orders, selectedDate }: LoncheritasA4Data) 
     setTimeout(() => win.print(), 400);
   }
 };
-
