@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { LoncheritasOrder } from '../../types/loncheritas';
-import { printLoncheritasA4 } from '../../utils/loncheritasTicketUtils';
+import { printLoncheritasA4, generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
 import {
   ShoppingBag, DollarSign, Users, TrendingUp,
   RefreshCw, Calendar, CreditCard, Wallet, Smartphone,
@@ -98,6 +98,14 @@ const LoncheritasDashboard: React.FC = () => {
 
   const isToday = selectedDate === todayStr();
 
+  // ── IMPRIMIR TICKETERA ───────────────────────────────
+  const handlePrintTicket = () => {
+    if (orders.length === 0) return;
+    const start = new Date(selectedDate + 'T00:00:00');
+    const end   = new Date(selectedDate + 'T23:59:59');
+    printLoncheritasResumenTicket(generateLoncheritasTicketSummary(orders), start, end);
+  };
+
   // ── IMPRIMIR A4 ──────────────────────────────────────
   const handlePrintA4 = () => {
     if (orders.length === 0) return;
@@ -126,33 +134,40 @@ const LoncheritasDashboard: React.FC = () => {
           </div>
 
           {/* Controles */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
-              <Calendar className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-gray-100 rounded-xl px-3 py-2">
+              <Calendar className="h-4 w-4 text-gray-500" />
               <input
                 type="date"
                 value={selectedDate}
                 onChange={e => setSelectedDate(e.target.value)}
-                className="text-sm text-gray-700 bg-transparent border-none outline-none"
+                className="bg-transparent text-sm font-medium text-gray-700 outline-none"
               />
             </div>
             <button
               onClick={fetchOrders}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50"
+              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+              title="Actualizar"
             >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Actualizar</span>
+              <RefreshCw className={`h-4 w-4 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            {/* ✅ BOTÓN IMPRIMIR A4 */}
             <button
-              onClick={handlePrintA4}
-              disabled={orders.length === 0 || loading}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 text-white text-sm font-semibold hover:from-gray-800 hover:to-black transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Imprimir reporte A4 con todos los productos"
+              onClick={handlePrintTicket}
+              disabled={stats.topProducts.length === 0}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-gray-700 to-gray-800 text-white text-sm font-semibold hover:from-gray-800 hover:to-gray-900 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Imprimir en ticketera térmica"
             >
               <Printer className="h-4 w-4" />
-              <span className="hidden sm:inline">Imprimir A4</span>
+              <span className="hidden sm:inline">Ticketera</span>
+            </button>
+            <button
+              onClick={handlePrintA4}
+              disabled={orders.length === 0}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Imprimir hoja completa A4"
+            >
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">Imprimir</span>
             </button>
           </div>
         </div>
