@@ -19,10 +19,12 @@ interface LoncheritasTicketSummary {
 
 export const generateLoncheritasTicketSummary = (orders: LoncheritasOrder[]): LoncheritasTicketSummary => {
   const productMap = new Map<string, { name: string; quantity: number; total: number }>();
-  orders.forEach(o => o.items.forEach(item => {
-    const ex = productMap.get(item.id);
+  orders.forEach(o => (o.items || []).forEach(item => {
+    // Agrupar por nombre en mayúsculas — el mismo producto de distintas órdenes consolida correctamente
+    const key = item.name.trim().toUpperCase();
+    const ex = productMap.get(key);
     if (ex) { ex.quantity += item.quantity; ex.total += item.price * item.quantity; }
-    else productMap.set(item.id, { name: item.name, quantity: item.quantity, total: item.price * item.quantity });
+    else productMap.set(key, { name: item.name.trim().toUpperCase(), quantity: item.quantity, total: item.price * item.quantity });
   }));
 
   return {
@@ -185,8 +187,9 @@ export const printLoncheritasA4 = ({ orders, selectedDate }: LoncheritasA4Data) 
   const prodMap = new Map<string, { name: string; qty: number; total: number }>();
   orders.forEach(o => {
     (o.items || []).forEach((item: any) => {
-      const key = item.name;
-      if (!prodMap.has(key)) prodMap.set(key, { name: item.name, qty: 0, total: 0 });
+      // Clave normalizada para consolidar el mismo producto de distintas órdenes
+      const key = item.name.trim().toUpperCase();
+      if (!prodMap.has(key)) prodMap.set(key, { name: item.name.trim().toUpperCase(), qty: 0, total: 0 });
       const p = prodMap.get(key)!;
       p.qty   += item.quantity;
       p.total += (item.price || 0) * item.quantity;
@@ -400,3 +403,4 @@ export const printLoncheritasA4 = ({ orders, selectedDate }: LoncheritasA4Data) 
     setTimeout(() => win.print(), 400);
   }
 };
+

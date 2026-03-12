@@ -72,9 +72,11 @@ const LoncheritasDashboard: React.FC = () => {
     const prodMap: Record<string, { name: string; qty: number; total: number }> = {};
     orders.forEach(o => {
       (o.items || []).forEach((item: any) => {
-        if (!prodMap[item.name]) prodMap[item.name] = { name: item.name, qty: 0, total: 0 };
-        prodMap[item.name].qty   += item.quantity;
-        prodMap[item.name].total += (item.price || 0) * item.quantity;
+        // Clave normalizada para que el mismo producto de distintas órdenes consolide correctamente
+        const key = item.name.trim().toUpperCase();
+        if (!prodMap[key]) prodMap[key] = { name: item.name.trim().toUpperCase(), qty: 0, total: 0 };
+        prodMap[key].qty   += item.quantity;
+        prodMap[key].total += (item.price || 0) * item.quantity;
       });
     });
     // Sin límite — todos los productos
