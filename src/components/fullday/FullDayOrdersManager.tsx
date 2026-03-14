@@ -1,4 +1,5 @@
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
+// ✅ ACTUALIZADO: CON SOPORTE COMPLETO DE PAGO MIXTO
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Search, Pencil, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet, Printer, Trash2 } from 'lucide-react';
@@ -13,9 +14,10 @@ import { FullDayPaymentModal } from './FullDayPaymentModal';
 import { PaymentFilter } from '../ui/PaymentFilter';
 import { FullDayOrderPreview } from './FullDayOrderPreview';
 import FullDayTicket from './FullDayTicket';
-import { FullDayOrder, FullDayPaymentMethod } from '../../types/fullday';
+import { FullDayOrder, FullDayPaymentMethod, FullDaySplitPaymentDetails } from '../../types/fullday';
 import { exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
 import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
+import { supabase } from '../../lib/supabase';
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -306,35 +308,70 @@ export const FullDayOrdersManager: React.FC = () => {
     setShowPaymentModal(true);
   }, []);
 
-  const handleSavePaymentMethod = useCallback(async (orderId: string, paymentMethod: FullDayPaymentMethod) => {
+  // ✅ ACTUALIZADO: soporta PAGO MIXTO con split_payment
+  const handleSavePaymentMethod = useCallback(async (
+    orderId: string,
+    paymentMethod: FullDayPaymentMethod,
+    splitDetails?: FullDaySplitPaymentDetails
+  ) => {
     try {
-      const result = await updateOrderPayment(orderId, paymentMethod);
-      if (!result.success) alert('❌ Error al actualizar: ' + result.error);
+      if (paymentMethod === 'MIXTO' && splitDetails) {
+        const paymentResult = await updateOrderPayment(orderId, paymentMethod);
+        if (paymentResult.success) {
+          const { error } = await supabase
+            .from('fullday')
+            .update({ split_payment: splitDetails, updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+          if (error) throw error;
+        } else {
+          alert('❌ Error al actualizar el método de pago: ' + paymentResult.error);
+        }
+      } else {
+        const result = await updateOrderPayment(orderId, paymentMethod);
+        if (result.success) {
+          await supabase
+            .from('fullday')
+            .update({ split_payment: null, updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+        } else {
+          alert('❌ Error al actualizar: ' + result.error);
+        }
+      }
     } catch (error: any) {
       alert('❌ Error inesperado: ' + error.message);
     }
   }, [updateOrderPayment]);
 
-  // NUEVO: Manejador para actualizar la UI inmediatamente después del cambio de pago
-  const handlePaymentUpdated = useCallback((orderId: string, newMethod: FullDayPaymentMethod) => {
-    setLocalOrders(prev => prev.map(order => 
-      order.id === orderId 
-        ? { ...order, payment_method: newMethod } 
-        : order
-    ));
+  // ✅ ACTUALIZADO: actualiza split_payment en la UI local
+  const handlePaymentUpdated = useCallback((
+    orderId: string,
+    newMethod: FullDayPaymentMethod,
+    splitDetails?: FullDaySplitPaymentDetails
+  ) => {
+    setLocalOrders(prev => prev.map(order => {
+      if (order.id === orderId) {
+        const updated = { ...order, payment_method: newMethod };
+        updated.split_payment = (newMethod === 'MIXTO' && splitDetails) ? splitDetails : null;
+        return updated;
+      }
+      return order;
+    }));
   }, []);
 
   const getDisplayNumber = useCallback((order: FullDayOrder) =>
     order.order_number || `FD-${order.id.slice(-8).toUpperCase()}`, []);
 
+  // ✅ ACTUALIZADO: incluye color para MIXTO
   const getPaymentColor = useCallback((method?: string | null) => ({
     'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
     'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
     'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
+    'MIXTO':     'bg-orange-100 text-orange-800 border-orange-200',
   }[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200'), []);
 
+  // ✅ ACTUALIZADO: incluye texto para MIXTO
   const getPaymentText = useCallback((method?: string | null) => ({
-    'EFECTIVO': 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', 'TARJETA': 'TARJETA',
+    'EFECTIVO': 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', 'TARJETA': 'TARJETA', 'MIXTO': 'MIXTO',
   }[method || ''] || 'NO APLICA'), []);
 
   const sortOptions = useMemo(() => [
@@ -383,14 +420,12 @@ export const FullDayOrdersManager: React.FC = () => {
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
-      {/* Modal Excel por rango */}
       <FullDayDateRangeModal
         isOpen={showDateRangeExcel}
         onClose={() => setShowDateRangeExcel(false)}
         onConfirm={handleExportByDateRange}
         title="📊 Reporte Excel por Rango de Fechas - FullDay"
       />
-      {/* Modal Ticket Resumen por rango */}
       <FullDayDateRangeModal
         isOpen={showDateRangeTicket}
         onClose={() => setShowDateRangeTicket(false)}

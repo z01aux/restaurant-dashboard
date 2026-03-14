@@ -1,9 +1,7 @@
 // ============================================
 // ARCHIVO: src/types/fullday.ts
-// Tipos para pedidos FullDay
+// ✅ ACTUALIZADO: Incluye PAGO MIXTO + SplitPaymentDetails
 // ============================================
-
-// Eliminada importación no usada de Student
 
 export interface FullDayMenuItem {
   id: string;
@@ -21,7 +19,16 @@ export interface FullDayOrderItem {
 }
 
 export type FullDayOrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
-export type FullDayPaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null;
+
+// ✅ NUEVO: Incluye MIXTO
+export type FullDayPaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO' | null;
+
+// ✅ NUEVO: Detalle del pago mixto
+export interface FullDaySplitPaymentDetails {
+  efectivo: number;
+  yapePlin: number;
+  tarjeta: number;
+}
 
 export interface FullDayOrder {
   id: string;
@@ -36,6 +43,8 @@ export interface FullDayOrder {
   status: FullDayOrderStatus;
   total: number;
   payment_method: FullDayPaymentMethod;
+  // ✅ NUEVO: Campo para el desglose del pago mixto
+  split_payment?: FullDaySplitPaymentDetails | null;
   notes: string | null;
   created_at: Date;
   updated_at: Date;
@@ -54,6 +63,8 @@ export interface FullDayDatabaseOrder {
   status: string;
   total: number;
   payment_method: string | null;
+  // ✅ NUEVO: JSONB en la BD
+  split_payment?: any | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

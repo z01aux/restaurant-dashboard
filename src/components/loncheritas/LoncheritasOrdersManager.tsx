@@ -1,4 +1,5 @@
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
+// ✅ ACTUALIZADO: CON SOPORTE COMPLETO DE PAGO MIXTO
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Search, Pencil, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, Trash2, Calendar, X } from 'lucide-react';
@@ -12,12 +13,13 @@ import { LoncheritasDateFilter } from './LoncheritasDateFilter';
 import { PaymentFilter } from '../ui/PaymentFilter';
 import { LoncheritasOrderPreview } from './LoncheritasOrderPreview';
 import LoncheritasTicket from './LoncheritasTicket';
-import { LoncheritasOrder, LoncheritasPaymentMethod } from '../../types/loncheritas';
+import { LoncheritasOrder, LoncheritasPaymentMethod, LoncheritasSplitPaymentDetails } from '../../types/loncheritas';
 import { exportLoncheritasToExcel, exportLoncheritasByDateRange } from '../../utils/loncheritasExportUtils';
 import { generateLoncheritasTicketSummary, printLoncheritasResumenTicket } from '../../utils/loncheritasTicketUtils';
+import { supabase } from '../../lib/supabase';
 
 // ============================================
-// MODAL DE RANGO DE FECHAS PARA LONCHERITAS (TICKET RESUMEN)
+// MODAL DE RANGO DE FECHAS PARA LONCHERITAS
 // ============================================
 interface LoncheritasDateRangeModalProps {
   isOpen: boolean;
@@ -55,20 +57,15 @@ const LoncheritasDateRangeModal: React.FC<LoncheritasDateRangeModalProps> = ({
   const validateDates = (): boolean => {
     const start = createPeruDate(startDate);
     const end = createPeruDate(endDate);
-
     if (start > end) {
       setError('La fecha de inicio no puede ser mayor que la fecha de fin');
       return false;
     }
-
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+    const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays > 31) {
       setError('El rango máximo permitido es de 31 días');
       return false;
     }
-
     setError(null);
     return true;
   };
@@ -80,69 +77,40 @@ const LoncheritasDateRangeModal: React.FC<LoncheritasDateRangeModalProps> = ({
     }
   };
 
-  const setToday = () => {
-    const today = getTodayString();
-    setStartDate(today);
-    setEndDate(today);
-  };
+  const setToday = () => { const t = getTodayString(); setStartDate(t); setEndDate(t); };
 
   const setYesterday = () => {
     const now = new Date();
     const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
     peruDate.setDate(peruDate.getDate() - 1);
-    const year = peruDate.getFullYear();
-    const month = String(peruDate.getMonth() + 1).padStart(2, '0');
-    const day = String(peruDate.getDate()).padStart(2, '0');
-    const yesterdayStr = `${year}-${month}-${day}`;
-    setStartDate(yesterdayStr);
-    setEndDate(yesterdayStr);
+    const s = `${peruDate.getFullYear()}-${String(peruDate.getMonth() + 1).padStart(2, '0')}-${String(peruDate.getDate()).padStart(2, '0')}`;
+    setStartDate(s); setEndDate(s);
   };
 
   const setThisWeek = () => {
     const now = new Date();
     const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
-
     const monday = new Date(peruDate);
-    const dayOfWeek = peruDate.getDay();
-    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const diff = peruDate.getDay() === 0 ? 6 : peruDate.getDay() - 1;
     monday.setDate(peruDate.getDate() - diff);
-
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-
-    const formatDate = (date: Date) => {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    };
-
-    setStartDate(formatDate(monday));
-    setEndDate(formatDate(sunday));
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setStartDate(fmt(monday)); setEndDate(fmt(sunday));
   };
 
   const setThisMonth = () => {
     const now = new Date();
     const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
-
     const firstDay = new Date(peruDate.getFullYear(), peruDate.getMonth(), 1);
-    const lastDay = new Date(peruDate.getFullYear(), peruDate.getMonth() + 1, 0);
-
-    const formatDate = (date: Date) => {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    };
-
-    setStartDate(formatDate(firstDay));
-    setEndDate(formatDate(lastDay));
+    const lastDay  = new Date(peruDate.getFullYear(), peruDate.getMonth() + 1, 0);
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setStartDate(fmt(firstDay)); setEndDate(fmt(lastDay));
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-        
         <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-4 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -154,79 +122,30 @@ const LoncheritasDateRangeModal: React.FC<LoncheritasDateRangeModalProps> = ({
             </button>
           </div>
         </div>
-
         <div className="p-6">
-          
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Opciones rápidas:
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Opciones rápidas:</label>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={setToday}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-              >
-                📅 Hoy
-              </button>
-              <button
-                onClick={setYesterday}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-              >
-                📅 Ayer
-              </button>
-              <button
-                onClick={setThisWeek}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-              >
-                📅 Esta Semana
-              </button>
-              <button
-                onClick={setThisMonth}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-              >
-                📅 Este Mes
-              </button>
+              {[['📅 Hoy', setToday], ['📅 Ayer', setYesterday], ['📅 Esta Semana', setThisWeek], ['📅 Este Mes', setThisMonth]].map(([label, fn]) => (
+                <button key={label as string} onClick={fn as () => void} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
+                  {label as string}
+                </button>
+              ))}
             </div>
           </div>
-
           <div className="space-y-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha de inicio:
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setError(null);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de inicio:</label>
+              <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setError(null); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha de fin:
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setError(null);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de fin:</label>
+              <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setError(null); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
             </div>
           </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
+          {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
           <div className="mb-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
             <h3 className="text-sm font-semibold text-orange-800 mb-2">🎫 El ticket incluirá:</h3>
             <ul className="text-xs text-orange-700 space-y-1 list-disc list-inside">
@@ -235,22 +154,10 @@ const LoncheritasDateRangeModal: React.FC<LoncheritasDateRangeModalProps> = ({
               <li>Top 5 productos más vendidos</li>
             </ul>
           </div>
-
           <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-semibold flex items-center justify-center space-x-2"
-            >
-              <Printer size={16} />
-              <span>Generar Ticket</span>
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
+            <button type="button" onClick={handleConfirm} className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-semibold flex items-center justify-center space-x-2">
+              <Printer size={16} /><span>Generar Ticket</span>
             </button>
           </div>
         </div>
@@ -286,29 +193,15 @@ const LoncheritasOrderRow = React.memo(({
   const displayNumber = getDisplayNumber(order);
   const actionsRef = useRef<HTMLDivElement>(null);
 
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    onEditPayment(order);
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    onDelete(order.id, displayNumber);
-  };
-
+  const handleEditClick = (e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); onEditPayment(order); };
+  const handleDeleteClick = (e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); onDelete(order.id, displayNumber); };
   const handleRowMouseEnter = (e: React.MouseEvent) => {
     if (actionsRef.current && actionsRef.current.contains(e.target as Node)) return;
     onMouseEnter(e);
   };
 
   return (
-    <tr
-      className="hover:bg-gray-50 cursor-pointer group relative"
-      onMouseEnter={handleRowMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
+    <tr className="hover:bg-gray-50 cursor-pointer group relative" onMouseEnter={handleRowMouseEnter} onMouseLeave={onMouseLeave}>
       <td className="px-4 sm:px-6 py-4">
         <div className="flex items-center space-x-2 mb-1">
           <div className="text-sm font-medium text-orange-600">{displayNumber}</div>
@@ -327,11 +220,7 @@ const LoncheritasOrderRow = React.memo(({
           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.payment_method)}`}>
             {getPaymentText(order.payment_method)}
           </span>
-          <button
-            onClick={handleEditClick}
-            className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
-            title="Cambiar método de pago"
-          >
+          <button onClick={handleEditClick} className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300" title="Cambiar método de pago">
             <Pencil size={14} />
           </button>
         </div>
@@ -342,19 +231,13 @@ const LoncheritasOrderRow = React.memo(({
       </td>
       <td className="px-4 sm:px-6 py-4">
         <div className="text-sm text-gray-900">{order.items.length} producto(s)</div>
-        <div className="text-xs text-gray-500 truncate max-w-xs">
-          {order.items.map(item => item.name).join(', ')}
-        </div>
+        <div className="text-xs text-gray-500 truncate max-w-xs">{order.items.map(item => item.name).join(', ')}</div>
       </td>
       <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
         <div ref={actionsRef} className="flex space-x-2">
           <LoncheritasTicket order={order} />
           {isAdmin && (
-            <button
-              onClick={handleDeleteClick}
-              className="text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-              title="Eliminar pedido"
-            >
+            <button onClick={handleDeleteClick} className="text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar pedido">
               <Trash2 size={16} />
             </button>
           )}
@@ -388,10 +271,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
 
   useEffect(() => {
-    if (orders.length > 0 && !isInitialized) {
-      setLocalOrders(orders);
-      setIsInitialized(true);
-    }
+    if (orders.length > 0 && !isInitialized) { setLocalOrders(orders); setIsInitialized(true); }
   }, [orders, isInitialized]);
 
   useEffect(() => {
@@ -401,18 +281,12 @@ export const LoncheritasOrdersManager: React.FC = () => {
     }
   }, [deletedOrder]);
 
-  const todayTotal = useMemo(() =>
-    getTodayOrders().reduce((sum, o) => sum + o.total, 0),
-    [getTodayOrders]
-  );
+  const todayTotal = useMemo(() => getTodayOrders().reduce((sum, o) => sum + o.total, 0), [getTodayOrders]);
 
   const paymentTotals = useMemo(() => {
     const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
     const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
-    const dayOrders  = orders.filter(o => {
-      const d = new Date(o.created_at);
-      return d >= startOfDay && d <= endOfDay;
-    });
+    const dayOrders  = orders.filter(o => { const d = new Date(o.created_at); return d >= startOfDay && d <= endOfDay; });
     return {
       efectivo: dayOrders.filter(o => o.payment_method === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0),
       yape:     dayOrders.filter(o => o.payment_method === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0),
@@ -423,10 +297,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
   const dateFilteredOrders = useMemo(() => {
     const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
     const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
-    return localOrders.filter(order => {
-      const orderDate = new Date(order.created_at);
-      return orderDate >= startOfDay && orderDate <= endOfDay;
-    });
+    return localOrders.filter(order => { const d = new Date(order.created_at); return d >= startOfDay && d <= endOfDay; });
   }, [localOrders, selectedDate]);
 
   const filteredAndSortedOrders = useMemo(() => {
@@ -484,31 +355,18 @@ export const LoncheritasOrdersManager: React.FC = () => {
     }
   }, [deleteOrder, orders]);
 
-  // ── Reportes ─────────────────────────────────────────────────
-  const handleExcelHoy = useCallback(() => {
-    exportLoncheritasToExcel(getTodayOrders(), 'today');
-  }, [getTodayOrders]);
-
-  const handleExcelTodo = useCallback(() => {
-    exportLoncheritasToExcel(orders, 'all');
-  }, [orders]);
-
-  const handleExcelRango = useCallback((startDate: Date, endDate: Date) => {
-    exportLoncheritasByDateRange(orders, startDate, endDate);
-  }, [orders]);
+  const handleExcelHoy  = useCallback(() => exportLoncheritasToExcel(getTodayOrders(), 'today'), [getTodayOrders]);
+  const handleExcelTodo = useCallback(() => exportLoncheritasToExcel(orders, 'all'), [orders]);
+  const handleExcelRango = useCallback((startDate: Date, endDate: Date) => exportLoncheritasByDateRange(orders, startDate, endDate), [orders]);
 
   const handleTicketResumen = useCallback((startDate: Date, endDate: Date) => {
     const s = new Date(startDate); s.setHours(0, 0, 0, 0);
     const e = new Date(endDate);   e.setHours(23, 59, 59, 999);
-    const filtered = orders.filter(o => {
-      const d = new Date(o.created_at);
-      return d >= s && d <= e;
-    });
+    const filtered = orders.filter(o => { const d = new Date(o.created_at); return d >= s && d <= e; });
     if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
     printLoncheritasResumenTicket(generateLoncheritasTicketSummary(filtered), startDate, endDate);
   }, [orders]);
 
-  // ── Caja ─────────────────────────────────────────────────────
   const handleOpenCash  = () => { setCashModalType('open');  setShowCashModal(true); };
   const handleCloseCash = () => { setCashModalType('close'); setShowCashModal(true); };
 
@@ -529,35 +387,70 @@ export const LoncheritasOrdersManager: React.FC = () => {
     setShowPaymentModal(true);
   }, []);
 
-  const handleSavePaymentMethod = useCallback(async (orderId: string, paymentMethod: LoncheritasPaymentMethod) => {
+  // ✅ ACTUALIZADO: soporta PAGO MIXTO con split_payment
+  const handleSavePaymentMethod = useCallback(async (
+    orderId: string,
+    paymentMethod: LoncheritasPaymentMethod,
+    splitDetails?: LoncheritasSplitPaymentDetails
+  ) => {
     try {
-      const result = await updateOrderPayment(orderId, paymentMethod);
-      if (!result.success) alert('❌ Error al actualizar: ' + result.error);
+      if (paymentMethod === 'MIXTO' && splitDetails) {
+        const paymentResult = await updateOrderPayment(orderId, paymentMethod);
+        if (paymentResult.success) {
+          const { error } = await supabase
+            .from('loncheritas')
+            .update({ split_payment: splitDetails, updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+          if (error) throw error;
+        } else {
+          alert('❌ Error al actualizar el método de pago: ' + paymentResult.error);
+        }
+      } else {
+        const result = await updateOrderPayment(orderId, paymentMethod);
+        if (result.success) {
+          await supabase
+            .from('loncheritas')
+            .update({ split_payment: null, updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+        } else {
+          alert('❌ Error al actualizar: ' + result.error);
+        }
+      }
     } catch (error: any) {
       alert('❌ Error inesperado: ' + error.message);
     }
   }, [updateOrderPayment]);
 
-  // NUEVO: Manejador para actualizar la UI inmediatamente después del cambio de pago
-  const handlePaymentUpdated = useCallback((orderId: string, newMethod: LoncheritasPaymentMethod) => {
-    setLocalOrders(prev => prev.map(order => 
-      order.id === orderId 
-        ? { ...order, payment_method: newMethod } 
-        : order
-    ));
+  // ✅ ACTUALIZADO: actualiza split_payment en la UI local
+  const handlePaymentUpdated = useCallback((
+    orderId: string,
+    newMethod: LoncheritasPaymentMethod,
+    splitDetails?: LoncheritasSplitPaymentDetails
+  ) => {
+    setLocalOrders(prev => prev.map(order => {
+      if (order.id === orderId) {
+        const updated = { ...order, payment_method: newMethod };
+        updated.split_payment = (newMethod === 'MIXTO' && splitDetails) ? splitDetails : null;
+        return updated;
+      }
+      return order;
+    }));
   }, []);
 
   const getDisplayNumber = useCallback((order: LoncheritasOrder) =>
     order.order_number || `LON-${order.id.slice(-8).toUpperCase()}`, []);
 
+  // ✅ ACTUALIZADO: incluye color para MIXTO
   const getPaymentColor = useCallback((method?: string | null) => ({
     'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
     'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
     'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
+    'MIXTO':     'bg-orange-100 text-orange-800 border-orange-200',
   }[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200'), []);
 
+  // ✅ ACTUALIZADO: incluye texto para MIXTO
   const getPaymentText = useCallback((method?: string | null) => ({
-    'EFECTIVO': 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', 'TARJETA': 'TARJETA',
+    'EFECTIVO': 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', 'TARJETA': 'TARJETA', 'MIXTO': 'MIXTO',
   }[method || ''] || 'NO APLICA'), []);
 
   const sortOptions = useMemo(() => [
@@ -582,12 +475,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
       )}
 
       {previewOrder && (
-        <LoncheritasOrderPreview
-          order={previewOrder}
-          isVisible={true}
-          position={previewPosition}
-          shouldIgnoreEvents={true}
-        />
+        <LoncheritasOrderPreview order={previewOrder} isVisible={true} position={previewPosition} shouldIgnoreEvents={true} />
       )}
 
       <LoncheritasPaymentModal
@@ -604,16 +492,12 @@ export const LoncheritasOrdersManager: React.FC = () => {
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
-      
-      {/* Modal Excel por rango */}
       <LoncheritasDateRangeModal
         isOpen={showDateRangeExcel}
         onClose={() => setShowDateRangeExcel(false)}
         onConfirm={handleExcelRango}
         title="📊 Reporte Excel por Rango de Fechas - Loncheritas"
       />
-      
-      {/* Modal Ticket Resumen por rango */}
       <LoncheritasDateRangeModal
         isOpen={showDateRangeTicket}
         onClose={() => setShowDateRangeTicket(false)}
@@ -645,37 +529,19 @@ export const LoncheritasOrdersManager: React.FC = () => {
         </div>
       </div>
 
-      <LoncheritasDateFilter
-        selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
-        totalOrders={filteredAndSortedOrders.length}
-      />
+      <LoncheritasDateFilter selectedDate={selectedDate} onDateChange={setSelectedDate} totalOrders={filteredAndSortedOrders.length} />
 
       <div className="mb-4">
-        <PaymentFilter
-          paymentFilter={paymentFilter}
-          setPaymentFilter={setPaymentFilter}
-          totalEfectivo={paymentTotals.efectivo}
-          totalYape={paymentTotals.yape}
-          totalTarjeta={paymentTotals.tarjeta}
-          showAmounts={true}
-        />
+        <PaymentFilter paymentFilter={paymentFilter} setPaymentFilter={setPaymentFilter}
+          totalEfectivo={paymentTotals.efectivo} totalYape={paymentTotals.yape} totalTarjeta={paymentTotals.tarjeta} showAmounts={true} />
       </div>
 
       {/* BOTONES */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExcelHoy} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
-          <FileSpreadsheet size={16} /><span>Excel Hoy</span>
-        </button>
-        <button onClick={handleExcelTodo} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
-          <FileSpreadsheet size={16} /><span>Excel Todo</span>
-        </button>
-        <button onClick={() => setShowDateRangeExcel(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1">
-          <Calendar size={16} /><span>Reporte por Fechas</span>
-        </button>
-        <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
-          <Printer size={16} /><span>Ticket Resumen</span>
-        </button>
+        <button onClick={handleExcelHoy}  className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1"><FileSpreadsheet size={16} /><span>Excel Hoy</span></button>
+        <button onClick={handleExcelTodo} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1"><FileSpreadsheet size={16} /><span>Excel Todo</span></button>
+        <button onClick={() => setShowDateRangeExcel(true)}  className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1"><Calendar size={16} /><span>Reporte por Fechas</span></button>
+        <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1"><Printer size={16} /><span>Ticket Resumen</span></button>
       </div>
 
       {/* FILTROS */}
@@ -683,32 +549,17 @@ export const LoncheritasOrdersManager: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por alumno, apoderado..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
-            />
+            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por alumno, apoderado..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" />
           </div>
         </div>
         {hasActiveFilters && (
           <div className="mt-3 flex items-center justify-between">
             <div className="flex flex-wrap gap-2">
-              {paymentFilter && (
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPaymentColor(paymentFilter)}`}>
-                  {getPaymentText(paymentFilter)}
-                </span>
-              )}
-              {searchTerm && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  🔍 Búsqueda: "{searchTerm}"
-                </span>
-              )}
+              {paymentFilter && <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPaymentColor(paymentFilter)}`}>{getPaymentText(paymentFilter)}</span>}
+              {searchTerm && <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">🔍 Búsqueda: "{searchTerm}"</span>}
             </div>
-            <button onClick={handleClearFilters} className="text-xs text-red-600 hover:text-red-800 font-medium">
-              Limpiar filtros
-            </button>
+            <button onClick={handleClearFilters} className="text-xs text-red-600 hover:text-red-800 font-medium">Limpiar filtros</button>
           </div>
         )}
       </div>
@@ -717,46 +568,20 @@ export const LoncheritasOrdersManager: React.FC = () => {
       <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
           <div className="text-sm text-gray-600">
-            Mostrando {((pagination.currentPage - 1) * itemsPerPage) + 1}-
-            {Math.min(pagination.currentPage * itemsPerPage, filteredAndSortedOrders.length)} de{' '}
+            Mostrando {((pagination.currentPage - 1) * itemsPerPage) + 1}-{Math.min(pagination.currentPage * itemsPerPage, filteredAndSortedOrders.length)} de{' '}
             <span className="font-semibold">{filteredAndSortedOrders.length}</span> pedidos
           </div>
           <div className="flex items-center space-x-4">
-            <select
-              value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 text-sm"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
+            <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 text-sm">
+              {[10, 20, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
             </select>
-            <select
-              value={currentSort}
-              onChange={(e) => setCurrentSort(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 text-sm"
-            >
-              {sortOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
+            <select value={currentSort} onChange={(e) => setCurrentSort(e.target.value)} className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 text-sm">
+              {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <div className="flex items-center space-x-1">
-              <button
-                onClick={pagination.prevPage}
-                disabled={pagination.currentPage === 1}
-                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft size={16} />
-              </button>
+              <button onClick={pagination.prevPage} disabled={pagination.currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={16} /></button>
               <span className="px-3 py-1 text-sm">{pagination.currentPage} / {totalPages}</span>
-              <button
-                onClick={pagination.nextPage}
-                disabled={pagination.currentPage === totalPages}
-                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight size={16} />
-              </button>
+              <button onClick={pagination.nextPage} disabled={pagination.currentPage === totalPages} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><ChevronRight size={16} /></button>
             </div>
           </div>
         </div>
@@ -765,14 +590,9 @@ export const LoncheritasOrdersManager: React.FC = () => {
       {/* TABLA */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {loading && !isInitialized ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
-            <p className="text-gray-600 mt-2">Cargando...</p>
-          </div>
+          <div className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div><p className="text-gray-600 mt-2">Cargando...</p></div>
         ) : pagination.currentItems.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            No hay pedidos para el {selectedDate.toLocaleDateString('es-PE')}
-          </div>
+          <div className="text-center py-12 text-gray-500">No hay pedidos para el {selectedDate.toLocaleDateString('es-PE')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -787,18 +607,10 @@ export const LoncheritasOrdersManager: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {pagination.currentItems.map((order) => (
-                  <LoncheritasOrderRow
-                    key={order.id}
-                    order={order}
-                    onMouseEnter={(e) => handleRowMouseEnter(order, e)}
-                    onMouseLeave={handleRowMouseLeave}
-                    onEditPayment={handleEditPayment}
-                    onDelete={handleDeleteOrder}
-                    getDisplayNumber={getDisplayNumber}
-                    getPaymentColor={getPaymentColor}
-                    getPaymentText={getPaymentText}
-                    isAdmin={isAdmin}
-                  />
+                  <LoncheritasOrderRow key={order.id} order={order}
+                    onMouseEnter={(e) => handleRowMouseEnter(order, e)} onMouseLeave={handleRowMouseLeave}
+                    onEditPayment={handleEditPayment} onDelete={handleDeleteOrder}
+                    getDisplayNumber={getDisplayNumber} getPaymentColor={getPaymentColor} getPaymentText={getPaymentText} isAdmin={isAdmin} />
                 ))}
               </tbody>
             </table>
@@ -809,9 +621,7 @@ export const LoncheritasOrdersManager: React.FC = () => {
       {filteredAndSortedOrders.length > 0 && (
         <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
           <div className="flex justify-between items-center">
-            <div>
-              <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}
-            </div>
+            <div><span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}</div>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/types/index.ts (ACTUALIZADO CON OEP + LONCHERITAS)
+// ARCHIVO: src/types/index.ts (COMPLETO - CON PAGO MIXTO)
 // ============================================
 
 export interface MenuItem {
@@ -24,6 +24,16 @@ export interface OrderSource {
   deliveryAddress?: string;
 }
 
+// Definimos el tipo para los métodos de pago, ahora incluye 'MIXTO'
+export type PaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO';
+
+// Interfaz para el detalle de un pago mixto
+export interface SplitPaymentDetails {
+  efectivo: number;
+  yapePlin: number;
+  tarjeta: number;
+}
+
 export interface Order {
   id: string;
   orderNumber?: string;
@@ -38,7 +48,9 @@ export interface Order {
   source: OrderSource;
   notes?: string;
   tableNumber?: string;
-  paymentMethod?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
+  paymentMethod?: PaymentMethod; // Usa el nuevo tipo
+  // Nuevo campo para guardar el detalle del pago mixto
+  splitPayment?: SplitPaymentDetails;
   updatedAt?: Date;
   studentId?: string;
   studentInfo?: {
@@ -64,7 +76,7 @@ export interface DatabaseOrder {
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   total: number;
   notes?: string;
-  payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
+  payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO'; // Actualizado
   created_at: string;
   updated_at: string;
   student_id?: string;

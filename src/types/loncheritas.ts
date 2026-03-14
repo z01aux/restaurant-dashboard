@@ -1,5 +1,6 @@
 // ============================================
 // ARCHIVO: src/types/loncheritas.ts
+// ✅ ACTUALIZADO: Incluye PAGO MIXTO + SplitPaymentDetails
 // ============================================
 
 export interface LoncheritasOrderItem {
@@ -11,7 +12,16 @@ export interface LoncheritasOrderItem {
 }
 
 export type LoncheritasOrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
-export type LoncheritasPaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | null;
+
+// ✅ NUEVO: Incluye MIXTO
+export type LoncheritasPaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO' | null;
+
+// ✅ NUEVO: Detalle del pago mixto
+export interface LoncheritasSplitPaymentDetails {
+  efectivo: number;
+  yapePlin: number;
+  tarjeta: number;
+}
 
 export interface LoncheritasOrder {
   id: string;
@@ -26,6 +36,8 @@ export interface LoncheritasOrder {
   status: LoncheritasOrderStatus;
   total: number;
   payment_method: LoncheritasPaymentMethod;
+  // ✅ NUEVO: Campo para el desglose del pago mixto
+  split_payment?: LoncheritasSplitPaymentDetails | null;
   notes: string | null;
   created_at: Date;
   updated_at: Date;
@@ -44,6 +56,8 @@ export interface LoncheritasDatabaseOrder {
   status: string;
   total: number;
   payment_method: string | null;
+  // ✅ NUEVO: JSONB en la BD
+  split_payment?: any | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -65,6 +79,8 @@ export interface LoncheritasSalesClosure {
   total_yape_plin: number;
   total_tarjeta: number;
   total_no_aplica: number;
+  // ✅ NUEVO: Total mixto
+  total_mixto?: number;
   total_orders: number;
   total_amount: number;
   orders_pending: number;

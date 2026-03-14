@@ -1,10 +1,10 @@
 // ============================================
-// ARCHIVO: src/hooks/useOrders.ts (ACTUALIZADO)
+// ARCHIVO: src/hooks/useOrders.ts (COMPLETO - CON PAGO MIXTO Y SPLIT PAYMENT ACTIVADO)
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Order, OrderItem, DatabaseOrder, DatabaseOrderItem } from '../types';
+import type { Order, OrderItem, DatabaseOrder, DatabaseOrderItem, PaymentMethod, SplitPaymentDetails } from '../types';
 import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 export const useOrders = () => {
@@ -68,7 +68,9 @@ export const useOrders = () => {
         status: dbOrder.status,
         total: parseFloat(dbOrder.total as any),
         notes: dbOrder.notes,
-        paymentMethod: dbOrder.payment_method,
+        paymentMethod: dbOrder.payment_method as PaymentMethod | undefined,
+        // Leer el split_payment de la base de datos si existe
+        splitPayment: (dbOrder as any).split_payment,
         items: orderItems,
         createdAt: new Date(dbOrder.created_at),
         updatedAt: new Date(dbOrder.updated_at),
@@ -107,7 +109,7 @@ export const useOrders = () => {
     }
   }, []);
 
-  // ?? Funci車n para recargar una orden espec赤fica (usada despu谷s de INSERT/UPDATE)
+  // Funcion para recargar una orden especifica (usada despues de INSERT/UPDATE)
   const refreshOrder = useCallback(async (orderId: string) => {
     try {
       const { data: orderData, error: orderError } = await supabase
@@ -135,7 +137,7 @@ export const useOrders = () => {
     }
   }, []);
 
-  // ?? Suscripci車n en tiempo real para 車rdenes
+  // Suscripcion en tiempo real para ordenes
   const handleOrderInsert = useCallback((newOrder: any) => {
     refreshOrder(newOrder.id);
   }, [refreshOrder]);
@@ -157,14 +159,14 @@ export const useOrders = () => {
     enabled: true
   });
 
-  // ?? Suscripci車n en tiempo real para items de 車rdenes
+  // Suscripcion en tiempo real para items de ordenes
   useRealtimeSubscription({
     table: 'order_items',
     onInsert: (newItem: any) => refreshOrder(newItem.order_id),
     onUpdate: (updatedItem: any) => refreshOrder(updatedItem.order_id),
     onDelete: (_deletedId: string) => {
       // Para DELETE necesitamos buscar la orden afectada
-      // Esto es m芍s complejo, podr赤amos simplemente recargar todo
+      // Esto es mas complejo, podriamos simplemente recargar todo
       fetchOrders();
     },
     enabled: true
@@ -218,9 +220,6 @@ export const useOrders = () => {
 
       if (itemsError) throw itemsError;
 
-      // No necesitamos actualizar setOrders manualmente
-      // La suscripci車n lo har芍 autom芍ticamente
-
       return { success: true, order };
     } catch (error: any) {
       console.error('Error en createOrder:', error);
@@ -237,25 +236,58 @@ export const useOrders = () => {
 
       if (error) throw error;
       
-      // No necesitamos actualizar setOrders, la suscripci車n lo har芍
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
   };
 
-  const updateOrderPayment = async (orderId: string, paymentMethod: Order['paymentMethod']) => {
+  // --- FUNCION ACTUALIZADA PARA PAGO MIXTO ---
+  const updateOrderPayment = async (orderId: string, paymentMethod: PaymentMethod | undefined, splitDetails?: SplitPaymentDetails) => {
     try {
+      // Preparar el objeto de actualizacion
+      const updateData: any = {
+        payment_method: paymentMethod,
+        updated_at: new Date().toISOString()
+      };
+
+      // Si hay detalles de split, guardarlos en la columna split_payment
+      if (paymentMethod === 'MIXTO' && splitDetails) {
+        updateData.split_payment = splitDetails;
+      } else {
+        // Si no es mixto, limpiar cualquier split anterior
+        updateData.split_payment = null;
+      }
+
       const { error } = await supabase
         .from('orders')
-        .update({ payment_method: paymentMethod, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', orderId);
 
       if (error) throw error;
-      
+
       return { success: true };
     } catch (error: any) {
-      console.error('Error actualizando m谷todo de pago:', error);
+      console.error('Error actualizando metodo de pago:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // --- NUEVA FUNCION PARA ACTUALIZAR SOLO EL DETALLE DE PAGO MIXTO ---
+  const updateOrderSplitPayment = async (orderId: string, splitDetails: SplitPaymentDetails) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          split_payment: splitDetails,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error actualizando split payment:', error);
       return { success: false, error: error.message };
     }
   };
@@ -276,7 +308,6 @@ export const useOrders = () => {
 
       if (orderError) throw orderError;
 
-      // No necesitamos actualizar setOrders, la suscripci車n lo har芍
       return { success: true };
     } catch (error: any) {
       console.error('Error al eliminar:', error);
@@ -286,20 +317,20 @@ export const useOrders = () => {
 
   const exportOrdersToCSV = (ordersToExport: Order[]) => {
     if (ordersToExport.length === 0) {
-      alert('No hay 車rdenes para exportar');
+      alert('No hay ordenes para exportar');
       return;
     }
 
     const headers = [
       'CLIENTE',
       'MONTO TOTAL',
-      'M谷TODO DE PAGO',
+      'METODO DE PAGO',
       'TIPO DE PEDIDO',
       'FECHA',
       'HORA',
-      'N～ ORDEN',
-      'N～ COMANDA',
-      'TEL谷FONO',
+      'N° ORDEN',
+      'N° COMANDA',
+      'TELEFONO',
       'PRODUCTOS',
       'TIPO'
     ];
@@ -374,6 +405,7 @@ export const useOrders = () => {
     createOrder,
     updateOrderStatus,
     updateOrderPayment,
+    updateOrderSplitPayment,
     deleteOrder,
     exportOrdersToCSV,
     getTodayOrders,

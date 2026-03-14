@@ -1,6 +1,5 @@
 // ARCHIVO: src/components/orders/OrderPreview.tsx
-// ✅ FIX: Lista completa de productos sin scrollbar interno
-//         El preview crece dinámicamente y se recorta al viewport si es necesario
+// ✅ CON DETALLE DE PAGO MIXTO EN EL PREVIEW
 
 import React from 'react';
 import { Order } from '../../types';
@@ -37,13 +36,48 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
     return `Hace ${diffMins} minutos`;
   };
 
-  const getPaymentText = (paymentMethod?: string) => {
-    const paymentMap = {
-      'EFECTIVO': '💵 Efectivo',
-      'YAPE/PLIN': '📱 Yape/Plin',
-      'TARJETA': '💳 Tarjeta',
+  // Función mejorada para mostrar el método de pago con detalle
+  const getPaymentDisplay = (order: Order): string => {
+    if (!order.paymentMethod) return 'NO APLICA';
+    
+    if (order.paymentMethod === 'MIXTO' && order.splitPayment) {
+      // Construir el detalle del pago mixto
+      const partes: string[] = [];
+      if (order.splitPayment.efectivo > 0) {
+        partes.push(`EFECTIVO S/ ${order.splitPayment.efectivo.toFixed(2)}`);
+      }
+      if (order.splitPayment.yapePlin > 0) {
+        partes.push(`YAPE S/ ${order.splitPayment.yapePlin.toFixed(2)}`);
+      }
+      if (order.splitPayment.tarjeta > 0) {
+        partes.push(`TARJETA S/ ${order.splitPayment.tarjeta.toFixed(2)}`);
+      }
+      return partes.join(' + ');
+    }
+    
+    // Para pagos normales
+    const paymentMap: Record<string, string> = {
+      'EFECTIVO': 'EFECTIVO',
+      'YAPE/PLIN': 'YAPE/PLIN',
+      'TARJETA': 'TARJETA',
     };
-    return paymentMethod ? paymentMap[paymentMethod as keyof typeof paymentMap] : 'NO APLICA';
+    return paymentMap[order.paymentMethod] || 'NO APLICA';
+  };
+
+  // Función para obtener el color del badge según el método de pago
+  const getPaymentBadgeColor = (order: Order): string => {
+    if (!order.paymentMethod) return 'bg-gray-100 text-gray-800';
+    
+    if (order.paymentMethod === 'MIXTO') {
+      return 'bg-orange-100 text-orange-800 border-orange-200';
+    }
+    
+    const colors: Record<string, string> = {
+      'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
+      'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
+      'TARJETA': 'bg-blue-100 text-blue-800 border-blue-200',
+    };
+    return colors[order.paymentMethod] || 'bg-gray-100 text-gray-800';
   };
 
   const getSourceText = (sourceType: Order['source']['type']) => {
@@ -71,7 +105,6 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
   }
   if (adjustedY < margin) adjustedY = margin;
 
-  // Altura máxima disponible desde la posición Y hasta el borde inferior de la pantalla
   const maxHeight = viewportHeight - adjustedY - margin;
 
   return (
@@ -83,7 +116,7 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
         left:      `${adjustedX}px`,
         top:       `${adjustedY}px`,
         maxHeight: `${maxHeight}px`,
-        overflowY: 'auto',       // scroll solo si el pedido es extremadamente largo
+        overflowY: 'auto',
         overflowX: 'hidden',
       }}
     >
@@ -104,11 +137,12 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
           </div>
         </div>
         <div className="text-right">
-          <div className="flex items-center space-x-1 text-xs text-gray-600">
-            <CreditCard size={12} />
-            <span className="font-semibold">{getPaymentText(order.paymentMethod)}</span>
+          {/* Badge de método de pago con color según tipo */}
+          <div className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentBadgeColor(order)}`}>
+            <CreditCard size={12} className="mr-1" />
+            <span>{getPaymentDisplay(order)}</span>
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 mt-1">
             {getSourceText(order.source.type)}
           </div>
         </div>
@@ -147,7 +181,7 @@ export const OrderPreview: React.FC<OrderPreviewProps> = ({
         )}
       </div>
 
-      {/* ✅ Lista completa de productos — sin max-h ni overflow interno */}
+      {/* Lista completa de productos */}
       <div className="mb-3">
         <h4 className="font-medium text-gray-900 text-sm mb-2">Items del pedido:</h4>
         <div className="space-y-1">

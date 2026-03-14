@@ -1,5 +1,5 @@
 // ============================================
-// ARCHIVO: src/utils/ticketUtils.ts (CORREGIDO)
+// ARCHIVO: src/utils/ticketUtils.ts (CENTRADO Y AUTO AJUSTE)
 // ============================================
 
 import { Order } from '../types';
@@ -14,7 +14,8 @@ interface TicketSummary {
     TARJETA: number;
     NO_APLICA: number;
   };
-  topProducts: Array<{
+  // Productos vendidos en el día (todos, no solo top 5)
+  productsSold: Array<{
     name: string;
     quantity: number;
     total: number;
@@ -28,20 +29,50 @@ interface TicketSummary {
 
 /**
  * Genera un resumen para ticket a partir de las órdenes
+ * LOS PAGOS MIXTOS YA ESTÁN DISTRIBUIDOS EN SUS MÉTODOS CORRESPONDIENTES
  */
 export const generateTicketSummary = (orders: Order[], startDate: Date, endDate: Date): TicketSummary => {
   const totalOrders = orders.length;
   const totalAmount = orders.reduce((sum, o) => sum + o.total, 0);
 
-  // Totales por método de pago
+  // Totales por método de pago (MIXTO se distribuye en sus componentes)
+  let efectivo = 0;
+  let yapePlin = 0;
+  let tarjeta = 0;
+  let noAplica = 0;
+
+  orders.forEach(order => {
+    if (order.paymentMethod === 'MIXTO' && order.splitPayment) {
+      // Distribuir el pago mixto en sus métodos correspondientes
+      efectivo += order.splitPayment.efectivo || 0;
+      yapePlin += order.splitPayment.yapePlin || 0;
+      tarjeta += order.splitPayment.tarjeta || 0;
+    } else {
+      // Pagos normales
+      switch (order.paymentMethod) {
+        case 'EFECTIVO':
+          efectivo += order.total;
+          break;
+        case 'YAPE/PLIN':
+          yapePlin += order.total;
+          break;
+        case 'TARJETA':
+          tarjeta += order.total;
+          break;
+        default:
+          noAplica += order.total;
+      }
+    }
+  });
+
   const byPaymentMethod = {
-    EFECTIVO: orders.filter(o => o.paymentMethod === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0),
-    YAPE_PLIN: orders.filter(o => o.paymentMethod === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0),
-    TARJETA: orders.filter(o => o.paymentMethod === 'TARJETA').reduce((sum, o) => sum + o.total, 0),
-    NO_APLICA: orders.filter(o => !o.paymentMethod).reduce((sum, o) => sum + o.total, 0),
+    EFECTIVO: efectivo,
+    YAPE_PLIN: yapePlin,
+    TARJETA: tarjeta,
+    NO_APLICA: noAplica,
   };
 
-  // Top productos
+  // TODOS los productos vendidos (ordenados por cantidad)
   const productMap = new Map<string, { quantity: number; total: number; name: string }>();
   orders.forEach(order => {
     order.items.forEach(item => {
@@ -59,14 +90,8 @@ export const generateTicketSummary = (orders: Order[], startDate: Date, endDate:
     });
   });
 
-  const topProducts = Array.from(productMap.values())
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 5)
-    .map(p => ({
-      name: p.name,
-      quantity: p.quantity,
-      total: p.total
-    }));
+  const productsSold = Array.from(productMap.values())
+    .sort((a, b) => b.quantity - a.quantity); // Todos los productos, no solo top 5
 
   // Desglose diario
   const dailyMap = new Map<string, { orders: number; total: number }>();
@@ -98,13 +123,13 @@ export const generateTicketSummary = (orders: Order[], startDate: Date, endDate:
     totalOrders,
     totalAmount,
     byPaymentMethod,
-    topProducts,
+    productsSold,
     dailyBreakdown
   };
 };
 
 /**
- * Genera el contenido HTML para el ticket de resumen
+ * Genera el contenido HTML para el ticket de resumen - CENTRADO Y AUTO AJUSTE
  */
 export const generateResumenTicketHTML = (
   summary: TicketSummary,
@@ -131,96 +156,109 @@ export const generateResumenTicketHTML = (
     : `PERIODO: ${formatDateForDisplay(startDate)} AL ${formatDateForDisplay(endDate)}`;
 
   return `
-    <div class="ticket" style="font-family: 'Courier New', monospace; width: 80mm; padding: 8px; margin: 0 auto; background: white; color: black; font-size: 11px; line-height: 1.3;">
+    <div class="ticket" style="font-family: 'Courier New', monospace; width: 100%; max-width: 80mm; margin: 0 auto; padding: 8px; background: white; color: black; font-size: 12px; line-height: 1.3; font-weight: bold; text-transform: uppercase; box-sizing: border-box;">
       
-      <!-- HEADER -->
-      <div style="text-align: center; margin-bottom: 8px;">
-        <div style="font-size: 14px; font-weight: bold;">MARY'S RESTAURANT</div>
-        <div style="font-size: 10px;">INVERSIONES AROMO S.A.C.</div>
-        <div style="font-size: 10px;">RUC: 20505262086</div>
-        <div style="font-size: 9px;">${periodText}</div>
-        <div style="font-size: 9px;">EMITIDO: ${formatDateForDisplay(new Date())} ${formatTimeForDisplay(new Date())}</div>
-        <div style="font-size: 9px;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+      <!-- HEADER - CENTRADO -->
+      <div style="text-align: center; margin-bottom: 10px; width: 100%;">
+        <div style="font-size: 16px; font-weight: bold; text-transform: uppercase; text-align: center;">MARY'S RESTAURANT</div>
+        <div style="font-size: 12px; font-weight: bold; text-transform: uppercase; text-align: center;">INVERSIONES AROMO S.A.C.</div>
+        <div style="font-size: 12px; font-weight: bold; text-transform: uppercase; text-align: center;">RUC: 20505262086</div>
+        <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; text-align: center;">${periodText}</div>
+        <div style="font-size: 10px; font-weight: bold; text-transform: uppercase; text-align: center;">EMITIDO: ${formatDateForDisplay(new Date())} ${formatTimeForDisplay(new Date())}</div>
+        <div style="font-size: 10px; font-weight: bold; text-transform: uppercase; text-align: center;">USUARIO: ${getCurrentUserName().toUpperCase()}</div>
+        <div style="border-top: 1px dashed #000; margin: 8px auto; width: 100%;"></div>
       </div>
 
       <!-- RESUMEN GENERAL -->
-      <div style="margin-bottom: 8px;">
-        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">RESUMEN GENERAL</div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>TOTAL ORDENES:</span>
+      <div style="margin-bottom: 8px; width: 100%;">
+        <div style="text-align: center; font-weight: bold; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; width: 100%;">RESUMEN GENERAL</div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%;">
+          <span style="font-weight: bold;">TOTAL ORDENES:</span>
           <span style="font-weight: bold;">${summary.totalOrders}</span>
         </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>TOTAL VENTAS:</span>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%;">
+          <span style="font-weight: bold;">TOTAL VENTAS:</span>
           <span style="font-weight: bold;">${formatCurrency(summary.totalAmount)}</span>
         </div>
       </div>
 
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+      <div style="border-top: 1px dashed #000; margin: 8px auto; width: 100%;"></div>
 
-      <!-- METODO DE PAGO -->
-      <div style="margin-bottom: 8px;">
-        <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">METODO DE PAGO</div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>EFECTIVO:</span>
-          <span>${formatCurrency(summary.byPaymentMethod.EFECTIVO)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>YAPE/PLIN:</span>
-          <span>${formatCurrency(summary.byPaymentMethod.YAPE_PLIN)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>TARJETA:</span>
-          <span>${formatCurrency(summary.byPaymentMethod.TARJETA)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>NO APLICA:</span>
-          <span>${formatCurrency(summary.byPaymentMethod.NO_APLICA)}</span>
-        </div>
+      <!-- MÉTODOS DE PAGO -->
+      <div style="margin-bottom: 8px; width: 100%;">
+        <div style="text-align: center; font-weight: bold; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; width: 100%;">METODO DE PAGO</div>
+        ${summary.byPaymentMethod.EFECTIVO > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%;">
+            <span style="font-weight: bold;">EFECTIVO:</span>
+            <span style="font-weight: bold;">${formatCurrency(summary.byPaymentMethod.EFECTIVO)}</span>
+          </div>
+        ` : ''}
+        ${summary.byPaymentMethod.YAPE_PLIN > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%;">
+            <span style="font-weight: bold;">YAPE/PLIN:</span>
+            <span style="font-weight: bold;">${formatCurrency(summary.byPaymentMethod.YAPE_PLIN)}</span>
+          </div>
+        ` : ''}
+        ${summary.byPaymentMethod.TARJETA > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%;">
+            <span style="font-weight: bold;">TARJETA:</span>
+            <span style="font-weight: bold;">${formatCurrency(summary.byPaymentMethod.TARJETA)}</span>
+          </div>
+        ` : ''}
+        ${summary.byPaymentMethod.NO_APLICA > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%;">
+            <span style="font-weight: bold;">NO APLICA:</span>
+            <span style="font-weight: bold;">${formatCurrency(summary.byPaymentMethod.NO_APLICA)}</span>
+          </div>
+        ` : ''}
       </div>
 
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+      <div style="border-top: 1px dashed #000; margin: 8px auto; width: 100%;"></div>
 
-      <!-- TOP 5 PRODUCTOS -->
-      ${summary.topProducts.length > 0 ? `
-        <div style="margin-bottom: 8px;">
-          <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">TOP 5 PRODUCTOS</div>
-          ${summary.topProducts.map((p, i) => `
-            <div style="display: flex; justify-content: space-between; font-size: 10px;">
-              <span>${i+1}. ${p.name.substring(0, 20)}${p.name.length > 20 ? '...' : ''}</span>
-              <span>${p.quantity}x ${formatCurrency(p.total)}</span>
+      <!-- PRODUCTOS VENDIDOS (TODOS) -->
+      ${summary.productsSold.length > 0 ? `
+        <div style="margin-bottom: 8px; width: 100%;">
+          <div style="text-align: center; font-weight: bold; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; width: 100%;">PRODUCTOS VENDIDOS</div>
+          ${summary.productsSold.map(p => `
+            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 3px; text-transform: uppercase; width: 100%;">
+              <span style="font-weight: bold;">${p.name}</span>
+              <span style="font-weight: bold;">${p.quantity}</span>
             </div>
           `).join('')}
+          <div style="border-top: 1px dashed #000; margin: 8px auto; width: 100%;"></div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; text-transform: uppercase; width: 100%;">
+            <span style="font-weight: bold;">TOTAL PLATOS:</span>
+            <span style="font-weight: bold;">${summary.productsSold.reduce((sum, p) => sum + p.quantity, 0)}</span>
+          </div>
         </div>
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+        <div style="border-top: 1px dashed #000; margin: 8px auto; width: 100%;"></div>
       ` : ''}
 
-      <!-- DESGLOSE DIARIO -->
+      <!-- DESGLOSE DIARIO (solo si hay más de un día) -->
       ${summary.dailyBreakdown.length > 1 ? `
-        <div style="margin-bottom: 8px;">
-          <div style="text-align: center; font-weight: bold; margin-bottom: 4px;">DESGLOSE DIARIO</div>
+        <div style="margin-bottom: 8px; width: 100%;">
+          <div style="text-align: center; font-weight: bold; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; width: 100%;">DESGLOSE DIARIO</div>
           ${summary.dailyBreakdown.map(day => `
-            <div style="display: flex; justify-content: space-between; font-size: 9px;">
-              <span>${day.date}:</span>
-              <span>${day.orders} ped - ${formatCurrency(day.total)}</span>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; margin-bottom: 3px; text-transform: uppercase; width: 100%;">
+              <span style="font-weight: bold;">${day.date}:</span>
+              <span style="font-weight: bold;">${day.orders} PED - ${formatCurrency(day.total)}</span>
             </div>
           `).join('')}
         </div>
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+        <div style="border-top: 1px dashed #000; margin: 8px auto; width: 100%;"></div>
       ` : ''}
 
-      <!-- FOOTER -->
-      <div style="text-align: center; font-size: 9px;">
-        <div>GRACIAS POR SU TRABAJO</div>
-        <div style="margin-top: 4px;">********************************</div>
+      <!-- FOOTER - CENTRADO -->
+      <div style="text-align: center; margin-top: 10px; font-size: 10px; font-weight: bold; text-transform: uppercase; width: 100%;">
+        <div style="font-weight: bold; text-align: center;">GRACIAS POR SU TRABAJO</div>
+        <div style="margin-top: 4px; font-weight: bold; text-align: center;">********************************</div>
       </div>
     </div>
   `;
 };
 
 /**
- * Imprime el ticket de resumen
+ * Imprime el ticket de resumen - CON CONFIGURACIÓN OPTIMIZADA
  */
 export const printResumenTicket = (summary: TicketSummary, startDate: Date, endDate: Date) => {
   const iframe = document.createElement('iframe');
@@ -250,22 +288,89 @@ export const printResumenTicket = (summary: TicketSummary, startDate: Date, endD
                 margin: 0;
                 padding: 0;
               }
-              body {
-                width: 80mm !important;
+              html, body {
+                width: 80mm;
                 margin: 0 auto !important;
                 padding: 0 !important;
                 background: white !important;
+              }
+              body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: auto;
                 font-family: 'Courier New', monospace !important;
+                font-size: 12px !important;
+                font-weight: bold !important;
+                text-transform: uppercase !important;
+              }
+              * {
+                font-family: 'Courier New', monospace !important;
+                font-weight: bold !important;
+                box-sizing: border-box !important;
+              }
+              .ticket {
+                width: 78mm !important; /* Un poco más pequeño para evitar cortes */
+                max-width: 78mm !important;
+                margin: 0 auto !important;
+                padding: 4mm !important;
+                background: white !important;
+                color: black !important;
+                box-sizing: border-box !important;
+              }
+              .center {
+                text-align: center;
+              }
+              .divider {
+                border-top: 1px dashed #000;
+                margin: 4px auto;
+                width: 100%;
+              }
+            }
+            @media screen {
+              body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+                padding: 20px;
+                background: #f0f0f0;
+                font-family: 'Courier New', monospace;
+              }
+              .ticket {
+                width: 80mm;
+                margin: 0 auto;
+                padding: 8px;
+                background: white;
+                color: black;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                border-radius: 4px;
               }
             }
             body {
               margin: 0;
               padding: 0;
-              background: white;
               font-family: 'Courier New', monospace;
+              font-size: 12px;
+              font-weight: bold;
+              text-transform: uppercase;
             }
             .ticket {
-              font-family: 'Courier New', monospace;
+              width: 100%;
+              max-width: 80mm;
+              margin: 0 auto;
+              padding: 8px;
+              box-sizing: border-box;
+            }
+            .ticket > div {
+              width: 100%;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 3px;
+              width: 100%;
             }
           </style>
         </head>

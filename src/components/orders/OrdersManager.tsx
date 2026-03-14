@@ -1,10 +1,10 @@
 //=================================================
-// ARCHIVO: src/components/orders/OrdersManager.tsx
+// ARCHIVO: src/components/orders/OrdersManager.tsx (COMPLETO - CON PAGO MIXTO)
 // ================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Order } from '../../types';
+import { Order, PaymentMethod, SplitPaymentDetails } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { usePagination, isDesktopPagination, isMobilePagination } from '../../hooks/usePagination';
@@ -288,6 +288,7 @@ const OrdersManager: React.FC = () => {
     loading,
     deleteOrder,
     updateOrderPayment,
+    updateOrderSplitPayment,
     exportOrdersToCSV,
     getTodayOrders,
     fetchOrders,
@@ -433,13 +434,25 @@ const OrdersManager: React.FC = () => {
   const getSourceText   = useCallback((t: string) => ({ phone: 'Teléfono', 'walk-in': 'Presencial', delivery: 'Delivery' }[t] || t), []);
   const getAreaIcon     = useCallback((t: string) => ({ phone: '🍳', 'walk-in': '👤', delivery: '🚚' }[t] || '📋'), []);
 
-  const getPaymentColor = useCallback((m?: string) => ({
-    'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
-    'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
-    'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
-  }[m || ''] || 'bg-gray-100 text-gray-800 border-gray-200'), []);
+  const getPaymentColor = useCallback((m?: string) => {
+    const colors: Record<string, string> = {
+      'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
+      'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
+      'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
+      'MIXTO':     'bg-orange-100 text-orange-800 border-orange-200',
+    };
+    return colors[m || ''] || 'bg-gray-100 text-gray-800 border-gray-200';
+  }, []);
 
-  const getPaymentText  = useCallback((m?: string) => ({ EFECTIVO: 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', TARJETA: 'TARJETA' }[m || ''] || 'NO APLICA'), []);
+  const getPaymentText  = useCallback((m?: string) => {
+    const texts: Record<string, string> = {
+      'EFECTIVO': 'EFECTIVO',
+      'YAPE/PLIN': 'YAPE/PLIN',
+      'TARJETA': 'TARJETA',
+      'MIXTO': 'MIXTO'
+    };
+    return texts[m || ''] || 'NO APLICA';
+  }, []);
 
   const handleRowMouseEnter = useCallback((order: Order, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -465,23 +478,74 @@ const OrdersManager: React.FC = () => {
     setShowPaymentModal(true);
   }, []);
 
-  const handleSavePaymentMethod = useCallback(async (orderId: string, newPaymentMethod: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | undefined) => {
+  // --- FUNCIÓN ACTUALIZADA PARA PAGO MIXTO ---
+  const handleSavePaymentMethod = useCallback(async (
+    orderId: string,
+    newPaymentMethod: PaymentMethod | undefined,
+    splitDetails?: SplitPaymentDetails
+  ) => {
     try {
       const previousMethod = localOrders.find(o => o.id === orderId)?.paymentMethod;
-      setLocalOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentMethod: newPaymentMethod } : o));
-      const result = await updateOrderPayment(orderId, newPaymentMethod);
+      const previousSplit = localOrders.find(o => o.id === orderId)?.splitPayment;
+
+      // Optimistic update: actualizamos la UI de inmediato
+      setLocalOrders(prev => prev.map(o => {
+        if (o.id === orderId) {
+          const updatedOrder = { ...o, paymentMethod: newPaymentMethod };
+          // Si es mixto y tenemos detalles, los guardamos
+          if (newPaymentMethod === 'MIXTO' && splitDetails) {
+            updatedOrder.splitPayment = splitDetails;
+          } else {
+            // Si no es mixto, eliminamos cualquier split anterior
+            delete updatedOrder.splitPayment;
+          }
+          return updatedOrder;
+        }
+        return o;
+      }));
+
+      let result;
+      if (newPaymentMethod === 'MIXTO' && splitDetails) {
+        // 1. Actualizar el método de pago principal a 'MIXTO'
+        const paymentResult = await updateOrderPayment(orderId, 'MIXTO');
+        if (paymentResult.success) {
+          // 2. Actualizar los detalles del split
+          result = await updateOrderSplitPayment(orderId, splitDetails);
+        } else {
+          result = paymentResult;
+        }
+      } else {
+        // Para otros métodos, solo actualizamos el método de pago principal
+        result = await updateOrderPayment(orderId, newPaymentMethod);
+      }
+
       if (!result.success) {
-        setLocalOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentMethod: previousMethod } : o));
+        // Revertir optimistic update en caso de error
+        setLocalOrders(prev => prev.map(o => {
+          if (o.id === orderId) {
+            const revertedOrder = { ...o, paymentMethod: previousMethod };
+            if (previousMethod === 'MIXTO' && previousSplit) {
+              revertedOrder.splitPayment = previousSplit;
+            } else {
+              delete revertedOrder.splitPayment;
+            }
+            return revertedOrder;
+          }
+          return o;
+        }));
         alert('❌ Error al actualizar el método de pago: ' + result.error);
       } else {
-        alert('✅ Método de pago actualizado correctamente');
+        // Si todo fue bien, refrescamos los datos para estar seguros
+        await fetchOrders(500);
       }
       setShowPaymentModal(false);
       setSelectedOrder(null);
     } catch (error: any) {
       alert('❌ Error inesperado: ' + error.message);
+      // Revertir en caso de error catastrófico
+      await fetchOrders(500);
     }
-  }, [updateOrderPayment, localOrders]);
+  }, [updateOrderPayment, updateOrderSplitPayment, localOrders, fetchOrders]);
 
   const handleExportExcel = useCallback(async (startDate: Date, endDate: Date) => {
     if (exporting) return;
@@ -703,6 +767,7 @@ const OrdersManager: React.FC = () => {
             <option value="EFECTIVO">💵 Efectivo</option>
             <option value="YAPE/PLIN">📱 Yape/Plin</option>
             <option value="TARJETA">💳 Tarjeta</option>
+            <option value="MIXTO">🔄 Pago Mixto</option>
           </select>
         </div>
 
