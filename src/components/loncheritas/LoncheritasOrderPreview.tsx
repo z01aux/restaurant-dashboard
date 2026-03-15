@@ -3,22 +3,25 @@
 
 import React from 'react';
 import { LoncheritasOrder } from '../../types/loncheritas';
-import { Clock, User, Phone, GraduationCap, Users, Utensils, CreditCard } from 'lucide-react';
+import { Clock, User, Phone, GraduationCap, Users, Utensils, CreditCard , X} from 'lucide-react';
 
 interface LoncheritasOrderPreviewProps {
   order: LoncheritasOrder;
   isVisible: boolean;
   position: { x: number; y: number };
   shouldIgnoreEvents?: boolean;
+  onClose?: () => void;
 }
 
 export const LoncheritasOrderPreview: React.FC<LoncheritasOrderPreviewProps> = ({
   order,
   isVisible,
   position,
-  shouldIgnoreEvents = false
+  shouldIgnoreEvents = false,
+  onClose,
 }) => {
   if (!isVisible) return null;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const getDisplayNumber = (order: LoncheritasOrder) =>
     order.order_number || `LON-${order.id.slice(-8).toUpperCase()}`;
@@ -75,13 +78,10 @@ export const LoncheritasOrderPreview: React.FC<LoncheritasOrderPreviewProps> = (
   if (adjustedY < margin) adjustedY = margin;
   const maxHeight = viewportHeight - adjustedY - margin;
 
-  return (
-    <div
-      className={`fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl w-96 p-4 animate-in fade-in-0 zoom-in-95 ${
-        shouldIgnoreEvents ? 'pointer-events-none' : ''
-      }`}
-      style={{ left: `${adjustedX}px`, top: `${adjustedY}px`, maxHeight: `${maxHeight}px`, overflowY: 'auto', overflowX: 'hidden' }}
-    >
+
+  // ── Contenido compartido entre móvil y desktop ──────────────
+  const content = (
+    <>
       {/* Header */}
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
         <div className="flex items-center space-x-2">
@@ -97,7 +97,6 @@ export const LoncheritasOrderPreview: React.FC<LoncheritasOrderPreviewProps> = (
           </div>
         </div>
         <div className="text-right">
-          {/* ✅ Badge con color según método de pago */}
           <div className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentBadgeColor(order)}`}>
             <CreditCard size={11} className="mr-1" />
             <span>{getPaymentDisplay(order)}</span>
@@ -128,7 +127,7 @@ export const LoncheritasOrderPreview: React.FC<LoncheritasOrderPreviewProps> = (
         )}
       </div>
 
-      {/* ✅ Detalle visual de pago mixto */}
+      {/* Detalle pago mixto */}
       {order.payment_method === 'MIXTO' && order.split_payment && (
         <div className="mb-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
           <p className="text-xs font-semibold text-orange-800 mb-2">🔄 Detalle Pago Mixto:</p>
@@ -183,7 +182,42 @@ export const LoncheritasOrderPreview: React.FC<LoncheritasOrderPreviewProps> = (
           </div>
         )}
       </div>
+    </>
+  );
 
+  // ── MÓVIL: bottom-sheet ────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <>
+        <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl p-4 max-h-[80vh] overflow-y-auto animate-in slide-in-from-bottom-4">
+          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+          <div className="flex justify-end mb-2">
+            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+          {content}
+        </div>
+      </>
+    );
+  }
+
+  // ── DESKTOP: tooltip flotante ──────────────────────────────────
+  return (
+    <div
+      className={`fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl w-96 p-4 animate-in fade-in-0 zoom-in-95 ${
+        shouldIgnoreEvents ? 'pointer-events-none' : ''
+      }`}
+      style={{
+        left: `${adjustedX}px`,
+        top: `${adjustedY}px`,
+        maxHeight: `${maxHeight}px`,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      }}
+    >
+      {content}
       {adjustedX < position.x ? (
         <div className="absolute w-4 h-4 bg-white border-r border-t border-gray-200 transform rotate-45 -right-2 top-6" />
       ) : (

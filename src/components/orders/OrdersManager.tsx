@@ -1,134 +1,26 @@
-//=================================================
-// ARCHIVO: src/components/orders/OrdersManager.tsx (COMPLETO - CON PAGO MIXTO)
+// ARCHIVO: src/components/orders/OrdersManager.tsx
+// ACTUALIZADO: Botón "Reporte PDF" agregado al modal de fechas
 // ================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Pencil, Download, ChevronLeft, ChevronRight, FileText, ChevronDown } from 'lucide-react';
 import { Order, PaymentMethod, SplitPaymentDetails } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
-import { usePagination, isDesktopPagination, isMobilePagination } from '../../hooks/usePagination';
-import { PaginationControls } from '../ui/PaginationControls';
+import { usePagination } from '../../hooks/usePagination';
 import { OrderPreview } from './OrderPreview';
 import OrderTicket from './OrderTicket';
 import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
+import { generateSalesReportPDF } from './SalesReportPDF';
 import { useSalesClosure } from '../../hooks/useSalesClosure';
 import { CashRegisterModal } from '../sales/CashRegisterModal';
 import { SalesHistory } from '../sales/SalesHistory';
 import { PaymentMethodModal } from './PaymentMethodModal';
+import { PaymentFilter } from '../ui/PaymentFilter';
+import { OrdersDateFilter } from './OrdersDateFilter';
 import { DateRangeModal } from './DateRangeModal';
 
-// ============================================
-// COMPONENTE DE SELECCIÓN DE FECHA (ESTILO FULLDAY)
-// ============================================
-const DateSelector: React.FC<{
-  selectedDate: Date;
-  onDateChange: (date: Date) => void;
-  showOnlyToday: boolean;
-  onToggleShowOnlyToday: () => void;
-}> = ({ selectedDate, onDateChange, showOnlyToday, onToggleShowOnlyToday }) => {
-  
-  const handlePrevDay = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() - 1);
-    onDateChange(newDate);
-  };
-
-  const handleNextDay = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + 1);
-    onDateChange(newDate);
-  };
-
-  const handleToday = () => {
-    onDateChange(new Date());
-  };
-
-  const isToday = (date: Date): boolean => {
-    const today = new Date();
-    return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear();
-  };
-
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('es-PE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  if (showOnlyToday) {
-    return (
-      <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2">
-        <div className="flex items-center space-x-2">
-          <Calendar size={18} className="text-gray-500" />
-          <span className="font-medium text-gray-700">Hoy: {formatDate(new Date())}</span>
-        </div>
-        <button
-          onClick={onToggleShowOnlyToday}
-          className="text-sm text-red-600 hover:text-red-800 font-medium"
-        >
-          Ver todas las fechas
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-2">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        
-        {/* Selector de fecha con flechas */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handlePrevDay}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Día anterior"
-          >
-            <ChevronLeft size={20} className="text-gray-600" />
-          </button>
-
-          <div className="flex items-center space-x-2 px-4 py-2 bg-red-50 rounded-lg border border-red-200">
-            <Calendar size={18} className="text-red-600" />
-            <span className="font-medium text-red-800">
-              {formatDate(selectedDate)}
-            </span>
-          </div>
-
-          <button
-            onClick={handleNextDay}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Día siguiente"
-            disabled={isToday(selectedDate)}
-          >
-            <ChevronRight size={20} className={`${isToday(selectedDate) ? 'text-gray-300' : 'text-gray-600'}`} />
-          </button>
-        </div>
-
-        {/* Botones de acción */}
-        <div className="flex items-center space-x-2">
-          {!isToday(selectedDate) && (
-            <button
-              onClick={handleToday}
-              className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-            >
-              Ver Hoy
-            </button>
-          )}
-          <button
-            onClick={onToggleShowOnlyToday}
-            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-          >
-            Volver a "Solo Hoy"
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -237,7 +129,7 @@ const OrderRow = React.memo(({
         </div>
       </td>
 
-      {/* ✅ FIX: onMouseEnter={onMouseLeave} oculta el preview al entrar a la celda de Acciones */}
+      {/* onMouseEnter={onMouseLeave} oculta el preview al entrar a la celda de Acciones */}
       <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
         <div className="flex space-x-2">
           <OrderTicket order={order} />
@@ -256,6 +148,82 @@ const OrderRow = React.memo(({
   );
 });
 
+
+// ── TARJETA MÓVIL ÓRDENES ─────────────────────────────────────────────
+const OrderCard = React.memo(({
+  order, onEditPayment, onDelete, onTapPreview,
+  getDisplayNumber, getNumberType, getSourceText,
+  getPaymentColor, getPaymentText, getAreaIcon, user,
+}: {
+  order: Order;
+  onEditPayment: (order: Order) => void;
+  onDelete: (orderId: string, displayNumber: string) => void;
+  onTapPreview: (order: Order) => void;
+  getDisplayNumber: (order: Order) => string;
+  getNumberType: (order: Order) => string;
+  getSourceText: (type: string) => string;
+  getPaymentColor: (method?: string) => string;
+  getPaymentText: (method?: string) => string;
+  getAreaIcon: (type: string) => string;
+  user: any;
+}) => {
+  const displayNumber = getDisplayNumber(order);
+  const numberType    = getNumberType(order);
+  const areaIcon      = getAreaIcon(order.source.type);
+  return (
+    <div
+      className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3 active:bg-gray-50 transition-colors"
+      onClick={() => onTapPreview(order)}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <div className={`text-xs font-medium mb-0.5 ${numberType === 'kitchen' ? 'text-emerald-600' : 'text-blue-600'}`}>
+            {displayNumber}
+          </div>
+          <div className="font-semibold text-gray-900 truncate">{order.customerName || 'Sin nombre'}</div>
+          <div className="text-sm text-gray-500">{areaIcon} {getSourceText(order.source.type)}</div>
+        </div>
+        <div className="text-right ml-3 flex-shrink-0">
+          <div className="text-lg font-bold text-red-600">S/ {order.total.toFixed(2)}</div>
+          <div className="text-xs text-gray-400">
+            {new Date(order.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+      </div>
+      <div className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+        <span className="font-medium">{order.items.length} producto(s): </span>
+        <span className="text-gray-500">{order.items.map(item => item.menuItem.name).join(', ')}</span>
+      </div>
+      <div className="flex items-center justify-between pt-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center space-x-2">
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.paymentMethod)}`}>
+            {getPaymentText(order.paymentMethod)}
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onEditPayment(order); }}
+            className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-colors border border-blue-300"
+            title="Cambiar método de pago"
+          >
+            <Pencil size={14} />
+          </button>
+        </div>
+        <div className="flex items-center space-x-2">
+          <OrderTicket order={order} />
+          {user?.role === 'admin' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(order.id, displayNumber); }}
+              className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+              title="Eliminar orden"
+            >
+              🗑️
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
@@ -271,7 +239,6 @@ const OrdersManager: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
-  const [showOnlyToday, setShowOnlyToday] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -281,6 +248,7 @@ const OrdersManager: React.FC = () => {
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   const { user } = useAuth();
   const {
@@ -300,7 +268,6 @@ const OrdersManager: React.FC = () => {
     loading: salesLoading,
     openCashRegister,
     closeCashRegister,
-    getTodaySummary
   } = useSalesClosure();
 
   const regularOrders = useMemo(() => getRegularOrders(), [getRegularOrders, orders]);
@@ -352,25 +319,15 @@ const OrdersManager: React.FC = () => {
   ], []);
 
   const dateFilteredOrders = useMemo(() => {
-    if (showOnlyToday) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return localOrders.filter(order => {
-        const d = new Date(order.createdAt);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime() === today.getTime();
-      });
-    } else {
-      const startOfDay = new Date(selectedDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(selectedDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      return localOrders.filter(order => {
-        const orderDate = new Date(order.createdAt);
-        return orderDate >= startOfDay && orderDate <= endOfDay;
-      });
-    }
-  }, [localOrders, showOnlyToday, selectedDate]);
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    return localOrders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate >= startOfDay && orderDate <= endOfDay;
+    });
+  }, [localOrders, selectedDate]);
 
   const filteredAndSortedOrders = useMemo(() => {
     if (!dateFilteredOrders.length) return [];
@@ -408,9 +365,9 @@ const OrdersManager: React.FC = () => {
             const to: Record<string, number> = { delivery: 1, phone: 2, 'walk-in': 3 };
             return to[a.source.type] - to[b.source.type];
           }
-          case 'total-desc':      return b.total - a.total;
-          case 'created-desc':    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          case 'created-asc':     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          case 'total-desc':   return b.total - a.total;
+          case 'created-desc': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          case 'created-asc':  return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           default: return 0;
         }
       });
@@ -419,11 +376,33 @@ const OrdersManager: React.FC = () => {
     return filtered;
   }, [dateFilteredOrders, searchTerm, areaFilter, paymentFilter, currentSort]);
 
+  const paymentTotals = useMemo(() => {
+    let efectivo = 0, yape = 0, tarjeta = 0;
+    dateFilteredOrders.forEach(o => {
+      if (o.paymentMethod === 'MIXTO' && o.splitPayment) {
+        efectivo += o.splitPayment.efectivo  || 0;
+        yape     += o.splitPayment.yapePlin  || 0;
+        tarjeta  += o.splitPayment.tarjeta   || 0;
+      } else if (o.paymentMethod === 'EFECTIVO')  { efectivo += o.total; }
+      else if (o.paymentMethod === 'YAPE/PLIN')   { yape     += o.total; }
+      else if (o.paymentMethod === 'TARJETA')     { tarjeta  += o.total; }
+    });
+    const totalGeneral = dateFilteredOrders.reduce((sum, o) => sum + o.total, 0);
+    return { efectivo, yape, tarjeta, totalGeneral };
+  }, [dateFilteredOrders]);
+
   const pagination = usePagination({
     items: filteredAndSortedOrders,
     itemsPerPage,
     mobileBreakpoint: 768
   });
+
+  const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
+
+  useEffect(() => {
+    pagination.resetPagination();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, areaFilter, paymentFilter, selectedDate, currentSort]);
 
   const getDisplayNumber = useCallback((order: Order) => {
     if (order.source.type === 'phone') return order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`;
@@ -444,12 +423,12 @@ const OrdersManager: React.FC = () => {
     return colors[m || ''] || 'bg-gray-100 text-gray-800 border-gray-200';
   }, []);
 
-  const getPaymentText  = useCallback((m?: string) => {
+  const getPaymentText = useCallback((m?: string) => {
     const texts: Record<string, string> = {
-      'EFECTIVO': 'EFECTIVO',
+      'EFECTIVO':  'EFECTIVO',
       'YAPE/PLIN': 'YAPE/PLIN',
-      'TARJETA': 'TARJETA',
-      'MIXTO': 'MIXTO'
+      'TARJETA':   'TARJETA',
+      'MIXTO':     'MIXTO'
     };
     return texts[m || ''] || 'NO APLICA';
   }, []);
@@ -461,6 +440,12 @@ const OrdersManager: React.FC = () => {
   }, []);
 
   const handleRowMouseLeave = useCallback(() => setPreviewOrder(null), []);
+
+  const handleTapPreview = useCallback((order: Order) => {
+    setPreviewOrder(order);
+    setPreviewPosition({ x: 0, y: 0 });
+  }, []);
+
 
   const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
     if (window.confirm(`¿Estás seguro de eliminar la orden ${orderNumber}?`)) {
@@ -478,7 +463,6 @@ const OrdersManager: React.FC = () => {
     setShowPaymentModal(true);
   }, []);
 
-  // --- FUNCIÓN ACTUALIZADA PARA PAGO MIXTO ---
   const handleSavePaymentMethod = useCallback(async (
     orderId: string,
     newPaymentMethod: PaymentMethod | undefined,
@@ -486,17 +470,15 @@ const OrdersManager: React.FC = () => {
   ) => {
     try {
       const previousMethod = localOrders.find(o => o.id === orderId)?.paymentMethod;
-      const previousSplit = localOrders.find(o => o.id === orderId)?.splitPayment;
+      const previousSplit  = localOrders.find(o => o.id === orderId)?.splitPayment;
 
-      // Optimistic update: actualizamos la UI de inmediato
+      // Optimistic update
       setLocalOrders(prev => prev.map(o => {
         if (o.id === orderId) {
           const updatedOrder = { ...o, paymentMethod: newPaymentMethod };
-          // Si es mixto y tenemos detalles, los guardamos
           if (newPaymentMethod === 'MIXTO' && splitDetails) {
             updatedOrder.splitPayment = splitDetails;
           } else {
-            // Si no es mixto, eliminamos cualquier split anterior
             delete updatedOrder.splitPayment;
           }
           return updatedOrder;
@@ -506,21 +488,17 @@ const OrdersManager: React.FC = () => {
 
       let result;
       if (newPaymentMethod === 'MIXTO' && splitDetails) {
-        // 1. Actualizar el método de pago principal a 'MIXTO'
         const paymentResult = await updateOrderPayment(orderId, 'MIXTO');
         if (paymentResult.success) {
-          // 2. Actualizar los detalles del split
           result = await updateOrderSplitPayment(orderId, splitDetails);
         } else {
           result = paymentResult;
         }
       } else {
-        // Para otros métodos, solo actualizamos el método de pago principal
         result = await updateOrderPayment(orderId, newPaymentMethod);
       }
 
       if (!result.success) {
-        // Revertir optimistic update en caso de error
         setLocalOrders(prev => prev.map(o => {
           if (o.id === orderId) {
             const revertedOrder = { ...o, paymentMethod: previousMethod };
@@ -535,32 +513,34 @@ const OrdersManager: React.FC = () => {
         }));
         alert('❌ Error al actualizar el método de pago: ' + result.error);
       } else {
-        // Si todo fue bien, refrescamos los datos para estar seguros
         await fetchOrders(500);
       }
       setShowPaymentModal(false);
       setSelectedOrder(null);
     } catch (error: any) {
       alert('❌ Error inesperado: ' + error.message);
-      // Revertir en caso de error catastrófico
       await fetchOrders(500);
     }
   }, [updateOrderPayment, updateOrderSplitPayment, localOrders, fetchOrders]);
 
+  // ── HANDLER EXCEL ──
   const handleExportExcel = useCallback(async (startDate: Date, endDate: Date) => {
     if (exporting) return;
     setExporting(true);
     const toast = document.createElement('div');
     toast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
-    toast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando reporte...</span></div>';
+    toast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando Excel...</span></div>';
     document.body.appendChild(toast);
     try {
-      const todaySummary = await getTodaySummary(regularOrders);
-      console.log('📊 Resumen:', todaySummary);
       await exportOrdersByDateRange(regularOrders, startDate, endDate);
+      const ok = document.createElement('div');
+      ok.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      ok.innerHTML = '<div>✅ Excel generado correctamente</div>';
+      document.body.appendChild(ok);
+      setTimeout(() => { if (document.body.contains(ok)) document.body.removeChild(ok); }, 3000);
     } catch (error: any) {
       const errToast = document.createElement('div');
-      errToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      errToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
       errToast.innerHTML = `<div>❌ Error: ${error.message}</div>`;
       document.body.appendChild(errToast);
       setTimeout(() => { if (document.body.contains(errToast)) document.body.removeChild(errToast); }, 3000);
@@ -568,7 +548,34 @@ const OrdersManager: React.FC = () => {
       if (document.body.contains(toast)) document.body.removeChild(toast);
       setExporting(false);
     }
-  }, [regularOrders, getTodaySummary, exporting]);
+  }, [regularOrders, exporting]);
+
+  // ── HANDLER PDF (NUEVO) ──
+  const handleExportPDF = useCallback(async (startDate: Date, endDate: Date) => {
+    if (exportingPDF) return;
+    setExportingPDF(true);
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+    toast.innerHTML = '<div class="flex items-center space-x-2"><div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div><span>Generando PDF...</span></div>';
+    document.body.appendChild(toast);
+    try {
+      await generateSalesReportPDF(regularOrders, startDate, endDate);
+      const ok = document.createElement('div');
+      ok.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      ok.innerHTML = '<div>✅ PDF generado correctamente</div>';
+      document.body.appendChild(ok);
+      setTimeout(() => { if (document.body.contains(ok)) document.body.removeChild(ok); }, 3000);
+    } catch (error: any) {
+      const errToast = document.createElement('div');
+      errToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+      errToast.innerHTML = `<div>❌ Error al generar PDF: ${error.message}</div>`;
+      document.body.appendChild(errToast);
+      setTimeout(() => { if (document.body.contains(errToast)) document.body.removeChild(errToast); }, 3000);
+    } finally {
+      if (document.body.contains(toast)) document.body.removeChild(toast);
+      setExportingPDF(false);
+    }
+  }, [regularOrders, exportingPDF]);
 
   const handlePrintTicket = useCallback((startDate: Date, endDate: Date) => {
     const filtered = regularOrders.filter(o => {
@@ -610,33 +617,15 @@ const OrdersManager: React.FC = () => {
     }
   }, [cashModalType, openCashRegister, closeCashRegister, regularOrders]);
 
-  const handleToggleHistory        = useCallback(() => setShowHistory(prev => !prev), []);
-  const handleToggleShowOnlyToday  = useCallback(() => setShowOnlyToday(prev => !prev), []);
-  const handleDateChange           = useCallback((date: Date) => setSelectedDate(date), []);
-
+  const handleToggleHistory       = useCallback(() => setShowHistory(prev => !prev), []);
   const handleClearFilters = useCallback(() => {
     setAreaFilter('');
     setPaymentFilter('');
     setSearchTerm('');
   }, []);
 
-  const desktopProps = isDesktopPagination(pagination) ? {
-    currentPage: pagination.currentPage,
-    totalPages: pagination.totalPages,
-    totalItems: pagination.totalItems,
-    startIndex: pagination.startIndex,
-    endIndex: pagination.endIndex,
-    hasNextPage: pagination.hasNextPage,
-    hasPrevPage: pagination.hasPrevPage,
-  } : {};
-
-  const mobileProps = isMobilePagination(pagination) ? {
-    hasMoreItems: pagination.hasMoreItems,
-    loadedItems: pagination.loadedItems,
-    onLoadMore: pagination.loadMore,
-  } : {};
-
   const hasActiveFilters = areaFilter !== '' || paymentFilter !== '' || searchTerm !== '';
+  const isAnyExporting   = exporting || exportingPDF;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -648,7 +637,9 @@ const OrdersManager: React.FC = () => {
       )}
 
       {previewOrder && (
-        <OrderPreview order={previewOrder} isVisible={true} position={previewPosition} />
+        <OrderPreview order={previewOrder} isVisible={true} position={previewPosition}
+          onClose={() => setPreviewOrder(null)}
+        />
       )}
 
       <PaymentMethodModal
@@ -658,14 +649,16 @@ const OrdersManager: React.FC = () => {
         onSave={handleSavePaymentMethod}
       />
 
+      {/* ── MODAL DE FECHAS: ahora recibe onConfirmPDF ── */}
       <DateRangeModal
         isOpen={showDateRangeModal}
         onClose={() => setShowDateRangeModal(false)}
         onConfirmExcel={handleExportExcel}
         onConfirmTicket={handlePrintTicket}
+        onConfirmPDF={handleExportPDF}
       />
 
-      {/* HEADER */}
+      {/* ── HEADER ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Órdenes</h2>
@@ -689,33 +682,62 @@ const OrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* SELECTOR DE FECHA */}
-      <DateSelector
+      {/* ── SELECTOR DE FECHA ── */}
+      <OrdersDateFilter
         selectedDate={selectedDate}
-        onDateChange={handleDateChange}
-        showOnlyToday={showOnlyToday}
-        onToggleShowOnlyToday={handleToggleShowOnlyToday}
+        onDateChange={setSelectedDate}
+        totalOrders={filteredAndSortedOrders.length}
       />
 
-      {/* BOTONES DE ACCIÓN */}
+      {/* ── BOTONES DE ACCIÓN ── */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExportTodayCSV} disabled={exporting} className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1 disabled:opacity-50">
+        <button
+          onClick={handleExportTodayCSV}
+          disabled={isAnyExporting}
+          className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1 disabled:opacity-50"
+        >
           <Download size={16} /><span>CSV Hoy</span>
         </button>
-        <button onClick={handleExportAllCSV} disabled={exporting} className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1 disabled:opacity-50">
+        <button
+          onClick={handleExportAllCSV}
+          disabled={isAnyExporting}
+          className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1 disabled:opacity-50"
+        >
           <Download size={16} /><span>CSV Todo</span>
         </button>
-        <button onClick={handleExportTodayExcel} disabled={exporting} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50">
+        <button
+          onClick={handleExportTodayExcel}
+          disabled={isAnyExporting}
+          className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50"
+        >
           <Download size={16} /><span>Excel Hoy</span>
         </button>
-        <button onClick={handleExportAllExcel} disabled={exporting} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1 disabled:opacity-50">
+        <button
+          onClick={handleExportAllExcel}
+          disabled={isAnyExporting}
+          className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1 disabled:opacity-50"
+        >
           <Download size={16} /><span>Excel Todo</span>
         </button>
-        <button onClick={() => setShowDateRangeModal(true)} disabled={exporting} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>Reportes por Fechas</span>
-          {exporting && <div className="ml-2 animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
+
+        {/* ── BOTÓN REPORTES POR FECHAS (abre el modal con Ticket + Excel + PDF) ── */}
+        <button
+          onClick={() => setShowDateRangeModal(true)}
+          disabled={isAnyExporting}
+          className="bg-gradient-to-r from-red-600 to-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:from-red-700 hover:to-amber-600 flex items-center space-x-2 disabled:opacity-50 shadow-sm font-medium"
+        >
+          <FileText size={16} />
+          <span>Reportes por Fechas</span>
+          {isAnyExporting && (
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+          )}
         </button>
-        <button onClick={() => { window.location.hash = '#reception'; }} className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm hover:from-red-600 hover:to-amber-600 flex items-center space-x-1" disabled={exporting}>
+
+        <button
+          onClick={() => { window.location.hash = '#reception'; }}
+          className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm hover:from-red-600 hover:to-amber-600 flex items-center space-x-1"
+          disabled={isAnyExporting}
+        >
           <span>➕</span><span>Nueva Orden</span>
         </button>
       </div>
@@ -732,7 +754,7 @@ const OrdersManager: React.FC = () => {
 
       {showHistory && <SalesHistory />}
 
-      {/* FILTROS */}
+      {/* ── FILTROS ── */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
@@ -743,31 +765,19 @@ const OrdersManager: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por cliente, teléfono..."
               className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
-              disabled={exporting}
+              disabled={isAnyExporting}
             />
           </div>
           <select
             value={areaFilter}
             onChange={(e) => setAreaFilter(e.target.value)}
             className="px-3 py-2 border rounded-lg text-sm min-w-[140px]"
-            disabled={exporting}
+            disabled={isAnyExporting}
           >
             <option value="">📋 Todas las áreas</option>
             <option value="phone">🍳 Cocina</option>
             <option value="walk-in">👤 Local</option>
             <option value="delivery">🚚 Delivery</option>
-          </select>
-          <select
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value)}
-            className="px-3 py-2 border rounded-lg text-sm min-w-[160px]"
-            disabled={exporting}
-          >
-            <option value="">💰 Todos los pagos</option>
-            <option value="EFECTIVO">💵 Efectivo</option>
-            <option value="YAPE/PLIN">📱 Yape/Plin</option>
-            <option value="TARJETA">💳 Tarjeta</option>
-            <option value="MIXTO">🔄 Pago Mixto</option>
           </select>
         </div>
 
@@ -800,33 +810,94 @@ const OrdersManager: React.FC = () => {
         )}
       </div>
 
-      <PaginationControls
-        {...desktopProps}
-        onPageChange={pagination.goToPage}
-        {...mobileProps}
-        isMobile={pagination.isMobile}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        onSortChange={setCurrentSort}
-        currentSort={currentSort}
-        sortOptions={sortOptions}
-      />
+      {/* ── FILTRO DE PAGO CON MONTOS ── */}
+      <div className="mb-4">
+        <PaymentFilter
+          paymentFilter={paymentFilter}
+          setPaymentFilter={setPaymentFilter}
+          totalEfectivo={paymentTotals.efectivo}
+          totalYape={paymentTotals.yape}
+          totalTarjeta={paymentTotals.tarjeta}
+          totalGeneral={paymentTotals.totalGeneral}
+          showAmounts={true}
+        />
+      </div>
 
-      {/* TABLA */}
+      {/* ── CONTROLES DESKTOP ── */}
+      {!pagination.isMobile && (
+        <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
+            <div className="text-sm text-gray-600">
+              Mostrando {((pagination.currentPage - 1) * itemsPerPage) + 1}–{Math.min(pagination.currentPage * itemsPerPage, filteredAndSortedOrders.length)} de{' '}
+              <span className="font-semibold">{filteredAndSortedOrders.length}</span> órdenes
+            </div>
+            <div className="flex items-center space-x-4">
+              <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 text-sm">
+                {[10, 20, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={currentSort} onChange={(e) => setCurrentSort(e.target.value)} className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 text-sm">
+                {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <div className="flex items-center space-x-1">
+                <button onClick={pagination.prevPage} disabled={pagination.currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronLeft size={16} /></button>
+                <span className="px-3 py-1 text-sm">{pagination.currentPage} / {totalPages || 1}</span>
+                <button onClick={pagination.nextPage} disabled={pagination.currentPage >= (totalPages || 1)} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronRight size={16} /></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── ORDENAMIENTO MÓVIL ── */}
+      {pagination.isMobile && (
+        <div className="flex items-center justify-between bg-white rounded-lg px-4 py-2 border shadow-sm mb-3">
+          <span className="text-xs text-gray-500 font-medium">{filteredAndSortedOrders.length} órdenes</span>
+          <select value={currentSort} onChange={(e) => setCurrentSort(e.target.value)} className="text-xs border-0 bg-transparent text-gray-700 font-medium focus:ring-0">
+            {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* ── TABLA / TARJETAS ── */}
+      {loading && !isInitialized ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+          <p className="text-gray-600 mt-2">Cargando...</p>
+        </div>
+      ) : pagination.currentItems.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 bg-white rounded-lg border">
+          {hasActiveFilters
+            ? 'No se encontraron órdenes con los filtros aplicados'
+            : `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`}
+        </div>
+      ) : pagination.isMobile ? (
+        <div className="space-y-3">
+          {pagination.currentItems.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onEditPayment={handleEditPayment}
+              onDelete={handleDeleteOrder}
+              onTapPreview={handleTapPreview}
+              user={user}
+              getDisplayNumber={getDisplayNumber}
+              getNumberType={getNumberType}
+              getSourceText={getSourceText}
+              getPaymentColor={getPaymentColor}
+              getPaymentText={getPaymentText}
+              getAreaIcon={getAreaIcon}
+            />
+          ))}
+          {(pagination as any).hasMoreItems && (
+            <button onClick={(pagination as any).loadMore}
+              className="w-full py-3 bg-white border border-red-300 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors flex items-center justify-center space-x-2">
+              <ChevronDown size={18} />
+              <span>Cargar más ({(pagination as any).loadedItems} de {filteredAndSortedOrders.length})</span>
+            </button>
+          )}
+        </div>
+      ) : (
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        {loading && !isInitialized ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
-            <p className="text-gray-600 mt-2">Cargando...</p>
-          </div>
-        ) : pagination.currentItems.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            {showOnlyToday
-              ? 'No hay órdenes regulares para hoy'
-              : `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
+        <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -858,30 +929,20 @@ const OrdersManager: React.FC = () => {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {filteredAndSortedOrders.length > 0 && (
         <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
           <div className="flex justify-between items-center">
-            <div>
-              <span className="font-semibold">Mostrando:</span>{' '}
-              {isDesktopPagination(pagination) ? (
-                <>{pagination.startIndex || 0}-{pagination.endIndex || 0} de {filteredAndSortedOrders.length} órdenes</>
-              ) : (
-                <>{pagination.loadedItems || 0} de {filteredAndSortedOrders.length} órdenes</>
-              )}
-            </div>
-            <div>
-              <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}
-            </div>
+            <div><span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}</div>
+            {isAnyExporting && (
+              <div className="text-xs text-red-600 flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600"></div>
+                <span>Generando reporte...</span>
+              </div>
+            )}
           </div>
-          {exporting && (
-            <div className="mt-2 text-xs text-blue-600 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
-              Generando reporte, por favor espera...
-            </div>
-          )}
         </div>
       )}
     </div>

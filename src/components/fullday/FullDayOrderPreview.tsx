@@ -1,24 +1,29 @@
 // ARCHIVO: src/components/fullday/FullDayOrderPreview.tsx
-// ✅ ACTUALIZADO: Muestra el detalle de PAGO MIXTO en la vista previa
+// ✅ CORREGIDO: Soporte táctil en móvil (tap para abrir, tap fuera para cerrar)
 
 import React from 'react';
 import { FullDayOrder } from '../../types/fullday';
-import { Clock, User, Phone, GraduationCap, Users, Utensils, CreditCard } from 'lucide-react';
+import { Clock, User, Phone, GraduationCap, Users, Utensils, CreditCard, X } from 'lucide-react';
 
 interface FullDayOrderPreviewProps {
   order: FullDayOrder;
   isVisible: boolean;
   position: { x: number; y: number };
   shouldIgnoreEvents?: boolean;
+  // ✅ NUEVO: callback para cerrar desde fuera (usado en móvil con tap)
+  onClose?: () => void;
 }
 
 export const FullDayOrderPreview: React.FC<FullDayOrderPreviewProps> = ({
   order,
   isVisible,
   position,
-  shouldIgnoreEvents = false
+  shouldIgnoreEvents = false,
+  onClose,
 }) => {
   if (!isVisible) return null;
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const getDisplayNumber = (order: FullDayOrder) =>
     order.order_number || `FD-${order.id.slice(-8).toUpperCase()}`;
@@ -30,17 +35,13 @@ export const FullDayOrderPreview: React.FC<FullDayOrderPreviewProps> = ({
     return `Hace ${diffMins} minutos`;
   };
 
-  // ✅ NUEVO: Muestra detalle completo del pago mixto
   const getPaymentDisplay = (order: FullDayOrder): string => {
     if (!order.payment_method) return 'NO APLICA';
     if (order.payment_method === 'MIXTO' && order.split_payment) {
       const partes: string[] = [];
-      if (order.split_payment.efectivo > 0)
-        partes.push(`EFEC S/ ${order.split_payment.efectivo.toFixed(2)}`);
-      if (order.split_payment.yapePlin > 0)
-        partes.push(`YAPE S/ ${order.split_payment.yapePlin.toFixed(2)}`);
-      if (order.split_payment.tarjeta > 0)
-        partes.push(`TARJ S/ ${order.split_payment.tarjeta.toFixed(2)}`);
+      if (order.split_payment.efectivo > 0) partes.push(`EFEC S/ ${order.split_payment.efectivo.toFixed(2)}`);
+      if (order.split_payment.yapePlin > 0) partes.push(`YAPE S/ ${order.split_payment.yapePlin.toFixed(2)}`);
+      if (order.split_payment.tarjeta > 0) partes.push(`TARJ S/ ${order.split_payment.tarjeta.toFixed(2)}`);
       return partes.join(' + ');
     }
     const map: Record<string, string> = {
@@ -52,7 +53,6 @@ export const FullDayOrderPreview: React.FC<FullDayOrderPreviewProps> = ({
     return map[order.payment_method] || 'NO APLICA';
   };
 
-  // ✅ NUEVO: Color del badge según método
   const getPaymentBadgeColor = (order: FullDayOrder): string => {
     if (!order.payment_method) return 'bg-gray-100 text-gray-800 border-gray-200';
     const colors: Record<string, string> = {
@@ -64,8 +64,9 @@ export const FullDayOrderPreview: React.FC<FullDayOrderPreviewProps> = ({
     return colors[order.payment_method] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
-  const viewportWidth  = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  // ── POSICIONAMIENTO (solo desktop, en móvil es modal centrado) ──
+  const viewportWidth  = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 768;
   const previewWidth   = 384;
   const margin         = 20;
 
@@ -75,17 +76,13 @@ export const FullDayOrderPreview: React.FC<FullDayOrderPreviewProps> = ({
   if (adjustedY < margin) adjustedY = margin;
   const maxHeight = viewportHeight - adjustedY - margin;
 
-  return (
-    <div
-      className={`fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl w-96 p-4 animate-in fade-in-0 zoom-in-95 ${
-        shouldIgnoreEvents ? 'pointer-events-none' : ''
-      }`}
-      style={{ left: `${adjustedX}px`, top: `${adjustedY}px`, maxHeight: `${maxHeight}px`, overflowY: 'auto', overflowX: 'hidden' }}
-    >
+  // ── CONTENIDO DEL PREVIEW (compartido entre móvil y desktop) ──
+  const content = (
+    <>
       {/* Header */}
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
             <Utensils size={16} className="text-white" />
           </div>
           <div>
@@ -96,39 +93,49 @@ export const FullDayOrderPreview: React.FC<FullDayOrderPreviewProps> = ({
             </div>
           </div>
         </div>
-        <div className="text-right">
-          {/* ✅ Badge de pago con color */}
-          <div className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentBadgeColor(order)}`}>
-            <CreditCard size={11} className="mr-1" />
-            <span>{getPaymentDisplay(order)}</span>
+        <div className="flex items-center gap-2">
+          <div className="text-right">
+            <div className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentBadgeColor(order)}`}>
+              <CreditCard size={11} className="mr-1" />
+              <span>{getPaymentDisplay(order)}</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">🎒 FullDay</div>
           </div>
-          <div className="text-xs text-gray-500 mt-1">🎒 FullDay</div>
+          {/* Botón cerrar — solo en móvil */}
+          {isMobile && onClose && (
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Info alumno */}
       <div className="space-y-2 mb-3">
         <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <User size={14} />
+          <User size={14} className="flex-shrink-0" />
           <span className="font-medium">{order.student_name}</span>
         </div>
         <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <GraduationCap size={14} />
+          <GraduationCap size={14} className="flex-shrink-0" />
           <span>{order.grade} - Sección {order.section}</span>
         </div>
         <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <Users size={14} />
+          <Users size={14} className="flex-shrink-0" />
           <span>Apoderado: {order.guardian_name}</span>
         </div>
         {order.phone && (
           <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <Phone size={14} />
+            <Phone size={14} className="flex-shrink-0" />
             <span>{order.phone}</span>
           </div>
         )}
       </div>
 
-      {/* ✅ Detalle visual de pago mixto */}
+      {/* Detalle pago mixto */}
       {order.payment_method === 'MIXTO' && order.split_payment && (
         <div className="mb-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
           <p className="text-xs font-semibold text-orange-800 mb-2">🔄 Detalle Pago Mixto:</p>
@@ -183,7 +190,44 @@ export const FullDayOrderPreview: React.FC<FullDayOrderPreviewProps> = ({
           </div>
         )}
       </div>
+    </>
+  );
 
+  // ── MÓVIL: modal bottom-sheet centrado con overlay oscuro ──
+  if (isMobile) {
+    return (
+      <>
+        {/* Overlay para cerrar al tocar fuera */}
+        <div
+          className="fixed inset-0 z-40 bg-black/40"
+          onClick={onClose}
+        />
+        {/* Panel deslizante desde abajo */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl p-4 max-h-[80vh] overflow-y-auto animate-in slide-in-from-bottom-4">
+          {/* Indicador de arrastre */}
+          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+          {content}
+        </div>
+      </>
+    );
+  }
+
+  // ── DESKTOP: tooltip flotante posicionado junto al cursor ──
+  return (
+    <div
+      className={`fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl w-96 p-4 animate-in fade-in-0 zoom-in-95 ${
+        shouldIgnoreEvents ? 'pointer-events-none' : ''
+      }`}
+      style={{
+        left: `${adjustedX}px`,
+        top: `${adjustedY}px`,
+        maxHeight: `${maxHeight}px`,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      }}
+    >
+      {content}
+      {/* Flechita decorativa */}
       {adjustedX < position.x ? (
         <div className="absolute w-4 h-4 bg-white border-r border-t border-gray-200 transform rotate-45 -right-2 top-6" />
       ) : (

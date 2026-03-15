@@ -1,12 +1,10 @@
 // ARCHIVO: src/components/fullday/FullDayTicket.tsx
-// Ticket FullDay — mismo diseño que OrderTicket (sin emoticonos)
-// Nombres: apellidos y primer nombre
-// ✅ FIX: onMouseEnter/onMouseLeave para suprimir preview al hover en botones
-// ============================================
+// ✅ CORREGIDO: Botones compactos en móvil (solo ícono), texto completo en desktop
 
 import React from 'react';
 import { FullDayOrder } from '../../types/fullday';
 import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Printer, FileDown } from 'lucide-react';
 
 interface FullDayTicketProps {
   order: FullDayOrder;
@@ -14,21 +12,16 @@ interface FullDayTicketProps {
   onMouseLeave?: () => void;
 }
 
-// ── Función para mostrar apellidos y primer nombre ─────────
 const formatName = (fullName: string): string => {
   if (!fullName) return '';
-  
   const parts = fullName.trim().split(/\s+/);
-  
   if (parts.length === 1) return parts[0];
   if (parts.length === 2) return fullName;
-  
   if (parts.length >= 3) {
     const firstName = parts[0];
     const lastNames = parts.slice(1).join(' ');
     return `${firstName} ${lastNames}`;
   }
-  
   return fullName;
 };
 
@@ -37,10 +30,8 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
   const studentDisplay  = formatName(order.student_name);
   const guardianDisplay = formatName(order.guardian_name);
 
-  // ── Constantes de diseño (igual que OrderTicket) ─────────────
   const TICKET_WIDTH = 80;
   const PAGE_WIDTH   = TICKET_WIDTH * 2.83465;
-
   const FONT_SIZE_SMALL   = 8;
   const FONT_SIZE_NORMAL  = 9;
   const FONT_SIZE_XLARGE  = 11;
@@ -58,21 +49,14 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
 
   const createdDate = new Date(order.created_at);
 
-  // ── ESTILOS PDF ────
   const styles = StyleSheet.create({
     page: {
-      flexDirection: 'column',
-      backgroundColor: '#FFFFFF',
-      padding: PADDING,
-      fontSize: FONT_SIZE_NORMAL,
-      fontFamily: 'Helvetica',
-      fontWeight: 'normal',
-      width: PAGE_WIDTH,
+      flexDirection: 'column', backgroundColor: '#FFFFFF', padding: PADDING,
+      fontSize: FONT_SIZE_NORMAL, fontFamily: 'Helvetica', fontWeight: 'normal', width: PAGE_WIDTH,
     },
     header: { textAlign: 'center', marginBottom: 6 },
     title: { fontSize: FONT_SIZE_XLARGE, fontWeight: 'bold', marginBottom: 3 },
     subtitle: { fontSize: FONT_SIZE_SMALL, marginBottom: 1, fontWeight: 'normal' },
-    boldSubtitle: { fontSize: FONT_SIZE_SMALL, marginBottom: 1, fontWeight: 'bold' },
     divider: { borderBottom: '1pt solid #000000', marginVertical: 3 },
     row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
     bold: { fontWeight: 'bold' },
@@ -84,18 +68,15 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
     colDescription: { width: '50%', fontSize: FONT_SIZE_PRODUCT, fontWeight: 'normal' },
     colPrice: { width: '35%', textAlign: 'right', fontSize: FONT_SIZE_PRODUCT, fontWeight: 'normal' },
     productName: { fontWeight: 'bold', textTransform: 'uppercase', fontSize: FONT_SIZE_PRODUCT, flexWrap: 'wrap', lineHeight: 1.4 },
-    notes: { fontStyle: 'italic', fontSize: FONT_SIZE_SMALL, marginLeft: 0, marginTop: 1, flexWrap: 'wrap', fontWeight: 'normal' },
+    notes: { fontStyle: 'italic', fontSize: FONT_SIZE_SMALL, marginTop: 1, flexWrap: 'wrap', fontWeight: 'normal' },
     footer: { textAlign: 'center', marginTop: 8 },
     footerDate: { marginTop: 6, fontSize: FONT_SIZE_SMALL - 1, fontWeight: 'normal' },
     valueBold: { fontWeight: 'bold', fontSize: FONT_SIZE_SMALL, maxWidth: '60%', flexWrap: 'wrap' },
   });
 
-  // ── DOCUMENTO PDF ─────────────────────────────────────────────
   const TicketDocument = () => (
     <Document>
       <Page size={[PAGE_WIDTH]} style={styles.page}>
-
-        {/* Encabezado */}
         <View style={styles.header}>
           <Text style={styles.title}>MARY'S RESTAURANT</Text>
           <Text style={styles.subtitle}>INVERSIONES AROMO S.A.C.</Text>
@@ -104,8 +85,6 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
           <Text style={styles.subtitle}>Tel: 941 778 599</Text>
           <View style={styles.divider} />
         </View>
-
-        {/* Info pedido */}
         <View style={styles.section}>
           <View style={styles.row}><Text style={styles.bold}>PEDIDO:</Text><Text>#{order.order_number}</Text></View>
           <View style={styles.row}><Text style={styles.bold}>TIPO:</Text><Text>FULLDAY</Text></View>
@@ -113,10 +92,7 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
           <View style={styles.row}><Text style={styles.bold}>HORA:</Text><Text>{createdDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</Text></View>
           <View style={styles.row}><Text style={styles.bold}>PAGO:</Text><Text>{getPaymentText()}</Text></View>
         </View>
-
         <View style={styles.divider} />
-
-        {/* Info alumno */}
         <View style={styles.section}>
           <View style={styles.row}>
             <Text style={styles.bold}>ALUMNO:</Text>
@@ -131,10 +107,7 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
             <View style={styles.row}><Text style={styles.bold}>TELEFONO:</Text><Text>{order.phone}</Text></View>
           )}
         </View>
-
         <View style={styles.divider} />
-
-        {/* Tabla de productos */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={styles.colQuantity}>Cant</Text>
@@ -162,16 +135,11 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
             </View>
           ))}
         </View>
-
-        {/* SOLO TOTAL - SIN IGV */}
         <View style={[styles.row, styles.bold, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#000000', paddingTop: 4 }]}>
           <Text style={styles.bold}>TOTAL:</Text>
           <Text style={styles.bold}>S/ {order.total.toFixed(2)}</Text>
         </View>
-
         <View style={styles.divider} />
-
-        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.bold}>GRACIAS POR SU PEDIDO!</Text>
           <Text>*** FULLDAY ***</Text>
@@ -182,19 +150,17 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
             {new Date().toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
-
       </Page>
     </Document>
   );
 
-  // ── HTML PARA IMPRESIÓN ──
   const generateTicketHTML = (): string => `
     <div class="ticket">
       <div class="center">
         <div class="header-title" style="font-size:14px;">MARY'S RESTAURANT</div>
         <div class="header-subtitle">INVERSIONES AROMO S.A.C.</div>
         <div class="header-subtitle">RUC: 20505262086</div>
-        <div class="header-subtitle">AV. ISABEL LA CATOLICA 1254</div>
+        <div class="header-subtitle">AV. ISABEL LA CATÓLICA 1254</div>
         <div class="header-subtitle">Tel: 941 778 599</div>
         <div class="divider"></div>
       </div>
@@ -225,7 +191,6 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
         </tbody>
       </table>
       <div class="divider"></div>
-      <!-- SOLO TOTAL - SIN IGV -->
       <div class="info-row" style="border-top:2px solid #000;padding-top:5px;margin-top:5px;">
         <span class="label">TOTAL:</span><span class="label">S/ ${order.total.toFixed(2)}</span>
       </div>
@@ -245,40 +210,26 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
     </div>
   `;
 
-  // ── HANDLERS ─────────────────────────────────────────────────
   const handlePrint = (e: React.MouseEvent) => {
     e.stopPropagation();
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right    = '0';
-    iframe.style.bottom   = '0';
-    iframe.style.width    = '0';
-    iframe.style.height   = '0';
-    iframe.style.border   = 'none';
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:none;';
     document.body.appendChild(iframe);
-
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (iframeDoc) {
       iframeDoc.open();
       iframeDoc.write(`
-        <!DOCTYPE html>
-        <html>
+        <!DOCTYPE html><html>
           <head>
             <title>Ticket ${order.order_number}</title>
             <style>
-              @media print {
-                @page { size: 80mm auto; margin: 0; padding: 0; }
-                body { width: 80mm !important; margin: 0 auto !important; padding: 0 !important; font-family: "Courier New", monospace !important; font-weight: bold !important; box-sizing: border-box !important; }
-                * { font-family: "Courier New", monospace !important; box-sizing: border-box !important; }
-              }
+              @media print { @page { size: 80mm auto; margin: 0; } body { width: 80mm !important; margin: 0 auto !important; } }
               body { font-family: "Courier New", monospace; font-weight: bold; font-size: 12px; line-height: 1.3; width: 80mm; margin: 0 auto; padding: 0; background: white; color: black; box-sizing: border-box; }
-              * { box-sizing: border-box; }
+              * { box-sizing: border-box; font-family: "Courier New", monospace !important; }
               .ticket { padding: 8px; width: 100%; }
-              .ticket, .ticket *, div, span, td, th { font-family: "Courier New", monospace !important; }
               .center { text-align: center; }
               .bold { font-weight: bold !important; }
               .normal { font-weight: bold !important; }
-              .uppercase { text-transform: uppercase; }
               .divider { border-top: 1px solid #000; margin: 6px 0; }
               .info-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; }
               .label { font-weight: bold !important; }
@@ -286,15 +237,13 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
               .customer-name-bold { font-weight: bold !important; max-width: 60%; word-wrap: break-word; font-size: 12px; }
               .header-title { font-weight: bold !important; font-size: 13px; }
               .header-subtitle { font-weight: bold !important; font-size: 11px; }
-              .notes { font-style: normal; font-size: 12px; margin-left: 0; margin-bottom: 3px; display: block; width: 100%; font-weight: bold !important; white-space: pre-wrap; word-wrap: break-word; text-align: left; }
-              .table-notes { font-style: normal; font-size: 10px; margin-left: 0; margin-top: 2px; display: block; font-weight: bold !important; }
-              .product-row { display: flex; margin-bottom: 4px; }
+              .notes { font-size: 12px; margin-bottom: 3px; white-space: pre-wrap; word-wrap: break-word; font-weight: bold !important; }
+              .table-notes { font-size: 10px; margin-top: 2px; font-weight: bold !important; }
               .quantity { width: 15%; font-weight: bold !important; font-size: 12px; }
               .product-name { width: 85%; font-weight: bold !important; text-transform: uppercase; font-size: 12px; line-height: 1.4; }
               table { width: 100%; border-collapse: collapse; margin: 5px 0; font-size: 12px; }
               th, td { padding: 2px 0; text-align: left; vertical-align: top; }
               th { border-bottom: 1px solid #000; font-weight: bold !important; font-size: 11px; }
-              td { font-size: 12px; }
             </style>
           </head>
           <body>${generateTicketHTML()}</body>
@@ -332,47 +281,57 @@ const FullDayTicket: React.FC<FullDayTicketProps> = ({ order, onMouseEnter, onMo
     }
   };
 
-  // ── RENDER ─────────────────────────────────────────────────
-  // ✅ FIX: onMouseEnter/onMouseLeave en el div wrapper para suprimir preview
   return (
     <div
-      style={{ display: 'flex', gap: '10px', margin: '10px 0' }}
+      className="flex items-center gap-1.5"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
+      {/* Botón Ticket — ícono solo en móvil, texto en desktop */}
       <button
         onClick={handlePrint}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontWeight: 'bold',
-        }}
+        title={`Ticket #${order.order_number}`}
+        className="
+          flex items-center gap-1.5
+          bg-blue-600 hover:bg-blue-700
+          text-white font-semibold
+          rounded-lg transition-colors
+          /* móvil: solo ícono, cuadrado */
+          p-2
+          /* desktop: ícono + texto */
+          sm:px-3 sm:py-1.5
+          text-xs
+        "
       >
-        Ticket Cliente #{order.order_number}
+        <Printer size={14} className="flex-shrink-0" />
+        <span className="hidden sm:inline whitespace-nowrap">
+          Ticket #{order.order_number}
+        </span>
       </button>
 
+      {/* Botón PDF — ícono solo en móvil, texto en desktop */}
       <button
         onClick={handleDownloadPDF}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#28a745',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontWeight: 'bold',
-        }}
+        title="Descargar PDF"
+        className="
+          flex items-center gap-1.5
+          bg-green-600 hover:bg-green-700
+          text-white font-semibold
+          rounded-lg transition-colors
+          /* móvil: solo ícono, cuadrado */
+          p-2
+          /* desktop: ícono + texto */
+          sm:px-3 sm:py-1.5
+          text-xs
+        "
       >
-        Descargar PDF
+        <FileDown size={14} className="flex-shrink-0" />
+        <span className="hidden sm:inline whitespace-nowrap">
+          Descargar PDF
+        </span>
       </button>
     </div>
   );
 };
 
 export default FullDayTicket;
-
-

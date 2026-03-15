@@ -1,10 +1,10 @@
-// ============================================================
 // ARCHIVO: src/components/oep/OEPTicket.tsx
 // Ticket OEP con botones Imprimir y PDF (igual que FullDay)
 // ✅ FIX: onMouseEnter/onMouseLeave para suprimir preview al hover en botones
 // ============================================================
 
 import React from 'react';
+import { Printer, FileDown } from 'lucide-react';
 import { OEPOrder } from '../../types/oep';
 import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
@@ -293,40 +293,28 @@ const OEPTicket: React.FC<OEPTicketProps> = ({ order, onMouseEnter, onMouseLeave
     }
   };
 
-  // ✅ FIX: onMouseEnter/onMouseLeave en el div wrapper para suprimir preview
+
   return (
     <div
-      style={{ display: 'flex', gap: '10px', margin: '10px 0' }}
+      className="flex items-center gap-1.5"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       <button
         onClick={handlePrint}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontWeight: 'bold',
-        }}
+        title={`Ticket #${order.order_number}`}
+        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors p-2 sm:px-3 sm:py-1.5 text-xs"
       >
-        🖨️ Ticket Cliente #{order.order_number}
+        <Printer size={14} className="flex-shrink-0" />
+        <span className="hidden sm:inline whitespace-nowrap">Ticket #{order.order_number}</span>
       </button>
       <button
         onClick={handleDownloadPDF}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#28a745',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontWeight: 'bold',
-        }}
+        title="Descargar PDF"
+        className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors p-2 sm:px-3 sm:py-1.5 text-xs"
       >
-        📥 Descargar PDF
+        <FileDown size={14} className="flex-shrink-0" />
+        <span className="hidden sm:inline whitespace-nowrap">Descargar PDF</span>
       </button>
     </div>
   );

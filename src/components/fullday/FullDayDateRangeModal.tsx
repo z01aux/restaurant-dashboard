@@ -1,34 +1,28 @@
 // ============================================
 // ARCHIVO: src/components/fullday/FullDayDateRangeModal.tsx
+// ACTUALIZADO: Agrega botón "PDF Ejecutivo"
 // ============================================
 
 import React, { useState } from 'react';
-import { X, Calendar, Download } from 'lucide-react'; // Eliminado 'Printer' que no se usaba
+import { X, Calendar, Download, FileText } from 'lucide-react';
 
 interface FullDayDateRangeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (startDate: Date, endDate: Date) => void;
-  title?: string; // Título personalizable
+  onConfirmPDF?: (startDate: Date, endDate: Date) => void;
+  title?: string;
 }
 
-/**
- * Obtiene la fecha de hoy en formato YYYY-MM-DD usando hora local de Perú (UTC-5)
- * CORREGIDO: antes usaba toISOString() que devuelve UTC y causaba que mostrara el día siguiente
- */
 const getTodayString = (): string => {
   const now = new Date();
   const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
-  const year = peruDate.getFullYear();
+  const year  = peruDate.getFullYear();
   const month = String(peruDate.getMonth() + 1).padStart(2, '0');
-  const day = String(peruDate.getDate()).padStart(2, '0');
+  const day   = String(peruDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
-/**
- * Convierte una fecha local (YYYY-MM-DD) a un objeto Date en hora local de Perú
- * CORREGIDO: antes usaba new Date(dateStr) que interpretaba la fecha como UTC
- */
 const createPeruDate = (dateStr: string): Date => {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day, 0, 0, 0, 0);
@@ -38,222 +32,126 @@ export const FullDayDateRangeModal: React.FC<FullDayDateRangeModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  title = "Reporte por Rango de Fechas" // Título por defecto
+  onConfirmPDF,
+  title = 'Reporte por Rango de Fechas',
 }) => {
   const [startDate, setStartDate] = useState<string>(getTodayString);
-  const [endDate, setEndDate] = useState<string>(getTodayString);
-  const [error, setError] = useState<string | null>(null);
+  const [endDate,   setEndDate]   = useState<string>(getTodayString);
+  const [error,     setError]     = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const validateDates = (): boolean => {
     const start = createPeruDate(startDate);
-    const end = createPeruDate(endDate);
-
-    if (start > end) {
-      setError('La fecha de inicio no puede ser mayor que la fecha de fin');
-      return false;
-    }
-
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays > 31) {
-      setError('El rango máximo permitido es de 31 días');
-      return false;
-    }
-
+    const end   = createPeruDate(endDate);
+    if (start > end) { setError('La fecha de inicio no puede ser mayor que la fecha de fin'); return false; }
+    const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays > 31) { setError('El rango máximo permitido es de 31 días'); return false; }
     setError(null);
     return true;
   };
 
-  const handleConfirm = () => {
-    if (validateDates()) {
-      onConfirm(createPeruDate(startDate), createPeruDate(endDate));
-      onClose();
-    }
+  const handleExcel = () => {
+    if (validateDates()) { onConfirm(createPeruDate(startDate), createPeruDate(endDate)); onClose(); }
   };
 
-  // Opciones rápidas — todas usan hora local de Perú
-  const setToday = () => {
-    const today = getTodayString();
-    setStartDate(today);
-    setEndDate(today);
+  const handlePDF = () => {
+    if (validateDates() && onConfirmPDF) { onConfirmPDF(createPeruDate(startDate), createPeruDate(endDate)); onClose(); }
   };
+
+  const setToday = () => { const t = getTodayString(); setStartDate(t); setEndDate(t); };
 
   const setYesterday = () => {
-    const now = new Date();
-    const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    const peruDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
     peruDate.setDate(peruDate.getDate() - 1);
-    const year = peruDate.getFullYear();
-    const month = String(peruDate.getMonth() + 1).padStart(2, '0');
-    const day = String(peruDate.getDate()).padStart(2, '0');
-    const yesterdayStr = `${year}-${month}-${day}`;
-    setStartDate(yesterdayStr);
-    setEndDate(yesterdayStr);
+    const s = `${peruDate.getFullYear()}-${String(peruDate.getMonth() + 1).padStart(2, '0')}-${String(peruDate.getDate()).padStart(2, '0')}`;
+    setStartDate(s); setEndDate(s);
   };
 
   const setThisWeek = () => {
-    const now = new Date();
-    const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
-
+    const peruDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
     const monday = new Date(peruDate);
-    const dayOfWeek = peruDate.getDay();
-    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    monday.setDate(peruDate.getDate() - diff);
-
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-
-    const formatDate = (date: Date) => {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    };
-
-    setStartDate(formatDate(monday));
-    setEndDate(formatDate(sunday));
+    monday.setDate(peruDate.getDate() - (peruDate.getDay() === 0 ? 6 : peruDate.getDay() - 1));
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setStartDate(fmt(monday)); setEndDate(fmt(sunday));
   };
 
   const setThisMonth = () => {
-    const now = new Date();
-    const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
-
-    const firstDay = new Date(peruDate.getFullYear(), peruDate.getMonth(), 1);
-    const lastDay = new Date(peruDate.getFullYear(), peruDate.getMonth() + 1, 0);
-
-    const formatDate = (date: Date) => {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    };
-
-    setStartDate(formatDate(firstDay));
-    setEndDate(formatDate(lastDay));
+    const peruDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    const first = new Date(peruDate.getFullYear(), peruDate.getMonth(), 1);
+    const last  = new Date(peruDate.getFullYear(), peruDate.getMonth() + 1, 0);
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setStartDate(fmt(first)); setEndDate(fmt(last));
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in">
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-        
-        {/* Header - Ahora usa el título personalizado */}
-        <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-4 text-white">
+
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-500 p-4 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Calendar size={20} />
               <h2 className="text-lg font-bold">{title}</h2>
             </div>
-            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg">
-              <X size={20} />
-            </button>
+            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg"><X size={20} /></button>
           </div>
         </div>
 
-        {/* Contenido */}
         <div className="p-6">
-          
           {/* Opciones rápidas */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Opciones rápidas:
-            </label>
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Opciones rápidas:</label>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={setToday}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-              >
-                📅 Hoy
-              </button>
-              <button
-                onClick={setYesterday}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-              >
-                📅 Ayer
-              </button>
-              <button
-                onClick={setThisWeek}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-              >
-                📅 Esta Semana
-              </button>
-              <button
-                onClick={setThisMonth}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-              >
-                📅 Este Mes
-              </button>
+              {([['📅 Hoy', setToday], ['📅 Ayer', setYesterday], ['📅 Esta Semana', setThisWeek], ['📅 Este Mes', setThisMonth]] as [string, () => void][]).map(([label, fn]) => (
+                <button key={label} onClick={fn} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">{label}</button>
+              ))}
             </div>
           </div>
 
-          {/* Selectores de fecha */}
-          <div className="space-y-4 mb-6">
+          {/* Selectores */}
+          <div className="space-y-4 mb-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha de inicio:
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setError(null);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de inicio:</label>
+              <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setError(null); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha de fin:
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setError(null);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de fin:</label>
+              <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setError(null); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
             </div>
           </div>
 
-          {/* Mensaje de error */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
+          {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
 
-          {/* Información */}
-          <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <h3 className="text-sm font-semibold text-purple-800 mb-2">📋 El reporte incluirá:</h3>
-            <ul className="text-xs text-purple-700 space-y-1 list-disc list-inside">
-              <li>Resumen general del período</li>
-              <li>Desglose diario de ventas</li>
-              <li>Detalle de pedidos por alumno (organizado por grado)</li>
-              <li>Top productos más vendidos</li>
+          {/* Info */}
+          <div className="mb-5 p-3 bg-purple-50 rounded-lg border border-purple-200">
+            <ul className="text-xs text-purple-700 space-y-0.5 list-disc list-inside">
+              <li>Fechas en hora de Perú (UTC-5) · máx. 31 días</li>
+              <li>Hoy: {new Date().toLocaleDateString('es-PE', { timeZone: 'America/Lima' })}</li>
             </ul>
           </div>
 
           {/* Botones */}
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancelar
+          <div className="space-y-2">
+            <button type="button" onClick={handleExcel}
+              className="w-full px-4 py-3 bg-emerald-700 text-white rounded-xl hover:bg-emerald-800 transition-all flex items-center justify-center space-x-2 font-semibold text-sm">
+              <Download size={17} /><span>Excel</span>
             </button>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg hover:shadow-md transition-all font-semibold flex items-center justify-center space-x-2"
-            >
-              <Download size={16} />
-              <span>Generar Ticket</span>
+
+            {onConfirmPDF && (
+              <button type="button" onClick={handlePDF}
+                className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-500 text-white rounded-xl hover:from-purple-700 hover:to-indigo-600 transition-all flex items-center justify-center space-x-2 font-semibold text-sm shadow-sm">
+                <FileText size={17} /><span>PDF Ejecutivo</span>
+              </button>
+            )}
+
+            <button type="button" onClick={onClose}
+              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors text-sm">
+              Cancelar
             </button>
           </div>
         </div>

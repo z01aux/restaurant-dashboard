@@ -1,10 +1,9 @@
-// ============================================================
 // ARCHIVO: src/components/oep/OEPOrdersManager.tsx
-// VERSIÓN CORREGIDA - Eliminados elementos no usados
+// ✅ ACTUALIZADO: CON SOPORTE COMPLETO DE PAGO MIXTO
 // ============================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
+import { Search, ChevronDown, Pencil, Download, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { usePagination } from '../../hooks/usePagination';
@@ -17,6 +16,10 @@ import OEPTicket from './OEPTicket';
 import { OEPOrder, OEPPaymentMethod } from '../../types/oep';
 import { exportOEPToExcel, exportOEPByDateRange } from '../../utils/oepExportUtils';
 import { generateOEPTicketSummary, printOEPResumenTicket } from '../../utils/oepTicketUtils';
+import { supabase } from '../../lib/supabase';
+
+// Tipo local para el desglose de pago mixto (compatible con oep.ts actualizado)
+interface OEPSplitPaymentDetails { efectivo: number; yapePlin: number; tarjeta: number; }
 
 // ─── Modal de rango de fechas ────────────────────────────────
 const getTodayString = (): string => {
@@ -48,33 +51,19 @@ const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConf
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
         <div className="flex space-x-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-            Cancelar
-          </button>
-          <button
-            onClick={() => { onConfirm(createPeruDate(startDate), createPeruDate(endDate)); onClose(); }}
-            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
-          >
-            Generar
-          </button>
+          <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancelar</button>
+          <button onClick={() => { onConfirm(createPeruDate(startDate), createPeruDate(endDate)); onClose(); }}
+            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold">Generar</button>
         </div>
       </div>
     </div>
@@ -82,7 +71,7 @@ const DateRangeModal: React.FC<DateRangeModalProps> = ({ isOpen, onClose, onConf
 };
 
 // ============================================
-// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN (CON HOVER PREVIEW)
+// COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
 // ============================================
 const OEPOrderRow = React.memo(({
   order,
@@ -103,65 +92,39 @@ const OEPOrderRow = React.memo(({
 }) => {
   const displayNumber = getDisplayNumber(order);
 
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    onEditPayment(order);
-  };
+  const handleEditClick = (e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); onEditPayment(order); };
 
   return (
-    <tr
-      className="hover:bg-gray-50 cursor-pointer group relative"
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
+    <tr className="hover:bg-gray-50 cursor-pointer group relative" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <td className="px-4 sm:px-6 py-4">
         <div className="flex items-center space-x-2 mb-1">
-          <div className="text-sm font-medium text-blue-600">
-            {displayNumber}
-          </div>
+          <div className="text-sm font-medium text-blue-600">{displayNumber}</div>
         </div>
         <div className="font-medium text-gray-900">{order.customer_name}</div>
-        <div className="text-sm font-bold text-blue-600">
-          S/ {order.total.toFixed(2)}
-        </div>
+        <div className="text-sm font-bold text-blue-600">S/ {order.total.toFixed(2)}</div>
       </td>
       <td className="px-4 sm:px-6 py-4">
         <div className="mb-1">
           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 items-center space-x-1">
-            <span>📦</span>
-            <span>OEP</span>
+            <span>📦</span><span>OEP</span>
           </span>
         </div>
         <div className="flex items-center space-x-2">
           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.payment_method)}`}>
             {getPaymentText(order.payment_method)}
           </span>
-
-          <button
-            onClick={handleEditClick}
-            className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
-            title="Cambiar método de pago"
-          >
+          <button onClick={handleEditClick} className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300" title="Cambiar método de pago">
             <Pencil size={14} />
           </button>
         </div>
       </td>
       <td className="px-4 sm:px-6 py-4">
-        <div className="text-sm text-gray-900">
-          {new Date(order.created_at).toLocaleDateString()}
-        </div>
-        <div className="text-sm text-gray-500">
-          {new Date(order.created_at).toLocaleTimeString()}
-        </div>
+        <div className="text-sm text-gray-900">{new Date(order.created_at).toLocaleDateString()}</div>
+        <div className="text-sm text-gray-500">{new Date(order.created_at).toLocaleTimeString()}</div>
       </td>
       <td className="px-4 sm:px-6 py-4">
-        <div className="text-sm text-gray-900">
-          {order.items.length} producto(s)
-        </div>
-        <div className="text-xs text-gray-500 truncate max-w-xs">
-          {order.items.map(item => item.name).join(', ')}
-        </div>
+        <div className="text-sm text-gray-900">{order.items.length} producto(s)</div>
+        <div className="text-xs text-gray-500 truncate max-w-xs">{order.items.map(item => item.name).join(', ')}</div>
       </td>
       <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
         <div className="flex space-x-2">
@@ -169,6 +132,55 @@ const OEPOrderRow = React.memo(({
         </div>
       </td>
     </tr>
+  );
+});
+
+// ── TARJETA MÓVIL OEP ─────────────────────────────────────────────────
+const OEPOrderCard = React.memo(({
+  order, onEditPayment, onTapPreview,
+  getDisplayNumber, getPaymentColor, getPaymentText,
+}: {
+  order: OEPOrder;
+  onEditPayment: (order: OEPOrder) => void;
+  onTapPreview: (order: OEPOrder) => void;
+  getDisplayNumber: (order: OEPOrder) => string;
+  getPaymentColor: (method?: string | null) => string;
+  getPaymentText: (method?: string | null) => string;
+}) => {
+  const displayNumber = getDisplayNumber(order);
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3 active:bg-gray-50 transition-colors"
+      onClick={() => onTapPreview(order)}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium text-blue-500 mb-0.5">{displayNumber}</div>
+          <div className="font-semibold text-gray-900 truncate">{order.customer_name}</div>
+          {order.phone && <div className="text-sm text-gray-500">{order.phone}</div>}
+        </div>
+        <div className="text-right ml-3 flex-shrink-0">
+          <div className="text-lg font-bold text-blue-600">S/ {order.total.toFixed(2)}</div>
+          <div className="text-xs text-gray-400">
+            {new Date(order.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+      </div>
+      <div className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+        <span className="font-medium">{order.items.length} producto(s): </span>
+        <span className="text-gray-500">{order.items.map(item => item.name).join(', ')}</span>
+      </div>
+      <div className="flex items-center justify-between pt-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center space-x-2">
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.payment_method)}`}>
+            {getPaymentText(order.payment_method)}
+          </span>
+          <button onClick={(e) => { e.stopPropagation(); onEditPayment(order); }}
+            className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-colors border border-blue-300">
+            <Pencil size={14} />
+          </button>
+        </div>
+        <OEPTicket order={order} />
+      </div>
+    </div>
   );
 });
 
@@ -194,62 +206,32 @@ export const OEPOrdersManager: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (orders.length > 0 && !isInitialized) {
-      setLocalOrders(orders);
-      setIsInitialized(true);
-    }
+    if (orders.length > 0 && !isInitialized) { setLocalOrders(orders); setIsInitialized(true); }
   }, [orders, isInitialized]);
 
-  // Calcular total del día (se usa en el header)
-  const todayTotal = useMemo(() =>
-    getTodayOrders().reduce((sum, o) => sum + o.total, 0),
-    [getTodayOrders]
-  );
+  const todayTotal = useMemo(() => getTodayOrders().reduce((sum, o) => sum + o.total, 0), [getTodayOrders]);
 
-  // Calcular MONTOS TOTALES por método de pago para el día seleccionado
   const paymentTotals = useMemo(() => {
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
+    const dayOrders  = orders.filter(o => { const d = new Date(o.created_at); return d >= startOfDay && d <= endOfDay; });
 
-    const dayOrders = orders.filter(o => {
-      const d = new Date(o.created_at);
-      return d >= startOfDay && d <= endOfDay;
-    });
-
-    return {
-      efectivo: dayOrders
-        .filter(o => o.payment_method === 'EFECTIVO')
-        .reduce((sum, o) => sum + o.total, 0),
-      yape: dayOrders
-        .filter(o => o.payment_method === 'YAPE/PLIN')
-        .reduce((sum, o) => sum + o.total, 0),
-      tarjeta: dayOrders
-        .filter(o => o.payment_method === 'TARJETA')
-        .reduce((sum, o) => sum + o.total, 0),
-    };
+    const efectivo     = dayOrders.filter(o => o.payment_method === 'EFECTIVO').reduce((sum, o) => sum + o.total, 0);
+    const yape         = dayOrders.filter(o => o.payment_method === 'YAPE/PLIN').reduce((sum, o) => sum + o.total, 0);
+    const tarjeta      = dayOrders.filter(o => o.payment_method === 'TARJETA').reduce((sum, o) => sum + o.total, 0);
+    const totalGeneral = dayOrders.reduce((sum, o) => sum + o.total, 0);
+    return { efectivo, yape, tarjeta, totalGeneral };
   }, [orders, selectedDate]);
 
-  // Filtrar por fecha (usando selectedDate)
   const dateFilteredOrders = useMemo(() => {
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    return localOrders.filter(order => {
-      const orderDate = new Date(order.created_at);
-      return orderDate >= startOfDay && orderDate <= endOfDay;
-    });
+    const startOfDay = new Date(selectedDate); startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay   = new Date(selectedDate); endOfDay.setHours(23, 59, 59, 999);
+    return localOrders.filter(order => { const d = new Date(order.created_at); return d >= startOfDay && d <= endOfDay; });
   }, [localOrders, selectedDate]);
 
-  // FILTROS Y ORDENAMIENTO
   const filteredAndSortedOrders = useMemo(() => {
     if (!dateFilteredOrders.length) return [];
     let filtered = dateFilteredOrders;
-
-    // Filtrar por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(o =>
@@ -258,13 +240,7 @@ export const OEPOrdersManager: React.FC = () => {
         o.phone?.includes(term)
       );
     }
-
-    // Filtrar por método de pago
-    if (paymentFilter) {
-      filtered = filtered.filter(o => o.payment_method === paymentFilter);
-    }
-
-    // Ordenar
+    if (paymentFilter) filtered = filtered.filter(o => o.payment_method === paymentFilter);
     if (filtered.length > 1) {
       filtered = [...filtered].sort((a, b) => {
         switch (currentSort) {
@@ -273,166 +249,162 @@ export const OEPOrdersManager: React.FC = () => {
             if (so[a.status] !== so[b.status]) return so[a.status] - so[b.status];
             return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           }
-          case 'waiting-time':
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          case 'total-desc':      return b.total - a.total;
-          case 'created-desc':    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          case 'created-asc':     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case 'waiting-time': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case 'total-desc':   return b.total - a.total;
+          case 'created-desc': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          case 'created-asc':  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           default: return 0;
         }
       });
     }
-
     return filtered;
   }, [dateFilteredOrders, searchTerm, paymentFilter, currentSort]);
 
-  // PAGINACIÓN
-  const pagination = usePagination({
-    items: filteredAndSortedOrders,
-    itemsPerPage,
-    mobileBreakpoint: 768
-  });
-
-  // Calcular totalPages manualmente
+  const pagination = usePagination({ items: filteredAndSortedOrders, itemsPerPage, mobileBreakpoint: 768 });
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
 
-  // HANDLERS PARA PREVIEW
+  
+  useEffect(() => {
+    pagination.resetPagination();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, paymentFilter, selectedDate, currentSort]);
+
   const handleRowMouseEnter = useCallback((order: OEPOrder, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setPreviewOrder(order);
     setPreviewPosition({ x: rect.left + rect.width / 2, y: rect.top });
   }, []);
 
-  const handleRowMouseLeave = useCallback(() => {
-    setPreviewOrder(null);
+  const handleRowMouseLeave = useCallback(() => setPreviewOrder(null), []);
+
+  const handleTapPreview = useCallback((order: any) => {
+    setPreviewOrder(order);
+    setPreviewPosition({ x: 0, y: 0 });
   }, []);
 
-  // ── Reportes ──────────────────────────────────────────────────
-  const handleExcelHoy = useCallback(() => {
-    exportOEPToExcel(getTodayOrders(), 'today');
-  }, [getTodayOrders]);
 
-  const handleExcelAll = useCallback(() => {
-    exportOEPToExcel(orders, 'all');
-  }, [orders]);
-
-  const handleExportByDateRange = useCallback((startDate: Date, endDate: Date) => {
-    exportOEPByDateRange(orders, startDate, endDate);
-  }, [orders]);
+  const handleExcelHoy = useCallback(() => exportOEPToExcel(getTodayOrders(), 'today'), [getTodayOrders]);
+  const handleExcelAll = useCallback(() => exportOEPToExcel(orders, 'all'), [orders]);
+  const handleExportByDateRange = useCallback((startDate: Date, endDate: Date) => exportOEPByDateRange(orders, startDate, endDate), [orders]);
 
   const handlePrintTicket = useCallback((startDate: Date, endDate: Date) => {
     const filtered = orders.filter(o => {
       const d = new Date(o.created_at); d.setHours(0, 0, 0, 0);
-      const s = new Date(startDate);   s.setHours(0, 0, 0, 0);
-      const e = new Date(endDate);     e.setHours(23, 59, 59, 999);
+      const s = new Date(startDate);    s.setHours(0, 0, 0, 0);
+      const e = new Date(endDate);      e.setHours(23, 59, 59, 999);
       return d >= s && d <= e;
     });
     if (!filtered.length) { alert('No hay pedidos en el rango seleccionado'); return; }
-    printOEPResumenTicket(generateOEPTicketSummary(filtered), startDate, endDate);
+    printOEPResumenTicket(generateOEPTicketSummary(filtered, startDate, endDate), startDate, endDate);
   }, [orders]);
 
-  // ── Caja ─────────────────────────────────────────────────────
-  const handleOpenCash = () => {
-    setCashModalType('open');
-    setShowCashModal(true);
-  };
-  const handleCloseCash = () => {
-    setCashModalType('close');
-    setShowCashModal(true);
-  };
+  const handleOpenCash  = () => { setCashModalType('open');  setShowCashModal(true); };
+  const handleCloseCash = () => { setCashModalType('close'); setShowCashModal(true); };
 
   const handleCashConfirm = async (data: { initialCash?: number; finalCash?: number; notes?: string }) => {
     if (cashModalType === 'open') {
       const r = await openCashRegister(data.initialCash!);
-      if (r.success) {
-        alert('✅ Caja OEP abierta correctamente');
-        setShowCashModal(false);
-      } else alert('❌ ' + r.error);
+      if (r.success) { alert('✅ Caja OEP abierta correctamente'); setShowCashModal(false); }
+      else alert('❌ ' + r.error);
     } else {
       const r = await closeCashRegister(orders, data.finalCash!, data.notes || '');
-      if (r.success) {
-        alert('✅ Caja OEP cerrada correctamente');
-        setShowCashModal(false);
-      } else alert('❌ ' + r.error);
+      if (r.success) { alert('✅ Caja OEP cerrada correctamente'); setShowCashModal(false); }
+      else alert('❌ ' + r.error);
     }
   };
 
-  // ── Pago ─────────────────────────────────────────────────────
   const handleEditPayment = useCallback((order: OEPOrder) => {
     setSelectedOrder(order);
     setShowPaymentModal(true);
   }, []);
 
-  const handleSavePaymentMethod = useCallback(async (orderId: string, paymentMethod: OEPPaymentMethod | null) => {
+  // ✅ ACTUALIZADO: soporta PAGO MIXTO con split_payment
+  const handleSavePaymentMethod = useCallback(async (
+    orderId: string,
+    paymentMethod: OEPPaymentMethod | null,
+    splitDetails?: OEPSplitPaymentDetails
+  ) => {
     try {
-      const result = await updateOrderPayment(orderId, paymentMethod);
-      if (!result.success) alert('❌ Error al actualizar: ' + result.error);
+      const methodStr = paymentMethod as string | null;
+      if (methodStr === 'MIXTO' && splitDetails) {
+        const paymentResult = await updateOrderPayment(orderId, paymentMethod);
+        if (paymentResult.success) {
+          const { error } = await supabase
+            .from('oep')
+            .update({ split_payment: splitDetails, updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+          if (error) throw error;
+        } else {
+          alert('❌ Error al actualizar el método de pago: ' + paymentResult.error);
+        }
+      } else {
+        const result = await updateOrderPayment(orderId, paymentMethod);
+        if (result.success) {
+          await supabase
+            .from('oep')
+            .update({ split_payment: null, updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+        } else {
+          alert('❌ Error al actualizar: ' + result.error);
+        }
+      }
     } catch (error: any) {
       alert('❌ Error inesperado: ' + error.message);
     }
   }, [updateOrderPayment]);
 
-  // NUEVO: Manejador para actualizar la UI inmediatamente después del cambio de pago
-  const handlePaymentUpdated = useCallback((orderId: string, newMethod: OEPPaymentMethod | null) => {
-    setLocalOrders(prev => prev.map(order => 
-      order.id === orderId 
-        ? { ...order, payment_method: newMethod } 
-        : order
-    ));
+  // ✅ ACTUALIZADO: actualiza split_payment en la UI local
+  const handlePaymentUpdated = useCallback((
+    orderId: string,
+    newMethod: OEPPaymentMethod | null,
+    splitDetails?: OEPSplitPaymentDetails
+  ) => {
+    setLocalOrders(prev => prev.map(order => {
+      if (order.id === orderId) {
+        const updated = { ...order, payment_method: newMethod } as any;
+        updated.split_payment = ((newMethod as string) === 'MIXTO' && splitDetails) ? splitDetails : null;
+        return updated as OEPOrder;
+      }
+      return order;
+    }));
   }, []);
 
-  // Funciones auxiliares
-  const getDisplayNumber = useCallback((order: OEPOrder) => {
-    return order.order_number || `OEP-${order.id.slice(-8).toUpperCase()}`;
-  }, []);
+  const getDisplayNumber = useCallback((order: OEPOrder) =>
+    order.order_number || `OEP-${order.id.slice(-8).toUpperCase()}`, []);
 
-  const getPaymentColor = useCallback((method?: string | null) => {
-    const colors: Record<string, string> = {
-      'EFECTIVO': 'bg-green-100 text-green-800 border-green-200',
-      'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
-      'TARJETA': 'bg-blue-100 text-blue-800 border-blue-200',
-    };
-    return colors[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200';
-  }, []);
+  // ✅ ACTUALIZADO: incluye color para MIXTO
+  const getPaymentColor = useCallback((method?: string | null) => ({
+    'EFECTIVO':  'bg-green-100 text-green-800 border-green-200',
+    'YAPE/PLIN': 'bg-purple-100 text-purple-800 border-purple-200',
+    'TARJETA':   'bg-blue-100 text-blue-800 border-blue-200',
+    'MIXTO':     'bg-orange-100 text-orange-800 border-orange-200',
+  }[method || ''] || 'bg-gray-100 text-gray-800 border-gray-200'), []);
 
-  const getPaymentText = useCallback((method?: string | null) => {
-    const texts: Record<string, string> = {
-      'EFECTIVO': 'EFECTIVO',
-      'YAPE/PLIN': 'YAPE/PLIN',
-      'TARJETA': 'TARJETA',
-    };
-    return texts[method || ''] || 'NO APLICA';
-  }, []);
+  // ✅ ACTUALIZADO: incluye texto para MIXTO
+  const getPaymentText = useCallback((method?: string | null) => ({
+    'EFECTIVO': 'EFECTIVO', 'YAPE/PLIN': 'YAPE/PLIN', 'TARJETA': 'TARJETA', 'MIXTO': 'MIXTO',
+  }[method || ''] || 'NO APLICA'), []);
 
   const sortOptions = useMemo(() => [
-    { value: 'status-time',       label: '🔄 Estado + Tiempo' },
-    { value: 'waiting-time',      label: '⏱️ Tiempo Espera' },
-    { value: 'total-desc',        label: '💰 Mayor Monto' },
-    { value: 'created-desc',      label: '📅 Más Recientes' },
-    { value: 'created-asc',       label: '📅 Más Antiguas' },
+    { value: 'status-time',  label: '🔄 Estado + Tiempo' },
+    { value: 'waiting-time', label: '⏱️ Tiempo Espera' },
+    { value: 'total-desc',   label: '💰 Mayor Monto' },
+    { value: 'created-desc', label: '📅 Más Recientes' },
+    { value: 'created-asc',  label: '📅 Más Antiguas' },
   ], []);
 
-  const handleClearFilters = useCallback(() => {
-    setPaymentFilter('');
-    setSearchTerm('');
-  }, []);
-
+  const handleClearFilters = useCallback(() => { setPaymentFilter(''); setSearchTerm(''); }, []);
   const hasActiveFilters = paymentFilter !== '' || searchTerm !== '';
 
   return (
     <div className="space-y-4 sm:space-y-6">
 
-      {/* PREVIEW */}
       {previewOrder && (
-        <OEPOrderPreview
-          order={previewOrder}
-          isVisible={true}
-          position={previewPosition}
-          shouldIgnoreEvents={true}
+        <OEPOrderPreview order={previewOrder} isVisible={true} position={previewPosition} shouldIgnoreEvents={true}
+          onClose={() => setPreviewOrder(null)}
         />
       )}
 
-      {/* Modales */}
       <OEPPaymentModal
         isOpen={showPaymentModal}
         onClose={() => { setShowPaymentModal(false); setSelectedOrder(null); }}
@@ -449,18 +421,8 @@ export const OEPOrdersManager: React.FC = () => {
         onConfirm={handleCashConfirm}
         loading={salesLoading}
       />
-      <DateRangeModal
-        isOpen={showDateRangeExcel}
-        onClose={() => setShowDateRangeExcel(false)}
-        onConfirm={handleExportByDateRange}
-        title="📊 Reporte Excel por Fechas - OEP"
-      />
-      <DateRangeModal
-        isOpen={showDateRangeTicket}
-        onClose={() => setShowDateRangeTicket(false)}
-        onConfirm={handlePrintTicket}
-        title="🖨️ Ticket Resumen por Fechas - OEP"
-      />
+      <DateRangeModal isOpen={showDateRangeExcel}  onClose={() => setShowDateRangeExcel(false)}  onConfirm={handleExportByDateRange} title="📊 Reporte Excel por Fechas - OEP" />
+      <DateRangeModal isOpen={showDateRangeTicket} onClose={() => setShowDateRangeTicket(false)} onConfirm={handlePrintTicket}        title="🖨️ Ticket Resumen por Fechas - OEP" />
 
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -476,164 +438,108 @@ export const OEPOrdersManager: React.FC = () => {
             <span className="text-sm font-medium">Caja: {cashRegister?.is_open ? 'Abierta' : 'Cerrada'}</span>
           </div>
           {!cashRegister?.is_open ? (
-            <button onClick={handleOpenCash} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors">💰 Abrir Caja</button>
+            <button onClick={handleOpenCash}  className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors">💰 Abrir Caja</button>
           ) : (
             <button onClick={handleCloseCash} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors">🔒 Cerrar Caja</button>
           )}
         </div>
       </div>
 
-      {/* FILTRO DE FECHA CON FLECHAS */}
-      <OEPDateFilter
-        selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
-        totalOrders={filteredAndSortedOrders.length}
-      />
+      <OEPDateFilter selectedDate={selectedDate} onDateChange={setSelectedDate} totalOrders={filteredAndSortedOrders.length} />
 
-      {/* FILTRO POR MÉTODO DE PAGO CON MONTOS */}
       <div className="mb-4">
-        <PaymentFilter
-          paymentFilter={paymentFilter}
-          setPaymentFilter={setPaymentFilter}
-          totalEfectivo={paymentTotals.efectivo}
-          totalYape={paymentTotals.yape}
-          totalTarjeta={paymentTotals.tarjeta}
-          showAmounts={true}
-        />
+        <PaymentFilter paymentFilter={paymentFilter} setPaymentFilter={setPaymentFilter}
+          totalEfectivo={paymentTotals.efectivo} totalYape={paymentTotals.yape} totalTarjeta={paymentTotals.tarjeta} totalGeneral={paymentTotals.totalGeneral} showAmounts={true} />
       </div>
 
-      {/* BOTONES DE ACCIÓN */}
+      {/* BOTONES */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExcelHoy} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
-          <Download size={16} /><span>Excel Hoy</span>
-        </button>
-        <button onClick={handleExcelAll} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
-          <Download size={16} /><span>Excel Todo</span>
-        </button>
-        <button onClick={() => setShowDateRangeExcel(true)} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1">
-          <Download size={16} /><span>Reportes por Fechas</span>
-        </button>
-        <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1">
-          <Printer size={16} /><span>Ticket Resumen</span>
-        </button>
+        <button onClick={handleExcelHoy} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1"><Download size={16} /><span>Excel Hoy</span></button>
+        <button onClick={handleExcelAll} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1"><Download size={16} /><span>Excel Todo</span></button>
+        <button onClick={() => setShowDateRangeExcel(true)}  className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700 flex items-center space-x-1"><Download size={16} /><span>Reportes por Fechas</span></button>
+        <button onClick={() => setShowDateRangeTicket(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 flex items-center space-x-1"><Printer size={16} /><span>Ticket Resumen</span></button>
       </div>
 
-      {/* FILTROS - Buscar */}
+      {/* FILTROS */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por cliente, teléfono..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
-            />
+            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por cliente, teléfono..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" />
           </div>
         </div>
-
-        {/* Indicadores de filtros activos */}
         {hasActiveFilters && (
           <div className="mt-3 flex items-center justify-between">
             <div className="flex flex-wrap gap-2">
-              {paymentFilter && (
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPaymentColor(paymentFilter)}`}>
-                  {getPaymentText(paymentFilter)}
-                </span>
-              )}
-              {searchTerm && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  🔍 Búsqueda: "{searchTerm}"
-                </span>
-              )}
+              {paymentFilter && <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPaymentColor(paymentFilter)}`}>{getPaymentText(paymentFilter)}</span>}
+              {searchTerm && <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">🔍 Búsqueda: "{searchTerm}"</span>}
             </div>
-            <button
-              onClick={handleClearFilters}
-              className="text-xs text-red-600 hover:text-red-800 font-medium"
-            >
-              Limpiar filtros
-            </button>
+            <button onClick={handleClearFilters} className="text-xs text-red-600 hover:text-red-800 font-medium">Limpiar filtros</button>
           </div>
         )}
       </div>
 
-      {/* CONTROLES DE PAGINACIÓN Y ORDENAMIENTO */}
-      <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
-          <div className="text-sm text-gray-600">
-            Mostrando {((pagination.currentPage - 1) * itemsPerPage) + 1}-
-            {Math.min(pagination.currentPage * itemsPerPage, filteredAndSortedOrders.length)} de{' '}
-            <span className="font-semibold">{filteredAndSortedOrders.length}</span> pedidos
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <select
-              value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            
-            <select
-              value={currentSort}
-              onChange={(e) => setCurrentSort(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            >
-              {sortOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={pagination.prevPage}
-                disabled={pagination.currentPage === 1}
-                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              
-              <span className="px-3 py-1 text-sm">
-                {pagination.currentPage} / {totalPages}
-              </span>
-              
-              <button
-                onClick={pagination.nextPage}
-                disabled={pagination.currentPage === totalPages}
-                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight size={16} />
-              </button>
+            {/* ── CONTROLES DESKTOP ── */}
+      {!pagination.isMobile && (
+        <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
+            <div className="text-sm text-gray-600">
+              Mostrando {((pagination.currentPage - 1) * itemsPerPage) + 1}–{Math.min(pagination.currentPage * itemsPerPage, filteredAndSortedOrders.length)} de{' '}
+              <span className="font-semibold">{filteredAndSortedOrders.length}</span> pedidos
+            </div>
+            <div className="flex items-center space-x-4">
+              <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="px-3 py-1 border border-gray-300 rounded text-sm">
+                {[10, 20, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={currentSort} onChange={(e) => setCurrentSort(e.target.value)} className="px-3 py-1 border border-gray-300 rounded text-sm">
+                {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <div className="flex items-center space-x-1">
+                <button onClick={pagination.prevPage} disabled={pagination.currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronLeft size={16} /></button>
+                <span className="px-3 py-1 text-sm">{pagination.currentPage} / {totalPages || 1}</span>
+                <button onClick={pagination.nextPage} disabled={pagination.currentPage >= (totalPages || 1)} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronRight size={16} /></button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* TABLA - CON HOVER PREVIEW */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        {loading && !isInitialized ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="text-gray-600 mt-2">Cargando...</p>
-          </div>
-        ) : pagination.currentItems.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            No hay pedidos para el {selectedDate.toLocaleDateString('es-PE')}
-          </div>
-        ) : (
+      )}
+      {pagination.isMobile && (
+        <div className="flex items-center justify-between bg-white rounded-lg px-4 py-2 border shadow-sm mb-3">
+          <span className="text-xs text-gray-500 font-medium">{filteredAndSortedOrders.length} pedidos</span>
+          <select value={currentSort} onChange={(e) => setCurrentSort(e.target.value)} className="text-xs border-0 bg-transparent text-gray-700 font-medium focus:ring-0">
+            {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      )}
+      {/* TABLA / TARJETAS */}
+      {loading && !isInitialized ? (
+        <div className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div><p className="text-gray-600 mt-2">Cargando...</p></div>
+      ) : pagination.currentItems.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 bg-white rounded-lg border">
+          {hasActiveFilters ? 'No se encontraron pedidos con los filtros aplicados' : `No hay pedidos para el ${selectedDate.toLocaleDateString('es-PE')}`}
+        </div>
+      ) : pagination.isMobile ? (
+        <div className="space-y-3">
+          {pagination.currentItems.map((order) => (
+            <OEPOrderCard key={order.id} order={order} onEditPayment={handleEditPayment} onTapPreview={handleTapPreview} getDisplayNumber={getDisplayNumber} getPaymentColor={getPaymentColor} getPaymentText={getPaymentText} />
+          ))}
+          {(pagination as any).hasMoreItems && (
+            <button onClick={(pagination as any).loadMore}
+              className="w-full py-3 bg-white border border-blue-300 text-blue-600 rounded-xl text-sm font-medium hover:bg-blue-50 transition-colors flex items-center justify-center space-x-2">
+              <ChevronDown size={18} />
+              <span>Cargar más ({(pagination as any).loadedItems} de {filteredAndSortedOrders.length})</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente / Monto</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Área / Pago</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo / Pago</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productos</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -641,35 +547,25 @@ export const OEPOrdersManager: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {pagination.currentItems.map((order) => (
-                  <OEPOrderRow
-                    key={order.id}
-                    order={order}
-                    onMouseEnter={(e) => handleRowMouseEnter(order, e)}
-                    onMouseLeave={handleRowMouseLeave}
-                    onEditPayment={handleEditPayment}
-                    getDisplayNumber={getDisplayNumber}
-                    getPaymentColor={getPaymentColor}
-                    getPaymentText={getPaymentText}
-                  />
+                  <OEPOrderRow key={order.id} order={order}
+                    onMouseEnter={(e) => handleRowMouseEnter(order, e)} onMouseLeave={handleRowMouseLeave}
+                    onEditPayment={handleEditPayment} getDisplayNumber={getDisplayNumber}
+                    getPaymentColor={getPaymentColor} getPaymentText={getPaymentText} />
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* INFO DE TOTALES */}
       {filteredAndSortedOrders.length > 0 && (
         <div className="bg-white rounded-lg p-4 border text-sm text-gray-600">
           <div className="flex justify-between items-center">
-            <div>
-              <span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}
-            </div>
+            <div><span className="font-semibold">Total mostrado:</span> S/ {filteredAndSortedOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}</div>
           </div>
         </div>
       )}
 
-      {/* Historial de cierres */}
       {closures.length > 0 && (
         <div className="mt-8 pt-6 border-t border-gray-200">
           <h3 className="text-sm font-bold text-gray-700 mb-3">Últimos cierres de caja</h3>

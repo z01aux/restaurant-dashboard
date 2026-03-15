@@ -1,21 +1,20 @@
-// ============================================
-// ARCHIVO: src/components/fullday/FullDayDateFilter.tsx
-// Selector de fecha para pedidos FullDay
+// ARCHIVO: src/components/orders/OrdersDateFilter.tsx
+// Selector de fecha para pedidos Órdenes
 // ============================================
 
 import React from 'react';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
-interface FullDayDateFilterProps {
+interface OrdersDateFilterProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
   totalOrders: number;
 }
 
-export const FullDayDateFilter: React.FC<FullDayDateFilterProps> = ({
+export const OrdersDateFilter: React.FC<OrdersDateFilterProps> = ({
   selectedDate,
   onDateChange,
-  totalOrders
+  totalOrders,
 }) => {
   const handlePrevDay = () => {
     const newDate = new Date(selectedDate);
@@ -29,30 +28,25 @@ export const FullDayDateFilter: React.FC<FullDayDateFilterProps> = ({
     onDateChange(newDate);
   };
 
-  const handleToday = () => {
-    onDateChange(new Date());
-  };
+  const handleToday = () => onDateChange(new Date());
 
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('es-PE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const formatDate = (date: Date): string =>
+    date.toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
 
   const isToday = (date: Date): boolean => {
     const today = new Date();
-    return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear();
+    return (
+      date.getDate()     === today.getDate()     &&
+      date.getMonth()    === today.getMonth()    &&
+      date.getFullYear() === today.getFullYear()
+    );
   };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        
-        {/* Selector de fecha */}
+
+        {/* Selector de fecha con flechas */}
         <div className="flex items-center space-x-2">
           <button
             onClick={handlePrevDay}
@@ -62,9 +56,9 @@ export const FullDayDateFilter: React.FC<FullDayDateFilterProps> = ({
             <ChevronLeft size={20} className="text-gray-600" />
           </button>
 
-          <div className="flex items-center space-x-2 px-4 py-2 bg-purple-50 rounded-lg border border-purple-200">
-            <Calendar size={18} className="text-purple-600" />
-            <span className="font-medium text-purple-800">
+          <div className="flex items-center space-x-2 px-4 py-2 bg-red-50 rounded-lg border border-red-200">
+            <Calendar size={18} className="text-red-600" />
+            <span className="font-medium text-red-800">
               {formatDate(selectedDate)}
             </span>
           </div>
@@ -75,7 +69,7 @@ export const FullDayDateFilter: React.FC<FullDayDateFilterProps> = ({
             title="Día siguiente"
             disabled={isToday(selectedDate)}
           >
-            <ChevronRight size={20} className={`${isToday(selectedDate) ? 'text-gray-300' : 'text-gray-600'}`} />
+            <ChevronRight size={20} className={isToday(selectedDate) ? 'text-gray-300' : 'text-gray-600'} />
           </button>
         </div>
 
@@ -83,7 +77,7 @@ export const FullDayDateFilter: React.FC<FullDayDateFilterProps> = ({
         {!isToday(selectedDate) && (
           <button
             onClick={handleToday}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
           >
             Ver Hoy
           </button>
@@ -91,7 +85,7 @@ export const FullDayDateFilter: React.FC<FullDayDateFilterProps> = ({
 
         {/* Total de pedidos */}
         <div className="text-sm text-gray-600">
-          <span className="font-semibold">{totalOrders}</span> pedidos en esta fecha
+          <span className="font-semibold">{totalOrders}</span> órdenes en esta fecha
         </div>
       </div>
     </div>

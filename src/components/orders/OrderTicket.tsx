@@ -1,4 +1,5 @@
 import React from 'react';
+import { Printer, FileDown } from 'lucide-react';
 import { Order } from '../../types';
 import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
@@ -898,46 +899,32 @@ const OrderTicket: React.FC<OrderTicketProps> = ({ order, onMouseEnter, onMouseL
   };
 
   return (
-    <div 
-      style={{ display: 'flex', gap: '10px', margin: '10px 0' }}
+    <div
+      className="flex items-center gap-1.5"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       <button
         onClick={handlePrint}
         data-order-id={order.id}
-        className="print-button"
-        style={{
-          padding: '10px 20px',
-          backgroundColor: isPhoneOrder ? '#10b981' : '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontWeight: 'bold'
-        }}
+        title={isPhoneOrder ? `Ticket Cocina #${getDisplayKitchenNumber()}` : `Ticket #${getDisplayOrderNumber()}`}
+        className={`flex items-center gap-1.5 ${isPhoneOrder ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'} text-white font-semibold rounded-lg transition-colors p-2 sm:px-3 sm:py-1.5 text-xs`}
       >
-        {isPhoneOrder ? '📋 Ticket Cocina' : '🧾 Ticket Cliente'} #{isPhoneOrder ? getDisplayKitchenNumber() : getDisplayOrderNumber()}
+        <Printer size={14} className="flex-shrink-0" />
+        <span className="hidden sm:inline whitespace-nowrap">
+          {isPhoneOrder ? `Cocina #${getDisplayKitchenNumber()}` : `Ticket #${getDisplayOrderNumber()}`}
+        </span>
       </button>
-
       <button
         onClick={handleDownloadPDF}
-        className="download-pdf-button"
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#28a745',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontWeight: 'bold'
-        }}
+        title="Descargar PDF"
+        className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors p-2 sm:px-3 sm:py-1.5 text-xs"
       >
-        Descargar PDF
+        <FileDown size={14} className="flex-shrink-0" />
+        <span className="hidden sm:inline whitespace-nowrap">Descargar PDF</span>
       </button>
     </div>
   );
 };
 
 export default OrderTicket;
-

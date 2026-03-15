@@ -1,65 +1,67 @@
-// ============================================
 // ARCHIVO: src/components/ui/PaymentFilter.tsx
-// Componente reutilizable para filtrar por método de pago
-// MUESTRA MONTOS TOTALES EN SOLES (S/)
-// ============================================
+// ✅ CORREGIDO: El botón "Todos" muestra el total real de todos los pedidos
+//    (incluyendo la distribución de pagos MIXTOS en cada método)
 
 import React from 'react';
 
 interface PaymentFilterProps {
   paymentFilter: string;
   setPaymentFilter: (filter: string) => void;
-  totalEfectivo?: number;      // Monto total en soles
-  totalYape?: number;          // Monto total en soles
-  totalTarjeta?: number;       // Monto total en soles
-  showAmounts?: boolean;        // Mostrar montos en lugar de contadores
+  totalEfectivo?: number;
+  totalYape?: number;
+  totalTarjeta?: number;
+  // ✅ NUEVO: total real de todos los pedidos del día
+  // Si no se pasa, se calcula como efectivo + yape + tarjeta (comportamiento anterior)
+  totalGeneral?: number;
+  showAmounts?: boolean;
 }
 
 export const PaymentFilter: React.FC<PaymentFilterProps> = ({
   paymentFilter,
   setPaymentFilter,
   totalEfectivo = 0,
-  totalYape = 0,
-  totalTarjeta = 0,
-  showAmounts = true
+  totalYape     = 0,
+  totalTarjeta  = 0,
+  totalGeneral,
+  showAmounts   = true,
 }) => {
-  const totalGeneral = totalEfectivo + totalYape + totalTarjeta;
+  // Si se pasa totalGeneral úsalo; si no, suma los tres métodos (retrocompatible)
+  const totalTodos = totalGeneral !== undefined
+    ? totalGeneral
+    : totalEfectivo + totalYape + totalTarjeta;
 
   const paymentOptions = [
-    { 
-      value: '', 
-      label: 'Todos', 
-      icon: '📋', 
-      color: 'gray',
-      amount: totalGeneral
+    {
+      value:  '',
+      label:  'Todos',
+      icon:   '📋',
+      color:  'gray',
+      amount: totalTodos,
     },
-    { 
-      value: 'EFECTIVO', 
-      label: 'Efectivo', 
-      icon: '💵', 
-      color: 'green',
-      amount: totalEfectivo
+    {
+      value:  'EFECTIVO',
+      label:  'Efectivo',
+      icon:   '💵',
+      color:  'green',
+      amount: totalEfectivo,
     },
-    { 
-      value: 'YAPE/PLIN', 
-      label: 'Yape/Plin', 
-      icon: '📱', 
-      color: 'purple',
-      amount: totalYape
+    {
+      value:  'YAPE/PLIN',
+      label:  'Yape/Plin',
+      icon:   '📱',
+      color:  'purple',
+      amount: totalYape,
     },
-    { 
-      value: 'TARJETA', 
-      label: 'Tarjeta', 
-      icon: '💳', 
-      color: 'blue',
-      amount: totalTarjeta
+    {
+      value:  'TARJETA',
+      label:  'Tarjeta',
+      icon:   '💳',
+      color:  'blue',
+      amount: totalTarjeta,
     },
   ];
 
-  // Formatear monto en soles
-  const formatAmount = (amount: number): string => {
-    return `S/ ${amount.toFixed(2)}`;
-  };
+  const formatAmount = (amount: number): string => `S/ ${amount.toFixed(2)}`;
 
   return (
     <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
@@ -76,7 +78,7 @@ export const PaymentFilter: React.FC<PaymentFilterProps> = ({
           </button>
         )}
       </div>
-      
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {paymentOptions.map((option) => (
           <button
@@ -108,7 +110,7 @@ export const PaymentFilter: React.FC<PaymentFilterProps> = ({
             `}>
               {showAmounts ? formatAmount(option.amount) : option.amount}
             </div>
-            {option.amount > 0 && option.value === '' && (
+            {option.value === '' && (
               <div className="text-[10px] text-gray-400 mt-0.5">
                 total general
               </div>
@@ -116,19 +118,19 @@ export const PaymentFilter: React.FC<PaymentFilterProps> = ({
           </button>
         ))}
       </div>
-      
-      {/* Leyenda de colores */}
+
+      {/* Leyenda */}
       <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-center gap-4 text-xs text-gray-500">
         <div className="flex items-center">
-          <span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-1"></span>
+          <span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-1" />
           <span>Efectivo</span>
         </div>
         <div className="flex items-center">
-          <span className="inline-block w-3 h-3 rounded-full bg-purple-500 mr-1"></span>
+          <span className="inline-block w-3 h-3 rounded-full bg-purple-500 mr-1" />
           <span>Yape/Plin</span>
         </div>
         <div className="flex items-center">
-          <span className="inline-block w-3 h-3 rounded-full bg-blue-500 mr-1"></span>
+          <span className="inline-block w-3 h-3 rounded-full bg-blue-500 mr-1" />
           <span>Tarjeta</span>
         </div>
       </div>
