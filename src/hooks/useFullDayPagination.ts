@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO: src/hooks/useFullDayPagination.ts
-// Hook para paginación de FullDay (adaptado de usePagination)
+// Hook para paginación de FullDay - CORREGIDO para móvil
 // ============================================
 
 import { useState, useMemo, useEffect } from 'react';
@@ -22,6 +22,7 @@ export const useFullDayPagination = ({
     typeof window !== 'undefined' ? window.innerWidth < mobileBreakpoint : false
   );
 
+  // Detectar cambio de tamaño de pantalla
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < mobileBreakpoint);
@@ -31,19 +32,26 @@ export const useFullDayPagination = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [mobileBreakpoint]);
 
+  // Resetear paginación cuando cambian los items
+  useEffect(() => {
+    setCurrentPage(1);
+    setLoadedItems(itemsPerPage);
+  }, [items.length, itemsPerPage]);
+
   // Para desktop: paginación tradicional
   const desktopPagination = useMemo(() => {
-    const totalPages = Math.ceil(items.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
+    const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, items.length);
     const currentItems = items.slice(startIndex, endIndex);
 
     return {
       currentItems,
       totalPages,
-      currentPage,
-      hasNextPage: currentPage < totalPages,
-      hasPrevPage: currentPage > 1,
+      currentPage: safeCurrentPage,
+      hasNextPage: safeCurrentPage < totalPages,
+      hasPrevPage: safeCurrentPage > 1,
       startIndex: startIndex + 1,
       endIndex: Math.min(endIndex, items.length),
       totalItems: items.length
@@ -52,13 +60,14 @@ export const useFullDayPagination = ({
 
   // Para móvil: carga incremental
   const mobilePagination = useMemo(() => {
-    const currentItems = items.slice(0, loadedItems);
-    const hasMoreItems = loadedItems < items.length;
+    const safeLoadedItems = Math.min(loadedItems, items.length);
+    const currentItems = items.slice(0, safeLoadedItems);
+    const hasMoreItems = safeLoadedItems < items.length;
 
     return {
       currentItems,
       hasMoreItems,
-      loadedItems,
+      loadedItems: safeLoadedItems,
       totalItems: items.length,
       loadMore: () => {
         setLoadedItems(prev => Math.min(prev + itemsPerPage, items.length));
