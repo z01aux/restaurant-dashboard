@@ -1,5 +1,6 @@
 // ============================================================
-// ARCHIVO: src/hooks/useOEPOrders.ts (ACTUALIZADO)
+// ARCHIVO: src/hooks/useOEPOrders.ts
+// ACTUALIZADO: Mapea created_by_id y created_by_name
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -15,17 +16,20 @@ export const useOEPOrders = () => {
 
   const convertDatabaseOrder = (dbOrder: any): OEPOrder => ({
     id: dbOrder.id,
-    order_number: dbOrder.order_number || '',
-    customer_name: dbOrder.customer_name || '',
-    phone: dbOrder.phone || null,
-    address: dbOrder.address || null,
-    items: Array.isArray(dbOrder.items) ? dbOrder.items : [],
-    status: (dbOrder.status as OEPOrderStatus) || 'pending',
-    total: Number(dbOrder.total) || 0,
-    payment_method: dbOrder.payment_method as OEPPaymentMethod | null,
-    notes: dbOrder.notes || null,
-    created_at: new Date(dbOrder.created_at),
-    updated_at: new Date(dbOrder.updated_at)
+    order_number:    dbOrder.order_number || '',
+    customer_name:   dbOrder.customer_name || '',
+    phone:           dbOrder.phone || null,
+    address:         dbOrder.address || null,
+    items:           Array.isArray(dbOrder.items) ? dbOrder.items : [],
+    status:          (dbOrder.status as OEPOrderStatus) || 'pending',
+    total:           Number(dbOrder.total) || 0,
+    payment_method:  dbOrder.payment_method as OEPPaymentMethod | null,
+    notes:           dbOrder.notes || null,
+    created_at:      new Date(dbOrder.created_at),
+    updated_at:      new Date(dbOrder.updated_at),
+    // ── Quién generó el pedido ──────────────
+    created_by_id:   dbOrder.created_by_id   || null,
+    created_by_name: dbOrder.created_by_name || null,
   });
 
   const fetchOrders = useCallback(async (limit = 1000) => {
@@ -93,7 +97,6 @@ export const useOEPOrders = () => {
 
   const updateOrderPayment = async (orderId: string, paymentMethod: OEPPaymentMethod | null) => {
     try {
-      // Optimistic update
       setOrders(prev => prev.map(order =>
         order.id === orderId ? { ...order, payment_method: paymentMethod } : order
       ));
@@ -107,7 +110,7 @@ export const useOEPOrders = () => {
 
       return { success: true };
     } catch (error: any) {
-      await fetchOrders(); // Revertir en caso de error
+      await fetchOrders();
       return { success: false, error: error.message };
     }
   };

@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO: src/hooks/useFullDay.ts
-// Hook para gestionar pedidos FullDay (tabla separada)
+// ACTUALIZADO: Guarda quién generó el pedido
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -28,6 +28,9 @@ export interface FullDayOrder {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  // ── Quién generó el pedido ──────────────
+  created_by_id?:   string | null;
+  created_by_name?: string | null;
 }
 
 export const useFullDay = () => {
@@ -71,6 +74,9 @@ export const useFullDay = () => {
     }>;
     payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
     notes?: string;
+    // ── Quién generó el pedido ──────────────
+    created_by_id?:   string;
+    created_by_name?: string;
   }) => {
     try {
       const total = orderData.items.reduce(
@@ -78,7 +84,6 @@ export const useFullDay = () => {
         0
       );
 
-      // Preparar items para guardar como JSON
       const itemsJson = orderData.items.map(item => ({
         id: item.menuItem.id,
         name: item.menuItem.name,
@@ -90,17 +95,19 @@ export const useFullDay = () => {
       const { data, error } = await supabase
         .from('fullday')
         .insert([{
-          student_id: orderData.student_id || null,
-          student_name: orderData.student_name,
-          grade: orderData.grade,
-          section: orderData.section,
-          guardian_name: orderData.guardian_name,
-          phone: orderData.phone || null,
-          items: itemsJson,
-          total: total,
-          payment_method: orderData.payment_method,
-          notes: orderData.notes,
-          status: 'pending'
+          student_id:      orderData.student_id || null,
+          student_name:    orderData.student_name,
+          grade:           orderData.grade,
+          section:         orderData.section,
+          guardian_name:   orderData.guardian_name,
+          phone:           orderData.phone || null,
+          items:           itemsJson,
+          total:           total,
+          payment_method:  orderData.payment_method,
+          notes:           orderData.notes,
+          status:          'pending',
+          created_by_id:   orderData.created_by_id   || null,
+          created_by_name: orderData.created_by_name || null,
         }])
         .select()
         .single();
@@ -165,7 +172,6 @@ export const useFullDay = () => {
   const getTodayOrders = useCallback(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
     return orders.filter(order => {
       const orderDate = new Date(order.created_at);
       orderDate.setHours(0, 0, 0, 0);
@@ -178,7 +184,6 @@ export const useFullDay = () => {
     start.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
-
     return orders.filter(order => {
       const orderDate = new Date(order.created_at);
       return orderDate >= start && orderDate <= end;

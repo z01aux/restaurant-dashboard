@@ -1,5 +1,6 @@
 // ============================================
 // ARCHIVO: src/hooks/useLoncheritas.ts
+// ACTUALIZADO: Guarda quién generó el pedido
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -27,6 +28,9 @@ export interface LoncheritasOrder {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  // ── Quién generó el pedido ──────────────
+  created_by_id?:   string | null;
+  created_by_name?: string | null;
 }
 
 export const useLoncheritas = () => {
@@ -69,6 +73,9 @@ export const useLoncheritas = () => {
     }>;
     payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
     notes?: string;
+    // ── Quién generó el pedido ──────────────
+    created_by_id?:   string;
+    created_by_name?: string;
   }) => {
     try {
       const total = orderData.items.reduce(
@@ -87,17 +94,19 @@ export const useLoncheritas = () => {
       const { data, error } = await supabase
         .from('loncheritas')
         .insert([{
-          student_id: orderData.student_id || null,
-          student_name: orderData.student_name,
-          grade: orderData.grade,
-          section: orderData.section,
-          guardian_name: orderData.guardian_name,
-          phone: orderData.phone || null,
-          items: itemsJson,
-          total: total,
-          payment_method: orderData.payment_method,
-          notes: orderData.notes,
-          status: 'pending'
+          student_id:      orderData.student_id || null,
+          student_name:    orderData.student_name,
+          grade:           orderData.grade,
+          section:         orderData.section,
+          guardian_name:   orderData.guardian_name,
+          phone:           orderData.phone || null,
+          items:           itemsJson,
+          total:           total,
+          payment_method:  orderData.payment_method,
+          notes:           orderData.notes,
+          status:          'pending',
+          created_by_id:   orderData.created_by_id   || null,
+          created_by_name: orderData.created_by_name || null,
         }])
         .select()
         .single();

@@ -1,6 +1,7 @@
-// ============================================================
-// ARCHIVO: src/hooks/useOEP.ts (VERSIÓN CORREGIDA)
-// ============================================================
+// ============================================
+// ARCHIVO: src/hooks/useOEP.ts
+// ACTUALIZADO: Guarda quién generó el pedido
+// ============================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
@@ -33,7 +34,10 @@ export const useOEP = () => {
                 payment_method: order.payment_method as OEPPaymentMethod | null,
                 notes: order.notes || null,
                 created_at: new Date(order.created_at),
-                updated_at: new Date(order.updated_at)
+                updated_at: new Date(order.updated_at),
+                // ── Quién generó el pedido ──────────────
+                created_by_id:   order.created_by_id   || null,
+                created_by_name: order.created_by_name || null,
             }));
 
             setOrders(convertedOrders);
@@ -59,6 +63,9 @@ export const useOEP = () => {
         }>;
         payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA';
         notes?: string;
+        // ── Quién generó el pedido ──────────────
+        created_by_id?:   string;
+        created_by_name?: string;
     }) => {
         try {
             const total = orderData.items.reduce(
@@ -77,14 +84,16 @@ export const useOEP = () => {
             const { data, error } = await supabase
                 .from('oep')
                 .insert([{
-                    customer_name: orderData.customer_name,
-                    phone: orderData.phone || null,
-                    address: orderData.address || null,
-                    items: itemsJson,
-                    total: total,
-                    payment_method: orderData.payment_method,
-                    notes: orderData.notes,
-                    status: 'pending'
+                    customer_name:   orderData.customer_name,
+                    phone:           orderData.phone || null,
+                    address:         orderData.address || null,
+                    items:           itemsJson,
+                    total:           total,
+                    payment_method:  orderData.payment_method,
+                    notes:           orderData.notes,
+                    status:          'pending',
+                    created_by_id:   orderData.created_by_id   || null,
+                    created_by_name: orderData.created_by_name || null,
                 }])
                 .select()
                 .single();
@@ -93,17 +102,19 @@ export const useOEP = () => {
 
             const newOrder: OEPOrder = {
                 id: data.id,
-                order_number: data.order_number || '',
-                customer_name: data.customer_name || '',
-                phone: data.phone || null,
-                address: data.address || null,
-                items: Array.isArray(data.items) ? data.items : [],
-                status: (data.status as OEPOrderStatus) || 'pending',
-                total: Number(data.total) || 0,
-                payment_method: data.payment_method as OEPPaymentMethod | null,
-                notes: data.notes || null,
-                created_at: new Date(data.created_at),
-                updated_at: new Date(data.updated_at)
+                order_number:    data.order_number || '',
+                customer_name:   data.customer_name || '',
+                phone:           data.phone || null,
+                address:         data.address || null,
+                items:           Array.isArray(data.items) ? data.items : [],
+                status:          (data.status as OEPOrderStatus) || 'pending',
+                total:           Number(data.total) || 0,
+                payment_method:  data.payment_method as OEPPaymentMethod | null,
+                notes:           data.notes || null,
+                created_at:      new Date(data.created_at),
+                updated_at:      new Date(data.updated_at),
+                created_by_id:   data.created_by_id   || null,
+                created_by_name: data.created_by_name || null,
             };
 
             setOrders(prev => [newOrder, ...prev]);

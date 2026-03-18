@@ -1,4 +1,3 @@
-// ============================================
 // ARCHIVO: src/hooks/useOrders.ts (COMPLETO - CON PAGO MIXTO Y SPLIT PAYMENT ACTIVADO)
 // ============================================
 
@@ -75,7 +74,9 @@ export const useOrders = () => {
         createdAt: new Date(dbOrder.created_at),
         updatedAt: new Date(dbOrder.updated_at),
         studentId: dbOrder.student_id,
-        orderType: dbOrder.order_type as 'regular' | 'fullday'
+        orderType: dbOrder.order_type as 'regular' | 'fullday',
+        createdById:   dbOrder.created_by_id,
+        createdByName: dbOrder.created_by_name,
       };
     });
   };
@@ -198,7 +199,9 @@ export const useOrders = () => {
           total: total,
           status: 'pending',
           student_id: orderData.studentId || null,
-          order_type: orderType
+          order_type: orderType,
+          created_by_id:   orderData.createdById   || null,
+          created_by_name: orderData.createdByName || null,
         }])
         .select('*, order_number, kitchen_number')
         .single();
@@ -328,8 +331,8 @@ export const useOrders = () => {
       'TIPO DE PEDIDO',
       'FECHA',
       'HORA',
-      'N¢X ORDEN',
-      'N¢X COMANDA',
+      'Nï¿½X ORDEN',
+      'Nï¿½X COMANDA',
       'TELEFONO',
       'PRODUCTOS',
       'TIPO'
@@ -413,3 +416,4 @@ export const useOrders = () => {
     getFullDayOrders
   };
 };
+
