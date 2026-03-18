@@ -24,10 +24,8 @@ export interface OrderSource {
   deliveryAddress?: string;
 }
 
-// Definimos el tipo para los métodos de pago, ahora incluye 'MIXTO'
 export type PaymentMethod = 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO';
 
-// Interfaz para el detalle de un pago mixto
 export interface SplitPaymentDetails {
   efectivo: number;
   yapePlin: number;
@@ -48,8 +46,7 @@ export interface Order {
   source: OrderSource;
   notes?: string;
   tableNumber?: string;
-  paymentMethod?: PaymentMethod; // Usa el nuevo tipo
-  // Nuevo campo para guardar el detalle del pago mixto
+  paymentMethod?: PaymentMethod;
   splitPayment?: SplitPaymentDetails;
   updatedAt?: Date;
   studentId?: string;
@@ -62,6 +59,9 @@ export interface Order {
   };
   orderType: 'regular' | 'fullday';
   igvRate?: number;
+  // ── Quién generó el pedido ──────────────
+  createdById?:   string;
+  createdByName?: string;
 }
 
 export interface DatabaseOrder {
@@ -76,11 +76,14 @@ export interface DatabaseOrder {
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   total: number;
   notes?: string;
-  payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO'; // Actualizado
+  payment_method?: 'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA' | 'MIXTO';
   created_at: string;
   updated_at: string;
   student_id?: string;
   order_type: string;
+  // ── Quién generó el pedido ──────────────
+  created_by_id?:   string;
+  created_by_name?: string;
 }
 
 export interface DatabaseOrderItem {
