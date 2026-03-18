@@ -1,5 +1,3 @@
-// =================================================
-// ARCHIVO: src/components/orders/OrderReception.tsx (VERSIÓN FINAL)
 // CORREGIDO: Alineación izquierda de las notas del pedido
 // =================================================
 
@@ -19,6 +17,7 @@ import { useCategories } from '../../hooks/useCategories';
 import { useOEP } from '../../hooks/useOEP';
 import { useLoncheritas } from '../../hooks/useLoncheritas';
 import { GRADES, SECTIONS, Grade, Section } from '../../types/student';
+import { SourceSelector } from './SourceSelector';
 
 const styles = `
   .hide-scrollbar::-webkit-scrollbar {
@@ -1705,8 +1704,10 @@ const OrderReception: React.FC = React.memo(() => {
             quantity: item.quantity,
             notes: item.notes,
           })),
-          payment_method: paymentMethod,
-          notes: orderNotes
+          payment_method:  paymentMethod,
+          notes:           orderNotes,
+          created_by_id:   user?.id,
+          created_by_name: user?.name,
         });
 
         if (result.success && result.data) {
@@ -1757,8 +1758,10 @@ const OrderReception: React.FC = React.memo(() => {
             quantity: item.quantity,
             notes: item.notes,
           })),
-          payment_method: paymentMethod,
-          notes: orderNotes
+          payment_method:  paymentMethod,
+          notes:           orderNotes,
+          created_by_id:   user?.id,
+          created_by_name: user?.name,
         });
 
         if (result.success && result.data) {
@@ -1794,9 +1797,9 @@ const OrderReception: React.FC = React.memo(() => {
       }
       else if (activeTab === 'oep') {
         const result = await createOEPOrder({
-          customer_name: customerName,
-          phone: phone,
-          address: address || undefined,
+          customer_name:   customerName,
+          phone:           phone,
+          address:         address || undefined,
           items: cart.map(item => ({
             menuItem: {
               id: item.menuItem.id,
@@ -1806,8 +1809,10 @@ const OrderReception: React.FC = React.memo(() => {
             quantity: item.quantity,
             notes: item.notes,
           })),
-          payment_method: paymentMethod,
-          notes: orderNotes
+          payment_method:  paymentMethod,
+          notes:           orderNotes,
+          created_by_id:   user?.id,
+          created_by_name: user?.name,
         });
 
         if (result.success && result.data) {
@@ -1856,7 +1861,9 @@ const OrderReception: React.FC = React.memo(() => {
             quantity: item.quantity,
             notes: item.notes,
           })),
-          orderType: 'regular'
+          orderType:     'regular',
+          createdById:   user?.id,
+          createdByName: user?.name,
         };
 
         const result = await createOrder(orderData);
@@ -1965,51 +1972,38 @@ const OrderReception: React.FC = React.memo(() => {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="lg:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-lg border-b border-red-200">
             <div className="px-3 py-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Recepción</h1>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <select
-                      value={activeTab}
-                      onChange={(e) => setActiveTab(e.target.value as any)}
-                      className="text-xs bg-gray-100 rounded-lg px-2 py-1 border border-gray-300"
+              {/* Fila superior: título + carrito */}
+              <div className="flex items-center justify-between mb-3">
+                <h1 className="text-xl font-bold text-gray-900">Recepción</h1>
+                <div className="flex items-center space-x-2">
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowMenuManager(true)}
+                      className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                      title="Gestionar menú"
                     >
-                      <option value="phone">📞 Cocina</option>
-                      <option value="oep">📦 OEP</option>
-                      <option value="loncheritas">🍱 Loncheritas</option>
-                      <option value="walk-in">👤 Local</option>
-                      <option value="delivery">🚚 Delivery</option>
-                      <option value="fullDay">🎒 FullDay</option>
-                    </select>
-                    
-                    {isAdmin && (
-                      <button
-                        onClick={() => setShowMenuManager(true)}
-                        className="p-1 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                        title="Gestionar menú"
-                      >
-                        <Settings size={14} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                
-                <button
-                  onClick={() => handleShowCartDrawer(true)}
-                  className="relative bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center space-x-2"
-                >
-                  <ShoppingBag size={20} />
-                  <div className="text-left">
-                    <div className="text-xs font-medium">Pedido</div>
-                    <div className="text-xs opacity-90">{totalItems} items</div>
-                  </div>
-                  {totalItems > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-white product-counter">
-                      {totalItems}
-                    </span>
+                      <Settings size={16} />
+                    </button>
                   )}
-                </button>
+                  <button
+                    onClick={() => handleShowCartDrawer(true)}
+                    className="relative bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center space-x-2"
+                  >
+                    <ShoppingBag size={18} />
+                    <div className="text-left">
+                      <div className="text-xs font-medium">Pedido</div>
+                      <div className="text-xs opacity-90">{totalItems} items</div>
+                    </div>
+                    {totalItems > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-white">
+                        {totalItems}
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
+              {/* Selector de tipo de pedido en grid */}
+              <SourceSelector value={activeTab} onChange={setActiveTab} layout="pill" />
             </div>
           </div>
 
@@ -2364,22 +2358,11 @@ const OrderReception: React.FC = React.memo(() => {
             <div className="grid grid-cols-7 gap-6">
               <div className="col-span-2">
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-white/20 sticky top-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">
-                      {(activeTab === 'fullDay' || activeTab === 'loncheritas') ? 'Nuevo Pedido' : 'Nuevo Pedido'}
-                    </h2>
-                    <select
-                      value={activeTab}
-                      onChange={(e) => setActiveTab(e.target.value as any)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    >
-                      <option value="phone">📞 Cocina</option>
-                      <option value="oep">📦 OEP</option>
-                      <option value="loncheritas">🍱 Loncheritas</option>
-                      <option value="walk-in">👤 Local</option>
-                      <option value="delivery">🚚 Delivery</option>
-                      <option value="fullDay">🎒 FullDay</option>
-                    </select>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-gray-900">Nuevo Pedido</h2>
+                  </div>
+                  <div className="mb-5">
+                    <SourceSelector value={activeTab} onChange={setActiveTab} layout="grid" />
                   </div>
                   
                   <div className="space-y-4">
@@ -2738,3 +2721,5 @@ const OrderReception: React.FC = React.memo(() => {
 });
 
 export default OrderReception;
+
+

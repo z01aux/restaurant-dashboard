@@ -1,14 +1,16 @@
 // ARCHIVO: src/components/orders/OrdersManager.tsx
-// ACTUALIZADO: Botón "Reporte PDF" agregado al modal de fechas
-// ================================================
+// ACTUALIZADO: Botón 🧾 Comprobante en cada fila y card
+// ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download, ChevronLeft, ChevronRight, FileText, ChevronDown } from 'lucide-react';
+import { Search, Pencil, Download, ChevronLeft, ChevronRight, FileText, ChevronDown, Receipt } from 'lucide-react';
 import { Order, PaymentMethod, SplitPaymentDetails } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { usePagination } from '../../hooks/usePagination';
+import { useComprobantes } from '../../hooks/useComprobantes';
 import { OrderPreview } from './OrderPreview';
+import { PreviewBottomSheet } from '../ui/PreviewBottomSheet';
 import OrderTicket from './OrderTicket';
 import { exportOrdersToExcel, exportOrdersByDateRange } from '../../utils/exportUtils';
 import { generateTicketSummary, printResumenTicket } from '../../utils/ticketUtils';
@@ -20,6 +22,7 @@ import { PaymentMethodModal } from './PaymentMethodModal';
 import { PaymentFilter } from '../ui/PaymentFilter';
 import { OrdersDateFilter } from './OrdersDateFilter';
 import { DateRangeModal } from './DateRangeModal';
+import { EmitirComprobanteModal } from '../billing/EmitirComprobanteModal';
 
 
 // ============================================
@@ -29,25 +32,29 @@ const OrderRow = React.memo(({
   order,
   onMouseEnter,
   onMouseLeave,
+  onActionsMouseEnter,
   onDelete,
   onEditPayment,
+  onEmitirComprobante,
+  tieneComprobante,
   user,
   getDisplayNumber,
   getNumberType,
-  getSourceText,
   getPaymentColor,
   getPaymentText,
   getAreaIcon
 }: {
   order: Order;
-  onMouseEnter: (e: React.MouseEvent) => void;
+  onMouseEnter: () => void;
   onMouseLeave: () => void;
+  onActionsMouseEnter: () => void;
   onDelete: (orderId: string, displayNumber: string) => void;
   onEditPayment: (order: Order) => void;
+  onEmitirComprobante: (order: Order) => void;
+  tieneComprobante: boolean;
   user: any;
   getDisplayNumber: (order: Order) => string;
   getNumberType: (order: Order) => string;
-  getSourceText: (type: string) => string;
   getPaymentColor: (method?: string) => string;
   getPaymentText: (method?: string) => string;
   getAreaIcon: (type: string) => string;
@@ -61,85 +68,104 @@ const OrderRow = React.memo(({
     onEditPayment(order);
   };
 
+  const handleComprobanteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onEmitirComprobante(order);
+  };
+
   return (
     <tr
       className="hover:bg-gray-50 cursor-pointer group relative"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <td className="px-4 sm:px-6 py-4">
-        <div className="flex items-center space-x-2 mb-1">
-          <div className={`text-sm font-medium ${
+      {/* ── Cliente / Monto / Área / Pago (todo en una celda) ── */}
+      <td className="px-3 py-3">
+        <div className="flex items-center space-x-1.5 mb-0.5">
+          <span className={`text-xs font-semibold ${
             numberType === 'kitchen' ? 'text-green-600' : 'text-blue-600'
           }`}>
             {displayNumber}
-          </div>
-          {numberType === 'kitchen' ? (
-            <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">
-              COCINA
-            </span>
-          ) : (
-            <span className="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
-              NORMAL
-            </span>
-          )}
-        </div>
-        <div className="font-medium text-gray-900">{order.customerName}</div>
-        <div className="text-sm font-bold text-red-600">
-          S/ {order.total.toFixed(2)}
-        </div>
-      </td>
-      <td className="px-4 sm:px-6 py-4">
-        <div className="mb-1">
-          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 items-center space-x-1">
-            <span>{getAreaIcon(order.source.type)}</span>
-            <span>{getSourceText(order.source.type)}</span>
+          </span>
+          <span className={`px-1.5 py-0.5 text-xs font-semibold rounded-full ${
+            numberType === 'kitchen'
+              ? 'bg-green-100 text-green-700'
+              : 'bg-blue-100 text-blue-700'
+          }`}>
+            {numberType === 'kitchen' ? 'COC' : 'NOR'}
           </span>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentColor(order.paymentMethod)}`}>
+        <div className="font-medium text-gray-900 text-sm leading-tight">{order.customerName}</div>
+        <div className="flex items-center space-x-2 mt-1">
+          <span className="text-xs font-bold text-red-600">S/ {order.total.toFixed(2)}</span>
+          <span className="text-xs text-gray-400">{getAreaIcon(order.source.type)}</span>
+          <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full border ${getPaymentColor(order.paymentMethod)}`}>
             {getPaymentText(order.paymentMethod)}
           </span>
+        </div>
+      </td>
 
-          {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'employee') && (
-            <button
-              onClick={handleEditClick}
-              className="bg-blue-100 text-blue-700 hover:bg-blue-200 p-1.5 rounded-lg transition-all duration-200 shadow-sm border border-blue-300"
-              title="Cambiar método de pago"
-            >
-              <Pencil size={14} />
-            </button>
-          )}
+      {/* ── Fecha ── */}
+      <td className="px-3 py-3">
+        <div className="text-xs text-gray-900 font-medium">
+          {new Date(order.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })}
+        </div>
+        <div className="text-xs text-gray-500">
+          {new Date(order.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
         </div>
       </td>
-      <td className="px-4 sm:px-6 py-4">
-        <div className="text-sm text-gray-900">
-          {new Date(order.createdAt).toLocaleDateString()}
-        </div>
-        <div className="text-sm text-gray-500">
-          {new Date(order.createdAt).toLocaleTimeString()}
-        </div>
-      </td>
-      <td className="px-4 sm:px-6 py-4">
-        <div className="text-sm text-gray-900">
-          {order.items.length} producto(s)
-        </div>
-        <div className="text-xs text-gray-500 truncate max-w-xs">
+
+      {/* ── Productos ── */}
+      <td className="px-3 py-3">
+        <div className="text-xs text-gray-900 font-medium">{order.items.length} ítem(s)</div>
+        <div className="text-xs text-gray-500 truncate max-w-[180px]">
           {order.items.map((item: any) => item.menuItem.name).join(', ')}
         </div>
       </td>
 
-      {/* onMouseEnter={onMouseLeave} oculta el preview al entrar a la celda de Acciones */}
-      <td className="px-4 sm:px-6 py-4 text-sm font-medium" onMouseEnter={onMouseLeave}>
-        <div className="flex space-x-2">
+      {/* ── Acciones — solo iconos con tooltip ── */}
+      <td className="px-3 py-3" onMouseEnter={onActionsMouseEnter}>
+        <div className="flex items-center space-x-1">
+
+          {/* Ticket imprimir */}
           <OrderTicket order={order} />
+
+          {/* Editar pago */}
+          {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'employee') && (
+            <button
+              onClick={handleEditClick}
+              title="Cambiar método de pago"
+              className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors"
+            >
+              <Pencil size={13} />
+            </button>
+          )}
+
+          {/* Comprobante CPE */}
+          <button
+            onClick={handleComprobanteClick}
+            title={tieneComprobante ? 'Comprobante ya emitido' : 'Emitir comprobante electrónico'}
+            className={`p-1.5 rounded-lg border transition-colors ${
+              tieneComprobante
+                ? 'bg-green-50 text-green-600 border-green-200 cursor-default'
+                : 'bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200'
+            }`}
+          >
+            {tieneComprobante
+              ? <span className="text-xs font-bold">✓</span>
+              : <Receipt size={13} />
+            }
+          </button>
+
+          {/* Eliminar (solo admin) */}
           {user?.role === 'admin' && (
             <button
               onClick={() => onDelete(order.id, displayNumber)}
-              className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
               title="Eliminar orden"
+              className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors"
             >
-              🗑️
+              <span className="text-sm">🗑️</span>
             </button>
           )}
         </div>
@@ -151,7 +177,8 @@ const OrderRow = React.memo(({
 
 // ── TARJETA MÓVIL ÓRDENES ─────────────────────────────────────────────
 const OrderCard = React.memo(({
-  order, onEditPayment, onDelete, onTapPreview,
+  order, onEditPayment, onDelete, onTapPreview, onEmitirComprobante,
+  tieneComprobante,
   getDisplayNumber, getNumberType, getSourceText,
   getPaymentColor, getPaymentText, getAreaIcon, user,
 }: {
@@ -159,6 +186,8 @@ const OrderCard = React.memo(({
   onEditPayment: (order: Order) => void;
   onDelete: (orderId: string, displayNumber: string) => void;
   onTapPreview: (order: Order) => void;
+  onEmitirComprobante: (order: Order) => void;
+  tieneComprobante: boolean;
   getDisplayNumber: (order: Order) => string;
   getNumberType: (order: Order) => string;
   getSourceText: (type: string) => string;
@@ -209,6 +238,21 @@ const OrderCard = React.memo(({
         </div>
         <div className="flex items-center space-x-2">
           <OrderTicket order={order} />
+
+          {/* ── Botón Comprobante (móvil) ── */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onEmitirComprobante(order); }}
+            title={tieneComprobante ? 'Ya tiene comprobante' : 'Emitir comprobante'}
+            className={`flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+              tieneComprobante
+                ? 'bg-green-50 text-green-700 border-green-300'
+                : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-300'
+            }`}
+          >
+            <Receipt size={13} />
+            <span>{tieneComprobante ? '✓' : 'CPE'}</span>
+          </button>
+
           {user?.role === 'admin' && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(order.id, displayNumber); }}
@@ -235,7 +279,8 @@ const OrdersManager: React.FC = () => {
   const [currentSort, setCurrentSort] = useState('status-time');
   const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
   const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  const hoverTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
   const [cashModalType, setCashModalType] = useState<'open' | 'close'>('open');
@@ -244,6 +289,10 @@ const OrdersManager: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+
+  // ── Estado para el modal de comprobante ───────────────────────────────────
+  const [showComprobanteModal, setShowComprobanteModal] = useState(false);
+  const [orderParaComprobante, setOrderParaComprobante] = useState<Order | null>(null);
 
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -270,6 +319,15 @@ const OrdersManager: React.FC = () => {
     closeCashRegister,
   } = useSalesClosure();
 
+  // ── Hook de comprobantes ───────────────────────────────────────────────────
+  const {
+    comprobantes,
+    orderIdsConComprobante,
+    proximoNumeroBoleta,
+    proximoNumeroFactura,
+    guardarComprobante,
+  } = useComprobantes();
+
   const regularOrders = useMemo(() => getRegularOrders(), [getRegularOrders, orders]);
 
   useEffect(() => {
@@ -293,6 +351,16 @@ const OrdersManager: React.FC = () => {
     window.addEventListener('newOrderCreated', handleNewOrder as EventListener);
     return () => window.removeEventListener('newOrderCreated', handleNewOrder as EventListener);
   }, [fetchOrders]);
+
+  // ── Escuchar evento de orden eliminada (desde anulación de comprobante) ────
+  useEffect(() => {
+    const handleOrderDeleted = (event: CustomEvent) => {
+      const { orderId } = event.detail;
+      setLocalOrders(prev => prev.filter(o => o.id !== orderId));
+    };
+    window.addEventListener('orderDeleted', handleOrderDeleted as EventListener);
+    return () => window.removeEventListener('orderDeleted', handleOrderDeleted as EventListener);
+  }, []);
 
   useEffect(() => {
     if (regularOrders.length > 0) {
@@ -433,19 +501,44 @@ const OrdersManager: React.FC = () => {
     return texts[m || ''] || 'NO APLICA';
   }, []);
 
-  const handleRowMouseEnter = useCallback((order: Order, event: React.MouseEvent) => {
-    const rect = event.currentTarget.getBoundingClientRect();
+  // Hover sobre fila → actualiza el preview inmediatamente
+  const handleRowMouseEnter = useCallback((order: Order) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
     setPreviewOrder(order);
-    setPreviewPosition({ x: rect.left + rect.width / 2, y: rect.top });
   }, []);
 
-  const handleRowMouseLeave = useCallback(() => setPreviewOrder(null), []);
+  // Salir de la fila → no hace nada
+  const handleRowMouseLeave = useCallback(() => {}, []);
+
+  // Salir de la tabla → cierra con delay para permitir click en "Ver PDF"
+  const handleTableMouseLeave = useCallback(() => {
+    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+    closeTimerRef.current = setTimeout(() => {
+      setPreviewOrder(null);
+    }, 300);
+  }, []);
+
+  // Mouse entra al panel del preview → cancela el cierre
+  const handlePreviewMouseEnter = useCallback(() => {
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+  }, []);
+
+  // Mouse sale del panel del preview → cierra
+  const handlePreviewMouseLeave = useCallback(() => {
+    closeTimerRef.current = setTimeout(() => {
+      setPreviewOrder(null);
+    }, 100);
+  }, []);
+
+  // Zona Acciones → cancela apertura
+  const handleActionsMouseEnter = useCallback(() => {
+    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+  }, []);
 
   const handleTapPreview = useCallback((order: Order) => {
     setPreviewOrder(order);
-    setPreviewPosition({ x: 0, y: 0 });
   }, []);
-
 
   const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
     if (window.confirm(`¿Estás seguro de eliminar la orden ${orderNumber}?`)) {
@@ -463,6 +556,24 @@ const OrdersManager: React.FC = () => {
     setShowPaymentModal(true);
   }, []);
 
+  // ── Handler: abrir modal de comprobante ───────────────────────────────────
+  const handleEmitirComprobante = useCallback((order: Order) => {
+    setOrderParaComprobante(order);
+    setShowComprobanteModal(true);
+  }, []);
+
+  // ── Handler: comprobante emitido exitosamente ──────────────────────────────
+  const handleComprobanteEmitido = useCallback(async (
+    respuesta: any,
+    _tipo: 'boleta' | 'factura',
+  ) => {
+    if (orderParaComprobante) {
+      await guardarComprobante(orderParaComprobante, respuesta);
+    }
+    setShowComprobanteModal(false);
+    setOrderParaComprobante(null);
+  }, [orderParaComprobante, guardarComprobante]);
+
   const handleSavePaymentMethod = useCallback(async (
     orderId: string,
     newPaymentMethod: PaymentMethod | undefined,
@@ -472,7 +583,6 @@ const OrdersManager: React.FC = () => {
       const previousMethod = localOrders.find(o => o.id === orderId)?.paymentMethod;
       const previousSplit  = localOrders.find(o => o.id === orderId)?.splitPayment;
 
-      // Optimistic update
       setLocalOrders(prev => prev.map(o => {
         if (o.id === orderId) {
           const updatedOrder = { ...o, paymentMethod: newPaymentMethod };
@@ -550,7 +660,7 @@ const OrdersManager: React.FC = () => {
     }
   }, [regularOrders, exporting]);
 
-  // ── HANDLER PDF (NUEVO) ──
+  // ── HANDLER PDF ──
   const handleExportPDF = useCallback(async (startDate: Date, endDate: Date) => {
     if (exportingPDF) return;
     setExportingPDF(true);
@@ -617,7 +727,7 @@ const OrdersManager: React.FC = () => {
     }
   }, [cashModalType, openCashRegister, closeCashRegister, regularOrders]);
 
-  const handleToggleHistory       = useCallback(() => setShowHistory(prev => !prev), []);
+  const handleToggleHistory = useCallback(() => setShowHistory(prev => !prev), []);
   const handleClearFilters = useCallback(() => {
     setAreaFilter('');
     setPaymentFilter('');
@@ -636,11 +746,57 @@ const OrdersManager: React.FC = () => {
         </div>
       )}
 
-      {previewOrder && (
-        <OrderPreview order={previewOrder} isVisible={true} position={previewPosition}
+      {previewOrder && !pagination.isMobile && (
+        <OrderPreview
+          order={previewOrder}
+          isVisible={true}
           onClose={() => setPreviewOrder(null)}
+          onMouseEnter={handlePreviewMouseEnter}
+          onMouseLeave={handlePreviewMouseLeave}
+          comprobante={comprobantes.find(c => c.order_id === previewOrder.id) ?? null}
         />
       )}
+
+      {previewOrder && pagination.isMobile && (() => {
+        const comp = comprobantes.find(c => c.order_id === previewOrder.id);
+        return (
+          <PreviewBottomSheet
+            isOpen={true}
+            onClose={() => setPreviewOrder(null)}
+            orderNumber={getDisplayNumber(previewOrder)}
+            badge={getNumberType(previewOrder) === 'kitchen'
+              ? { label: 'COCINA', color: 'bg-green-100 text-green-700' }
+              : { label: 'NORMAL', color: 'bg-blue-100 text-blue-700' }
+            }
+            total={previewOrder.total}
+            totalColor="text-red-600"
+            minutesAgo={Math.floor((Date.now() - new Date(previewOrder.createdAt).getTime()) / 60000)}
+            fields={[
+              { icon: '👤', value: previewOrder.customerName },
+              { icon: '📞', value: previewOrder.phone || '—' },
+              { icon: '💳', value: getPaymentText(previewOrder.paymentMethod) },
+              { icon: '📋', value: getSourceText(previewOrder.source.type) },
+              ...(previewOrder.address ? [{ icon: '🏠', value: previewOrder.address }] : []),
+              ...(previewOrder.tableNumber ? [{ icon: '🪑', value: `Mesa ${previewOrder.tableNumber}` }] : []),
+            ]}
+            items={previewOrder.items.map(i => ({
+              name: i.menuItem.name,
+              quantity: i.quantity,
+              price: i.menuItem.price,
+            }))}
+            notes={previewOrder.notes}
+            comprobante={comp ? {
+              tipo: comp.tipo_comprobante === 1 ? 'FACTURA' : 'BOLETA',
+              serie: comp.serie,
+              numero: comp.numero,
+              aceptada_por_sunat: comp.aceptada_por_sunat,
+              enlace_pdf: comp.enlace_pdf,
+              anulado: comp.anulado,
+            } : null}
+            createdByName={previewOrder.createdByName}
+          />
+        );
+      })()}
 
       <PaymentMethodModal
         isOpen={showPaymentModal}
@@ -649,7 +805,17 @@ const OrdersManager: React.FC = () => {
         onSave={handleSavePaymentMethod}
       />
 
-      {/* ── MODAL DE FECHAS: ahora recibe onConfirmPDF ── */}
+      {/* ── Modal de emisión de comprobante ── */}
+      <EmitirComprobanteModal
+        isOpen={showComprobanteModal}
+        onClose={() => { setShowComprobanteModal(false); setOrderParaComprobante(null); }}
+        order={orderParaComprobante}
+        proximoNumeroBoleta={proximoNumeroBoleta}
+        proximoNumeroFactura={proximoNumeroFactura}
+        onEmitido={handleComprobanteEmitido}
+        yaEmitido={orderParaComprobante ? orderIdsConComprobante.has(orderParaComprobante.id) : false}
+      />
+
       <DateRangeModal
         isOpen={showDateRangeModal}
         onClose={() => setShowDateRangeModal(false)}
@@ -691,53 +857,31 @@ const OrdersManager: React.FC = () => {
 
       {/* ── BOTONES DE ACCIÓN ── */}
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={handleExportTodayCSV}
-          disabled={isAnyExporting}
-          className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1 disabled:opacity-50"
-        >
+        <button onClick={handleExportTodayCSV} disabled={isAnyExporting}
+          className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1 disabled:opacity-50">
           <Download size={16} /><span>CSV Hoy</span>
         </button>
-        <button
-          onClick={handleExportAllCSV}
-          disabled={isAnyExporting}
-          className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1 disabled:opacity-50"
-        >
+        <button onClick={handleExportAllCSV} disabled={isAnyExporting}
+          className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1 disabled:opacity-50">
           <Download size={16} /><span>CSV Todo</span>
         </button>
-        <button
-          onClick={handleExportTodayExcel}
-          disabled={isAnyExporting}
-          className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50"
-        >
+        <button onClick={handleExportTodayExcel} disabled={isAnyExporting}
+          className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50">
           <Download size={16} /><span>Excel Hoy</span>
         </button>
-        <button
-          onClick={handleExportAllExcel}
-          disabled={isAnyExporting}
-          className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1 disabled:opacity-50"
-        >
+        <button onClick={handleExportAllExcel} disabled={isAnyExporting}
+          className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1 disabled:opacity-50">
           <Download size={16} /><span>Excel Todo</span>
         </button>
-
-        {/* ── BOTÓN REPORTES POR FECHAS (abre el modal con Ticket + Excel + PDF) ── */}
-        <button
-          onClick={() => setShowDateRangeModal(true)}
-          disabled={isAnyExporting}
-          className="bg-gradient-to-r from-red-600 to-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:from-red-700 hover:to-amber-600 flex items-center space-x-2 disabled:opacity-50 shadow-sm font-medium"
-        >
+        <button onClick={() => setShowDateRangeModal(true)} disabled={isAnyExporting}
+          className="bg-gradient-to-r from-red-600 to-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:from-red-700 hover:to-amber-600 flex items-center space-x-2 disabled:opacity-50 shadow-sm font-medium">
           <FileText size={16} />
           <span>Reportes por Fechas</span>
-          {isAnyExporting && (
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-          )}
+          {isAnyExporting && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />}
         </button>
-
-        <button
-          onClick={() => { window.location.hash = '#reception'; }}
+        <button onClick={() => { window.location.hash = '#reception'; }}
           className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm hover:from-red-600 hover:to-amber-600 flex items-center space-x-1"
-          disabled={isAnyExporting}
-        >
+          disabled={isAnyExporting}>
           <span>➕</span><span>Nueva Orden</span>
         </button>
       </div>
@@ -768,12 +912,8 @@ const OrdersManager: React.FC = () => {
               disabled={isAnyExporting}
             />
           </div>
-          <select
-            value={areaFilter}
-            onChange={(e) => setAreaFilter(e.target.value)}
-            className="px-3 py-2 border rounded-lg text-sm min-w-[140px]"
-            disabled={isAnyExporting}
-          >
+          <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}
+            className="px-3 py-2 border rounded-lg text-sm min-w-[140px]" disabled={isAnyExporting}>
             <option value="">📋 Todas las áreas</option>
             <option value="phone">🍳 Cocina</option>
             <option value="walk-in">👤 Local</option>
@@ -800,10 +940,7 @@ const OrdersManager: React.FC = () => {
                 </span>
               )}
             </div>
-            <button
-              onClick={handleClearFilters}
-              className="text-xs text-red-600 hover:text-red-800 font-medium"
-            >
+            <button onClick={handleClearFilters} className="text-xs text-red-600 hover:text-red-800 font-medium">
               Limpiar filtros
             </button>
           </div>
@@ -847,6 +984,7 @@ const OrdersManager: React.FC = () => {
           </div>
         </div>
       )}
+
       {/* ── ORDENAMIENTO MÓVIL ── */}
       {pagination.isMobile && (
         <div className="flex items-center justify-between bg-white rounded-lg px-4 py-2 border shadow-sm mb-3">
@@ -878,6 +1016,8 @@ const OrdersManager: React.FC = () => {
               onEditPayment={handleEditPayment}
               onDelete={handleDeleteOrder}
               onTapPreview={handleTapPreview}
+              onEmitirComprobante={handleEmitirComprobante}
+              tieneComprobante={orderIdsConComprobante.has(order.id)}
               user={user}
               getDisplayNumber={getDisplayNumber}
               getNumberType={getNumberType}
@@ -896,16 +1036,15 @@ const OrdersManager: React.FC = () => {
           )}
         </div>
       ) : (
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden" onMouseLeave={handleTableMouseLeave}>
+          <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente / Monto</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Área / Pago</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productos</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Cliente / Pago</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide w-20">Fecha</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Productos</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide w-28">Acciones</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -913,14 +1052,16 @@ const OrdersManager: React.FC = () => {
                   <OrderRow
                     key={order.id}
                     order={order}
-                    onMouseEnter={(e) => handleRowMouseEnter(order, e)}
+                    onMouseEnter={() => handleRowMouseEnter(order)}
                     onMouseLeave={handleRowMouseLeave}
+                    onActionsMouseEnter={handleActionsMouseEnter}
                     onDelete={handleDeleteOrder}
                     onEditPayment={handleEditPayment}
+                    onEmitirComprobante={handleEmitirComprobante}
+                    tieneComprobante={orderIdsConComprobante.has(order.id)}
                     user={user}
                     getDisplayNumber={getDisplayNumber}
                     getNumberType={getNumberType}
-                    getSourceText={getSourceText}
                     getPaymentColor={getPaymentColor}
                     getPaymentText={getPaymentText}
                     getAreaIcon={getAreaIcon}
@@ -950,3 +1091,5 @@ const OrdersManager: React.FC = () => {
 };
 
 export default OrdersManager;
+
+
