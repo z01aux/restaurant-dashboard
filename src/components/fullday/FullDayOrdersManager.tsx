@@ -1,5 +1,5 @@
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// ACTUALIZADO: Tabla compacta, botones icono, CPE, preview centrado
+// CORREGIDO: Exportación Excel Hoy con filtrado robusto
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -460,7 +460,6 @@ export const FullDayOrdersManager: React.FC = () => {
 
   const handleComprobanteEmitido = useCallback(async(respuesta:NubefactRespuestaComprobante,_tipo:'boleta'|'factura')=>{
     if(orderParaComprobante){
-      // Adaptar FullDayOrder al tipo Order que espera guardarComprobante
       const orderAdapted = {
         id: orderParaComprobante.id,
         total: orderParaComprobante.total,
@@ -479,8 +478,30 @@ export const FullDayOrdersManager: React.FC = () => {
     setOrderParaComprobante(null);
   },[orderParaComprobante,guardarComprobante]);
 
-  // ── Handlers exportación ──────────────────────────────────────────────────
-  const handleExcelRango   = useCallback((s:Date,e:Date)=>exportFullDayByDateRange(orders,s,e),[orders]);
+  // ── Handlers exportación CORREGIDOS ───────────────────────────────────────
+  const handleExportTodayExcel = useCallback(() => {
+    const today = new Date();
+    const startOfToday = new Date(today);
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const todaysOrders = orders.filter(order => {
+      const orderDate = new Date(order.created_at);
+      return orderDate >= startOfToday && orderDate <= endOfToday;
+    });
+
+    exportFullDayToExcel(todaysOrders, 'today');
+  }, [orders]);
+
+  const handleExportAllExcel = useCallback(() => {
+    exportFullDayToExcel(orders, 'all');
+  }, [orders]);
+
+  const handleExcelRango = useCallback((s: Date, e: Date) => {
+    exportFullDayByDateRange(orders, s, e);
+  }, [orders]);
+
   const handlePDFRango     = useCallback(async(s:Date,e:Date)=>{
     if(exportingPDF) return;
     setExportingPDF(true);
@@ -498,6 +519,7 @@ export const FullDayOrdersManager: React.FC = () => {
     }catch(err:any){alert('❌ '+err.message);}
     finally{if(document.body.contains(t))document.body.removeChild(t);setExportingPDF(false);}
   },[orders,exportingPDF]);
+
   const handleTicketResumen = useCallback((s:Date,e:Date)=>{
     const sd=new Date(s);sd.setHours(0,0,0,0);const ed=new Date(e);ed.setHours(23,59,59,999);
     const f=orders.filter(o=>{const d=new Date(o.created_at);return d>=sd&&d<=ed;});
@@ -642,20 +664,31 @@ export const FullDayOrdersManager: React.FC = () => {
 
       <FullDayDateFilter selectedDate={selectedDate} onDateChange={setSelectedDate} totalOrders={filteredAndSortedOrders.length}/>
 
-      {/* Botones exportación */}
+      {/* Botones exportación - CORREGIDOS */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={()=>exportFullDayToExcel(getTodayOrders(),'today')}
-          className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1">
-          <FileSpreadsheet size={15}/><span>Excel Hoy</span>
+        <button 
+          onClick={handleExportTodayExcel}
+          className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1"
+        >
+          <FileSpreadsheet size={15}/>
+          <span>Excel Hoy</span>
         </button>
-        <button onClick={()=>exportFullDayToExcel(orders,'all')}
-          className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1">
-          <FileSpreadsheet size={15}/><span>Excel Todo</span>
+        
+        <button 
+          onClick={handleExportAllExcel}
+          className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1"
+        >
+          <FileSpreadsheet size={15}/>
+          <span>Excel Todo</span>
         </button>
-        <button onClick={()=>setShowReportModal(true)}
-          className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 font-medium shadow-sm hover:shadow-md">
-          <FileText size={15}/><span>Reportes por Fechas</span>
-          {exportingPDF&&<div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"/>}
+        
+        <button 
+          onClick={() => setShowReportModal(true)}
+          className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 font-medium shadow-sm hover:shadow-md"
+        >
+          <FileText size={15}/>
+          <span>Reportes por Fechas</span>
+          {exportingPDF && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"/>}
         </button>
       </div>
 
@@ -760,5 +793,3 @@ export const FullDayOrdersManager: React.FC = () => {
     </div>
   );
 };
-
-
