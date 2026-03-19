@@ -1,11 +1,12 @@
 // =========================================
 // ARCHIVO: src/utils/fulldayExportUtils.ts
+// CORREGIDO: Filtrado robusto por fechas y eliminadas importaciones no usadas
 // =========================================
 
 import * as XLSX from 'xlsx';
 import { FullDayOrder } from '../types/fullday';
-import { formatDateForDisplay, formatTimeForDisplay, getStartOfDay, getEndOfDay } from './dateUtils';
-import { supabase } from '../lib/supabase'; // <-- IMPORTANTE: Añadir esta importación
+import { formatDateForDisplay, formatTimeForDisplay } from './dateUtils';
+import { supabase } from '../lib/supabase';
 
 export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => {
   if (orders.length === 0) {
@@ -31,7 +32,6 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
     
-    // Productos en mayúsculas - AHORA SIEMPRE COMPLETO
     const productos = order.items.map(item => 
       `${item.quantity}x ${item.name.toUpperCase()}`
     ).join(' | ');
@@ -68,7 +68,7 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
   URL.revokeObjectURL(url);
 };
 
-// --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA (CORREGIDA) ---
+// --- FUNCIÓN AUXILIAR PARA LISTAR PRODUCTOS POR CATEGORÍA ---
 const listFullDayItemsByMainCategory = async (order: FullDayOrder): Promise<{ 
   entradas: string; 
   fondos: string; 
@@ -80,7 +80,6 @@ const listFullDayItemsByMainCategory = async (order: FullDayOrder): Promise<{
       bebidas: [] as string[],
   };
 
-  // Obtener las categorías de todos los productos del pedido de una sola vez
   const itemIds = order.items.map(item => item.id);
   
   let menuItemsWithCategories: any[] = [];
@@ -97,24 +96,19 @@ const listFullDayItemsByMainCategory = async (order: FullDayOrder): Promise<{
     console.error('Error obteniendo categorías:', error);
   }
 
-  // Crear un mapa para acceso rápido: id -> categoría
   const categoryMap = new Map();
   menuItemsWithCategories.forEach(item => {
     categoryMap.set(item.id, item.category);
   });
 
   for (const item of order.items) {
-    // Nombre del producto en mayúsculas para la visualización
     const itemDisplay = `${item.quantity}x ${item.name.toUpperCase()}`;
     
-    // Obtener la categoría del mapa
     const category = categoryMap.get(item.id) || '';
     const categoryLower = category.toLowerCase();
     const itemNameLower = item.name.toLowerCase();
 
-    // --- CLASIFICACIÓN BASADA EN CATEGORÍA (si existe) ---
     if (category) {
-      // Bebidas
       if (categoryLower.includes('bebida') || 
           categoryLower.includes('gaseosa') || 
           categoryLower.includes('jugo') || 
@@ -127,7 +121,6 @@ const listFullDayItemsByMainCategory = async (order: FullDayOrder): Promise<{
         continue;
       }
       
-      // Entradas
       if (categoryLower.includes('entrada') || 
           categoryLower.includes('ensalada') || 
           categoryLower.includes('sopa')) {
@@ -135,14 +128,10 @@ const listFullDayItemsByMainCategory = async (order: FullDayOrder): Promise<{
         continue;
       }
       
-      // Platos de fondo (por defecto si no es bebida ni entrada)
       result.fondos.push(itemDisplay);
       continue;
     }
 
-    // --- RESPALDO: CLASIFICACIÓN POR NOMBRE (si no hay categoría) ---
-    
-    // Bebidas
     if (itemNameLower.includes('gaseosa') || 
         itemNameLower.includes('inca kola') || 
         itemNameLower.includes('coca cola') ||
@@ -164,7 +153,6 @@ const listFullDayItemsByMainCategory = async (order: FullDayOrder): Promise<{
       continue;
     }
     
-    // Entradas
     if (itemNameLower.includes('entrada') || 
         itemNameLower.includes('ensalada') || 
         itemNameLower.includes('sopa') ||
@@ -177,7 +165,6 @@ const listFullDayItemsByMainCategory = async (order: FullDayOrder): Promise<{
       continue;
     }
     
-    // Si no coincide con ninguna, es un plato de fondo
     result.fondos.push(itemDisplay);
   }
 
@@ -194,8 +181,6 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
     return;
   }
 
-  // --- ESTRUCTURA DE DATOS PARA LA HOJA PRINCIPAL ---
-  // Procesar cada orden de forma asíncrona para obtener las categorías
   const dataPromises = orders.map(async (order) => {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
@@ -211,20 +196,17 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
       '📞 TELÉFONO': order.phone || '',
       '💰 MONTO TOTAL': `S/ ${order.total.toFixed(2)}`,
       '💳 MÉTODO PAGO': order.payment_method || 'NO APLICA',
-      // Las siguientes columnas ya vienen en mayúsculas desde listFullDayItemsByMainCategory
       '🥗 ENTRADAS': categorizedItems.entradas,
       '🍽️ PLATOS DE FONDO': categorizedItems.fondos,
       '🥤 BEBIDAS': categorizedItems.bebidas,
     };
   });
 
-  // Esperar a que todas las promesas se resuelvan
   const data = await Promise.all(dataPromises);
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
   
-  // Ajustar el ancho de las columnas
   ws['!cols'] = [
     { wch: 12 }, // 📅 FECHA
     { wch: 8 },  // ⏰ HORA
@@ -235,8 +217,8 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
     { wch: 15 }, // 📞 TELÉFONO
     { wch: 12 }, // 💰 MONTO TOTAL
     { wch: 12 }, // 💳 MÉTODO PAGO
-    { wch: 60 }, // 🥗 ENTRADAS - AUMENTADO A 60 PARA QUE QUEPAN TODOS LOS PRODUCTOS
-    { wch: 60 }, // 🍽️ PLATOS DE FONDO - AUMENTADO A 60
+    { wch: 60 }, // 🥗 ENTRADAS
+    { wch: 60 }, // 🍽️ PLATOS DE FONDO
     { wch: 40 }, // 🥤 BEBIDAS
   ];
 
@@ -244,7 +226,6 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
   XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
 
   const fecha = new Date().toISOString().split('T')[0];
-  // CAMBIADO: Eliminado el tipoTexto para que el nombre sea solo fullday_fecha.xlsx
   const fileName = `fullday_${fecha}.xlsx`;
 
   XLSX.writeFile(wb, fileName);
@@ -257,8 +238,17 @@ export const exportFullDayByDateRange = async (
 ) => {
   console.log('🔍 EXPORTACIÓN POR RANGO DE FECHAS - INICIANDO');
   
-  const startOfDay = getStartOfDay(startDate);
-  const endOfDay = getEndOfDay(endDate);
+  // --- FILTRADO CORREGIDO: Usando objetos Date con rangos explícitos ---
+  const startOfDay = new Date(startDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  
+  const endOfDay = new Date(endDate);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  console.log('🔍 Filtrando por rango de fechas (local):', {
+    start: startOfDay.toLocaleString(),
+    end: endOfDay.toLocaleString()
+  });
 
   const filteredOrders = orders.filter(order => {
     const orderDate = new Date(order.created_at);
@@ -269,6 +259,8 @@ export const exportFullDayByDateRange = async (
     alert('No hay pedidos en el rango de fechas seleccionado');
     return;
   }
+
+  console.log(`📊 Generando reporte con ${filteredOrders.length} pedidos`);
 
   const wb = XLSX.utils.book_new();
   
@@ -306,7 +298,7 @@ export const exportFullDayByDateRange = async (
   wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, '📊 RESUMEN');
 
-  // HOJA 2: DETALLE POR ALUMNO (ahora usa la función categorizadora)
+  // HOJA 2: DETALLE POR ALUMNO (con productos categorizados)
   const detailData: any[][] = [
     ['DETALLE DE PEDIDOS'],
     [`Período: ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`],
@@ -318,7 +310,6 @@ export const exportFullDayByDateRange = async (
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
-  // Procesar cada orden con categorización
   for (const order of sortedOrders) {
     const fecha = formatDateForDisplay(new Date(order.created_at));
     const hora = formatTimeForDisplay(new Date(order.created_at));
@@ -334,7 +325,6 @@ export const exportFullDayByDateRange = async (
       order.guardian_name,
       order.phone || '---',
       order.payment_method || 'NO APLICA',
-      // Las columnas de productos ya vienen en mayúsculas
       categorizedItems.entradas,
       categorizedItems.fondos,
       categorizedItems.bebidas,
@@ -374,7 +364,7 @@ export const exportFullDayByDateRange = async (
     .slice(0, 10)
     .map((p, index) => [
       index + 1,
-      p.name.toUpperCase(), // Producto en mayúsculas
+      p.name.toUpperCase(),
       p.quantity,
       `S/ ${p.total.toFixed(2)}`
     ]);
@@ -393,7 +383,6 @@ export const exportFullDayByDateRange = async (
   ];
   XLSX.utils.book_append_sheet(wb, wsProducts, '🏆 TOP 10');
 
-  // CAMBIADO: Nombre del archivo en minúsculas y sin mayúsculas
   const fileName = `fullday_${startStr}_al_${endStr}.xlsx`;
   XLSX.writeFile(wb, fileName);
   console.log('✅ Reporte generado:', fileName);
