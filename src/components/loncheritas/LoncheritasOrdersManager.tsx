@@ -1,5 +1,5 @@
 // ARCHIVO: src/components/loncheritas/LoncheritasOrdersManager.tsx
-// ACTUALIZADO: Tabla compacta, botones icono, CPE, preview centrado
+// ACTUALIZADO: + Exportación por Grado/Sección (Excel y CSV)
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -23,6 +23,7 @@ import { generateLoncheritasReportPDF } from './LoncheritasReportPDF';
 import { supabase } from '../../lib/supabase';
 import type { NubefactRespuestaComprobante } from '../../types/nubefact';
 import { Order } from '../../types';
+import { LoncheritasGradeExportButton } from './LoncheritasGradeExportButton';
 
 const getTodayString = (): string => {
   const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
@@ -171,7 +172,7 @@ const LoncheritasOrderRow = React.memo(({order,onMouseEnter,onActionsMouseEnter,
             {tieneComprobante?<span className="text-xs font-bold">✓</span>:<Receipt size={13}/>}
           </button>
           {isAdmin&&<button onClick={e=>{e.stopPropagation();onDelete(order.id,displayNumber);}} title="Eliminar"
-            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 border border-transparent"><Trash2 size={13}/></button>}
+            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200"><Trash2 size={13}/></button>}
         </div>
       </td>
     </tr>
@@ -356,6 +357,17 @@ export const LoncheritasOrdersManager: React.FC = () => {
     printLoncheritasResumenTicket(generateLoncheritasTicketSummary(f,sd,ed),s,e);
   },[orders]);
 
+  const handleExcelHoy  = useCallback(async () => {
+    const today = getTodayOrders();
+    if (today.length === 0) { alert('No hay pedidos para hoy'); return; }
+    await exportLoncheritasToExcel(today, 'today');
+  }, [getTodayOrders]);
+
+  const handleExcelTodo = useCallback(async () => {
+    if (orders.length === 0) { alert('No hay pedidos para exportar'); return; }
+    await exportLoncheritasToExcel(orders, 'all');
+  }, [orders]);
+
   const handleOpenCash=()=>{setCashModalType('open');setShowCashModal(true);};
   const handleCloseCash=()=>{setCashModalType('close');setShowCashModal(true);};
   const handleCashConfirm=async(data:{initialCash?:number;finalCash?:number;notes?:string})=>{
@@ -422,12 +434,18 @@ export const LoncheritasOrdersManager: React.FC = () => {
 
       <LoncheritasDateFilter selectedDate={selectedDate} onDateChange={setSelectedDate} totalOrders={filteredAndSortedOrders.length}/>
 
+      {/* Botones exportación */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={()=>exportLoncheritasToExcel(getTodayOrders(),'today')} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1"><FileSpreadsheet size={15}/><span>Excel Hoy</span></button>
-        <button onClick={()=>exportLoncheritasToExcel(orders,'all')} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1"><FileSpreadsheet size={15}/><span>Excel Todo</span></button>
+        <button onClick={handleExcelHoy} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1"><FileSpreadsheet size={15}/><span>Excel Hoy</span></button>
+        <button onClick={handleExcelTodo} className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1"><FileSpreadsheet size={15}/><span>Excel Todo</span></button>
         <button onClick={()=>setShowReportModal(true)} className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 font-medium shadow-sm">
           <FileText size={15}/><span>Reportes por Fechas</span>{exportingPDF&&<div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"/>}
         </button>
+        {/* Excel/CSV por Grado — pedidos del día seleccionado */}
+        <LoncheritasGradeExportButton
+          orders={dateFilteredOrders}
+          selectedDate={selectedDate}
+        />
       </div>
 
       <div className="bg-white rounded-lg p-4 shadow-sm border">
@@ -496,5 +514,3 @@ export const LoncheritasOrdersManager: React.FC = () => {
     </div>
   );
 };
-
-
