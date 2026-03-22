@@ -5,30 +5,86 @@
 @tailwind utilities;
 
 @layer base {
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background: linear-gradient(135deg, #fef2f2 0%, #fecaca 50%, #ffedd5 100%);
     min-height: 100vh;
     font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  button, [role="button"], label[for], a, select {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: #fecaca;
+    color: #991b1b;
+  }
+
+  :focus-visible {
+    outline: 2px solid #ef4444;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button, a, input, select, textarea, [role="button"] {
+    transition: opacity 0.15s ease, background-color 0.15s ease,
+                border-color 0.15s ease, box-shadow 0.15s ease,
+                transform 0.15s ease;
   }
 }
 
-/* Estilos para impresión */
-@media print {
-  @page {
-    margin: 0;
-    size: 80mm auto;
+/* Scrollbar rojo */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #f87171; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #ef4444; }
+* { scrollbar-width: thin; scrollbar-color: #f87171 transparent; }
+
+/* Animaciones 200ms */
+@keyframes slide-in-from-right-full {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slide-out-to-right-full {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+@keyframes fade-in-0  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zoom-in-95 {
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.animate-in  { animation: slide-in-from-right-full 0.2s ease-out; }
+.animate-out { animation: slide-out-to-right-full  0.2s ease-in;  }
+.fade-in-0   { animation: fade-in-0  0.15s ease-out; }
+.zoom-in-95  { animation: zoom-in-95 0.15s ease-out; }
+.animate-in.fade-in-0.zoom-in-95 { animation: zoom-in-95 0.15s ease-out; }
+
+/* Scroll suave en móviles */
+@media (max-width: 640px) {
+  .overflow-x-auto, .overflow-y-auto, .overflow-y-scroll {
+    -webkit-overflow-scrolling: touch;
   }
-  
+}
+
+/* Impresión */
+@media print {
+  @page { margin: 0; size: 80mm auto; }
   body {
     font-family: 'system-ui', 'Courier New', monospace !important;
     font-size: 12px !important;
     background: white !important;
   }
-  
-  .no-print {
-    display: none !important;
-  }
-  
+  .no-print { display: none !important; }
   .print-ticket {
     width: 80mm !important;
     padding: 10px !important;
@@ -38,7 +94,7 @@
   }
 }
 
-/* Utilidades para responsive */
+/* Utilidades */
 @layer utilities {
   .line-clamp-1 {
     overflow: hidden;
@@ -46,49 +102,12 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
   }
-  
   .line-clamp-2 {
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
-}
-
-/* Mejoras de scroll para móviles */
-@media (max-width: 640px) {
-  .overflow-x-auto {
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* Animaciones para el toast */
-@keyframes slide-in-from-right-full {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slide-out-to-right-full {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-}
-
-.animate-in {
-  animation: slide-in-from-right-full 0.3s ease-out;
-}
-
-.animate-out {
-  animation: slide-out-to-right-full 0.3s ease-in;
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { scrollbar-width: none; }
 }
