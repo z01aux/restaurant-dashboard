@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, FileText, ChevronDown, Receipt, DollarSign, Clock } from 'lucide-react';
+import { Search, Pencil, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, FileText, ChevronDown, Receipt } from 'lucide-react';
 import { useFullDayOrders } from '../../hooks/useFullDayOrders';
 import { useFullDaySalesClosure } from '../../hooks/useFullDaySalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -360,27 +360,8 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showComprobanteModal, setShowComprobanteModal] = useState(false);
   const [orderParaComprobante, setOrderParaComprobante] = useState<FullDayOrder | null>(null);
 
-  const [cobrando,   setCobrando]   = useState<string | null>(null);
-  const [cobrarSearch, setCobrarSearch] = useState('');
-  const [webFilter,    setWebFilter]    = useState(false);
-  const [activeView, setActiveView] = useState<'pedidos' | 'cobrar'>('pedidos');
 
-  // ── Cobrar pedido WEB ─────────────────────────────────────────
-  const handleCobrarPedido = useCallback(async (order: FullDayOrder) => {
-    setCobrando(order.id);
-    try {
-      const { error } = await supabase
-        .from('fullday')
-        .update({ cobrado: true, cobrado_at: new Date().toISOString() })
-        .eq('id', order.id);
-      if (!error) {
-        setLocalOrders(prev => prev.map(o =>
-          o.id === order.id ? { ...o, cobrado: true } as any : o
-        ));
-      }
-    } catch (e) { console.error('handleCobrarPedido error:', e); }
-    finally { setCobrando(null); }
-  }, []);
+
 
   // Preview hover timers
   const hoverTimerRef = React.useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -430,7 +411,6 @@ export const FullDayOrdersManager: React.FC = () => {
       f=f.filter(o=>o.student_name?.toLowerCase().includes(t)||o.grade?.toLowerCase().includes(t)||o.section?.toLowerCase().includes(t)||o.order_number?.toLowerCase().includes(t));
     }
     if(paymentFilter) f=f.filter(o=>paymentFilter==='NO_APLICA'?!o.payment_method:o.payment_method===paymentFilter);
-    if(webFilter) f=f.filter(o=>o.notes?.includes('portal web'));
     return [...f].sort((a,b)=>{
       switch(currentSort){
         case 'status-time':{
@@ -445,7 +425,7 @@ export const FullDayOrdersManager: React.FC = () => {
         default: return 0;
       }
     });
-  },[dateFilteredOrders,searchTerm,paymentFilter,currentSort,webFilter]);
+  },[dateFilteredOrders,searchTerm,paymentFilter,currentSort]);
 
   const pagination = usePagination({items:filteredAndSortedOrders,itemsPerPage,mobileBreakpoint:768});
   const totalPages = Math.ceil(filteredAndSortedOrders.length/itemsPerPage);
@@ -732,156 +712,8 @@ export const FullDayOrdersManager: React.FC = () => {
         />
       </div>
 
-      {/* ── Toggle vista Pedidos / Por cobrar ── */}
-      {(() => {
-        const pendCobro = dateFilteredOrders.filter(o =>
-          (o as any).cobrado === false && o.notes?.includes('portal web')
-        );
-        return (
-          <div className="flex items-center gap-3">
-            <div className="flex bg-white border rounded-xl p-1 shadow-sm">
-              <button onClick={() => setActiveView('pedidos')}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  activeView === 'pedidos'
-                    ? 'bg-purple-500 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}>
-                📋 Todos los pedidos
-              </button>
-              <button onClick={() => setActiveView('cobrar')}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-                  activeView === 'cobrar'
-                    ? 'bg-amber-500 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}>
-                <DollarSign size={14} />
-                Por cobrar
-                {pendCobro.length > 0 && (
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
-                    activeView === 'cobrar' ? 'bg-white/30 text-white' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {pendCobro.length}
-                  </span>
-                )}
-              </button>
-            </div>
-            {activeView === 'cobrar' && pendCobro.length > 0 && (
-              <span className="text-sm text-amber-600 font-semibold">
-                Total pendiente: S/ {pendCobro.reduce((s, o) => s + o.total, 0).toFixed(2)}
-              </span>
-            )}
-          </div>
-        );
-      })()}
 
-      {/* ── Vista Por Cobrar ── */}
-      {activeView === 'cobrar' && (() => {
-        const pendCobro = dateFilteredOrders
-          .filter(o => {
-            if ((o as any).cobrado !== false || !o.notes?.includes('portal web')) return false;
-            if (!cobrarSearch.trim()) return true;
-            const t = cobrarSearch.toLowerCase();
-            return o.student_name.toLowerCase().includes(t) || o.grade.toLowerCase().includes(t) || o.section.toLowerCase().includes(t);
-          })
-          .sort((a, b) => {
-            if (a.grade !== b.grade) return a.grade.localeCompare(b.grade);
-            if (a.section !== b.section) return a.section.localeCompare(b.section);
-            return a.student_name.localeCompare(b.student_name);
-          });
 
-        if (pendCobro.length === 0) return (
-          <div className="bg-white rounded-2xl p-12 text-center border shadow-sm">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <DollarSign size={28} className="text-green-500" />
-            </div>
-            <p className="font-semibold text-gray-700 text-lg">¡Todo cobrado!</p>
-            <p className="text-sm text-gray-400 mt-1">No hay pedidos web pendientes de cobro hoy.</p>
-          </div>
-        );
-
-        // Agrupar por grado
-        const byGrade: Record<string, FullDayOrder[]> = {};
-        pendCobro.forEach(o => {
-          const key = `${o.grade} — Sección ${o.section}`;
-          if (!byGrade[key]) byGrade[key] = [];
-          byGrade[key].push(o);
-        });
-
-        return (
-          <div className="space-y-4">
-            {/* Buscador Por Cobrar */}
-            <div className="bg-white rounded-xl p-3 border shadow-sm">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15}/>
-                <input type="text" value={cobrarSearch} onChange={e => setCobrarSearch(e.target.value)}
-                  placeholder="Buscar por alumno, grado o sección..."
-                  className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm"/>
-                {cobrarSearch && (
-                  <button onClick={() => setCobrarSearch('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                    ×
-                  </button>
-                )}
-              </div>
-            </div>
-            {Object.entries(byGrade).map(([gradeKey, gradeOrders]) => (
-              <div key={gradeKey} className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-                <div className="bg-amber-50 border-b border-amber-100 px-4 py-3 flex items-center justify-between">
-                  <span className="font-bold text-amber-800 text-sm">{gradeKey}</span>
-                  <span className="text-xs text-amber-600 font-semibold">
-                    {gradeOrders.length} pedido{gradeOrders.length !== 1 ? 's' : ''} ·{' '}
-                    S/ {gradeOrders.reduce((s, o) => s + o.total, 0).toFixed(2)}
-                  </span>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {gradeOrders.map(order => (
-                    <div key={order.id} className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs font-bold text-blue-600">{getDisplayNumber(order)}</span>
-                          <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">🌐 WEB</span>
-                        </div>
-                        <p className="font-semibold text-gray-900 text-sm truncate">{order.student_name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold border ${
-                            ({'EFECTIVO':'bg-green-100 text-green-800 border-green-200','YAPE/PLIN':'bg-purple-100 text-purple-800 border-purple-200','TARJETA':'bg-blue-100 text-blue-800 border-blue-200'} as any)[order.payment_method as string] || 'bg-gray-100 text-gray-600 border-gray-200'
-                          }`}>
-                            {order.payment_method || 'NO APLICA'}
-                          </span>
-                          <div className="flex items-center gap-1 text-xs text-gray-400">
-                            <Clock size={11} />
-                            {new Date(order.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="font-black text-gray-900 text-lg">S/ {order.total.toFixed(2)}</p>
-                        <div className="mt-1">
-                          {order.items.map(i => `${i.quantity}× ${i.name}`).join(', ').slice(0, 40)}
-                          {order.items.map(i => i.name).join('').length > 40 ? '…' : ''}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleCobrarPedido(order)}
-                        disabled={cobrando === order.id}
-                        className="flex-shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm hover:shadow-md transition-all disabled:opacity-50 active:scale-95">
-                        {cobrando === order.id
-                          ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          : <DollarSign size={14} />
-                        }
-                        {cobrando === order.id ? '' : 'Cobrar'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
-
-      {/* ── Vista normal — solo si activeView === 'pedidos' ── */}
-      {activeView === 'pedidos' && <>
 
       {/* Filtros */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
@@ -892,14 +724,7 @@ export const FullDayOrdersManager: React.FC = () => {
               placeholder="Buscar por alumno, grado, número de orden..."
               className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm"/>
           </div>
-          <button onClick={() => setWebFilter(w => !w)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border transition-all ${
-              webFilter
-                ? 'bg-blue-500 text-white border-blue-500 shadow-sm'
-                : 'bg-white text-gray-600 border-gray-300 hover:border-blue-300'
-            }`}>
-            🌐 Solo WEB
-          </button>
+
         </div>
       </div>
 
@@ -1008,7 +833,6 @@ export const FullDayOrdersManager: React.FC = () => {
         </div>
       )}
 
-      </> /* cierre vista pedidos */}
     </div>
   );
 };
