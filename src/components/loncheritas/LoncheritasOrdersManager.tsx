@@ -481,6 +481,24 @@ export const LoncheritasOrdersManager: React.FC = () => {
         <div className="text-center py-12 text-gray-500 bg-white rounded-lg border">No hay pedidos para este día</div>
       ):pagination.isMobile?(
         <div className="space-y-3">
+          {/* Control de orden — solo móvil */}
+          <div className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-2.5 shadow-sm">
+            <span className="text-xs text-gray-500 font-medium">
+              {filteredAndSortedOrders.length} pedidos
+            </span>
+            <button
+              onClick={() => setCurrentSort((s: string) =>
+                s === 'created-desc' ? 'created-asc' : 'created-desc'
+              )}
+              className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg active:scale-95 transition-transform">
+              {currentSort === 'created-desc' ? (
+                <><ChevronDown size={13}/> Más nuevos primero</>
+              ) : (
+                <><ChevronDown size={13} className="rotate-180" /> Más antiguos primero</>
+              )}
+            </button>
+          </div>
+
           {pagination.currentItems.map(order=>(
             <LoncheritasOrderCard key={order.id} order={order} onEditPayment={handleEditPayment} onDelete={handleDeleteOrder} onTapPreview={handleTapPreview} onEmitirComprobante={handleEmitirComprobante} tieneComprobante={orderIdsConComprobante.has(order.id)} getDisplayNumber={getDisplayNumber} getPaymentColor={getPaymentColor} getPaymentText={getPaymentText} isAdmin={isAdmin}/>
           ))}
