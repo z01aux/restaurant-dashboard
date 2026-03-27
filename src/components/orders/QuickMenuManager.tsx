@@ -912,7 +912,6 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={activeTab === 'today' ? "🔍 Buscar en productos del día..." : "🔍 Buscar en inventario..."}
                   className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  autoFocus={activeTab === 'today'}
                 />
                 {searchTerm && (
                   <button
