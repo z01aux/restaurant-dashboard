@@ -1,6 +1,7 @@
 // ============================================
 // ARCHIVO: src/utils/fulldayExportUtils.ts
 // Reescrito con xlsx-js-style para estilos completos
+// INCLUYE COLUMNA NOTAS
 // ============================================
 
 import XLSXStyle from 'xlsx-js-style';
@@ -61,13 +62,12 @@ const PAYMENT_COLORS: Record<string, { bg: string; font: string }> = {
 const DEFAULT_PAYMENT = { bg: 'F3F4F6', font: '374151' };
 const getPaymentColor = (method: string | null) => PAYMENT_COLORS[method ?? ''] ?? DEFAULT_PAYMENT;
 
-// ── Fecha local sin toISOString ──────────────────────────────────
+// ── Fecha local ──────────────────────────────────────────────────
 
 const localStamp = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-// ── Categorización BULK — una sola consulta para todos los pedidos ──
-// Recibe el categoryMap ya cargado y clasifica los items de un pedido
+// ── Categorización ───────────────────────────────────────────────
 
 const isBebida = (cat: string, name: string) =>
   cat.includes('bebida') || cat.includes('gaseosa') || cat.includes('jugo') ||
@@ -85,6 +85,17 @@ const isEntrada = (cat: string, name: string) =>
   name.includes('entrada') || name.includes('ensalada') || name.includes('sopa') ||
   name.includes('caldo')   || name.includes('causa')    || name.includes('huancaina') ||
   name.includes('tamal')   || name.includes('chaufa');
+
+const loadCategoryMap = async (orders: FullDayOrder[]): Promise<Map<string, string>> => {
+  const allIds = [...new Set(orders.flatMap(o => o.items.map(i => i.id)))];
+  const categoryMap = new Map<string, string>();
+  if (allIds.length === 0) return categoryMap;
+  try {
+    const { data, error } = await supabase.from('menu_items').select('id, category').in('id', allIds);
+    if (!error && data) (data as any[]).forEach(i => categoryMap.set(i.id, i.category || ''));
+  } catch (e) { console.error('Error obteniendo categorías:', e); }
+  return categoryMap;
+};
 
 const categorizeWithMap = (
   order: FullDayOrder,
@@ -109,19 +120,7 @@ const categorizeWithMap = (
   };
 };
 
-// Carga todas las categorías en UNA SOLA consulta para un array de pedidos
-const loadCategoryMap = async (orders: FullDayOrder[]): Promise<Map<string, string>> => {
-  const allIds = [...new Set(orders.flatMap(o => o.items.map(i => i.id)))];
-  const categoryMap = new Map<string, string>();
-  if (allIds.length === 0) return categoryMap;
-  try {
-    const { data, error } = await supabase.from('menu_items').select('id, category').in('id', allIds);
-    if (!error && data) (data as any[]).forEach(i => categoryMap.set(i.id, i.category || ''));
-  } catch (e) { console.error('Error obteniendo categorías:', e); }
-  return categoryMap;
-};
-
-// ── Construir worksheet con estilos completos ────────────────────
+// ── Construir worksheet ──────────────────────────────────────────
 
 const buildStyledSheet = (
   aoa:       object[][],
@@ -146,9 +145,9 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
 
   const now   = new Date();
   const fecha = formatDateForDisplay(now);
-  // Encabezados
-  const COLS = ['Fecha','Hora','N° Orden','Grado','Sección','Alumno','Teléfono','Pago','Total','Entradas','Plato de Fondo','Bebidas'];
-  const COL_W = [12, 8, 15, 25, 10, 35, 15, 14, 12, 35, 35, 30];
+  // Encabezados con NOTAS
+  const COLS = ['Fecha','Hora','N° Orden','Grado','Sección','Alumno','Teléfono','Pago','Total','Entradas','Plato de Fondo','Bebidas','Notas'];
+  const COL_W = [12, 8, 15, 25, 10, 35, 15, 14, 12, 35, 35, 30, 40];
 
   const titleStyle = {
     font:      { bold: true, sz: 13, name: 'Arial', color: { rgb: '1A1A1A' } },
@@ -167,13 +166,13 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
   // Fila 1: Título
   aoa.push([
     mkCell(`PEDIDOS FULLDAY — ${fecha}`, titleStyle),
-    ...Array(11).fill(emptyCell()),
+    ...Array(12).fill(emptyCell()),
   ]);
 
   // Fila 2: Encabezados
   aoa.push(COLS.map(h => mkCell(h, headerStyle)));
 
-  // Filas de datos — UNA sola consulta para todos los pedidos
+  // Filas de datos
   let totalGeneral = 0;
   const sortedOrders = [...orders].sort((a, b) =>
     new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -235,22 +234,26 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
       mkCell(order.section,      gradeStyle),
       mkCell(order.student_name, textStyle),
       mkCell(order.phone || '—', textStyle),
-      mkCell(order.payment_method === 'EFECTIVO' ? '💵 EFECTIVO' : order.payment_method === 'YAPE/PLIN' ? '📱 YAPE/PLIN' : order.payment_method === 'TARJETA' ? '💳 TARJETA' : order.payment_method === 'MIXTO' ? '🔀 MIXTO' : '— NO APLICA', payStyle),
+      mkCell(order.payment_method === 'EFECTIVO' ? '💵 EFECTIVO' : 
+             order.payment_method === 'YAPE/PLIN' ? '📱 YAPE/PLIN' : 
+             order.payment_method === 'TARJETA' ? '💳 TARJETA' : 
+             order.payment_method === 'MIXTO' ? '🔀 MIXTO' : '— NO APLICA', payStyle),
       mkCell(`S/ ${order.total.toFixed(2)}`, totalStyle),
       mkCell(cats.entradas, textStyle),
       mkCell(cats.fondos,   textStyle),
       mkCell(cats.bebidas,  textStyle),
+      mkCell(order.notes || '', textStyle),
     ]);
   }
 
   // Filas vacías + total
-  aoa.push(Array(12).fill(emptyCell()));
-  aoa.push(Array(12).fill(emptyCell()));
+  aoa.push(Array(13).fill(emptyCell()));
+  aoa.push(Array(13).fill(emptyCell()));
   aoa.push([
     mkCell(`Total de pedidos: ${orders.length}   |   Total ventas: S/ ${totalGeneral.toFixed(2)}`, {
       font: { italic: true, sz: 10, name: 'Arial', color: { rgb: '888780' } },
     }),
-    ...Array(11).fill(emptyCell()),
+    ...Array(12).fill(emptyCell()),
   ]);
 
   const rowHeights = [
@@ -261,8 +264,8 @@ export const exportFullDayToExcel = async (orders: FullDayOrder[], tipo: 'today'
 
   const ws = buildStyledSheet(
     aoa, COL_W, rowHeights,
-    [{ s:{r:0,c:0}, e:{r:0,c:11} }],
-    'A2:L2'
+    [{ s:{r:0,c:0}, e:{r:0,c:12} }],
+    'A2:M2'
   );
 
   const wb = XLSXStyle.utils.book_new();
@@ -315,13 +318,13 @@ export const exportFullDayByDateRange = async (orders: FullDayOrder[], startDate
   const wsSummary = buildStyledSheet(summaryAoa, [35,20,12], Array(summaryAoa.length).fill(18), [{s:{r:0,c:0},e:{r:0,c:2}}]);
   XLSXStyle.utils.book_append_sheet(wb, wsSummary, 'Resumen');
 
-  // ── HOJA 2: DETALLE ───────────────────────────────────────────
-  const COLS = ['Fecha','Hora','N° Orden','Grado','Sección','Alumno','Apoderado','Teléfono','Pago','Entradas','Plato de Fondo','Bebidas','Total'];
-  const COL_W = [12,8,15,25,10,30,28,14,14,35,35,30,12];
+  // ── HOJA 2: DETALLE CON NOTAS ───────────────────────────────────────────
+  const COLS = ['Fecha','Hora','N° Orden','Grado','Sección','Alumno','Apoderado','Teléfono','Pago','Entradas','Plato de Fondo','Bebidas','Notas','Total'];
+  const COL_W = [12,8,15,25,10,30,28,14,14,35,35,30,40,12];
   const headerStyle = { font:{bold:true,sz:11,name:'Arial',color:{rgb:'F1EFE8'}}, fill:fill('5F5E5A'), alignment:{horizontal:'center',vertical:'center'}, border:borderMedium };
 
   const detailAoa: object[][] = [
-    [mkCell(`DETALLE DE PEDIDOS — ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`, { font:{bold:true,sz:13,name:'Arial',color:{rgb:'1A1A1A'}}, fill:fill('FFD3B6'), alignment:{horizontal:'center',vertical:'center'} }), ...Array(12).fill(emptyCell())],
+    [mkCell(`DETALLE DE PEDIDOS — ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`, { font:{bold:true,sz:13,name:'Arial',color:{rgb:'1A1A1A'}}, fill:fill('FFD3B6'), alignment:{horizontal:'center',vertical:'center'} }), ...Array(13).fill(emptyCell())],
     COLS.map(h => mkCell(h, headerStyle)),
   ];
 
@@ -352,25 +355,29 @@ export const exportFullDayByDateRange = async (orders: FullDayOrder[], startDate
       mkCell(order.student_name, tS),
       mkCell(order.guardian_name || '—', tS),
       mkCell(order.phone || '—', cS),
-      mkCell(order.payment_method === 'EFECTIVO' ? '💵 EFECTIVO' : order.payment_method === 'YAPE/PLIN' ? '📱 YAPE/PLIN' : order.payment_method === 'TARJETA' ? '💳 TARJETA' : order.payment_method === 'MIXTO' ? '🔀 MIXTO' : '— NO APLICA', payStyle),
+      mkCell(order.payment_method === 'EFECTIVO' ? '💵 EFECTIVO' : 
+             order.payment_method === 'YAPE/PLIN' ? '📱 YAPE/PLIN' : 
+             order.payment_method === 'TARJETA' ? '💳 TARJETA' : 
+             order.payment_method === 'MIXTO' ? '🔀 MIXTO' : '— NO APLICA', payStyle),
       mkCell(cats.entradas, tS),
       mkCell(cats.fondos,   tS),
       mkCell(cats.bebidas,  tS),
+      mkCell(order.notes || '', tS),
       mkCell(`S/ ${order.total.toFixed(2)}`, rS),
     ]);
   }
 
-  detailAoa.push(Array(13).fill(emptyCell()));
-  detailAoa.push(Array(13).fill(emptyCell()));
+  detailAoa.push(Array(14).fill(emptyCell()));
+  detailAoa.push(Array(14).fill(emptyCell()));
   detailAoa.push([
     mkCell(`Total de pedidos: ${filtered.length}   |   Total ventas: S/ ${totalGeneral.toFixed(2)}`, {
       font: { italic:true, sz:10, name:'Arial', color:{rgb:'888780'} },
     }),
-    ...Array(12).fill(emptyCell()),
+    ...Array(13).fill(emptyCell()),
   ]);
 
   const detailRowHeights = [26, 20, ...sorted.map(() => 18)];
-  const wsDetail = buildStyledSheet(detailAoa, COL_W, detailRowHeights, [{s:{r:0,c:0},e:{r:0,c:12}}], 'A2:M2');
+  const wsDetail = buildStyledSheet(detailAoa, COL_W, detailRowHeights, [{s:{r:0,c:0},e:{r:0,c:13}}], 'A2:N2');
   XLSXStyle.utils.book_append_sheet(wb, wsDetail, 'Detalle');
 
   // ── HOJA 3: TOP PRODUCTOS ─────────────────────────────────────
@@ -403,12 +410,12 @@ export const exportFullDayByDateRange = async (orders: FullDayOrder[], startDate
   XLSXStyle.writeFile(wb, `fullday_${s}_al_${e}.xlsx`);
 };
 
-// ── EXPORTAR CSV (sin cambios) ───────────────────────────────────
+// ── EXPORTAR CSV ───────────────────────────────────────────────────
 
 export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => {
   if (orders.length === 0) { alert('No hay pedidos para exportar'); return; }
 
-  const headers = ['FECHA','HORA','N° ORDEN','ALUMNO','GRADO','SECCIÓN','APODERADO','TELÉFONO','MONTO','MÉTODO PAGO','PRODUCTOS'];
+  const headers = ['FECHA','HORA','N° ORDEN','ALUMNO','GRADO','SECCIÓN','APODERADO','TELÉFONO','MONTO','MÉTODO PAGO','PRODUCTOS','NOTAS'];
   const rows = orders.map(o => [
     formatDateForDisplay(new Date(o.created_at)),
     formatTimeForDisplay(new Date(o.created_at)),
@@ -421,6 +428,7 @@ export const exportFullDayToCSV = (orders: FullDayOrder[], fileName: string) => 
     `S/ ${o.total.toFixed(2)}`,
     o.payment_method || 'NO APLICA',
     o.items.map(i => `${i.quantity}x ${i.name.toUpperCase()}`).join(' + '),
+    o.notes || '',
   ]);
 
   const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');

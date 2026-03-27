@@ -1,6 +1,7 @@
 // ============================================
 // ARCHIVO: src/utils/loncheritasExportUtils.ts
 // Reescrito con xlsx-js-style para estilos completos
+// INCLUYE COLUMNA NOTAS
 // ============================================
 
 import XLSXStyle from 'xlsx-js-style';
@@ -55,6 +56,7 @@ const PAYMENT_COLORS: Record<string, { bg: string; font: string }> = {
   'EFECTIVO':  { bg: 'D1FAE5', font: '065F46' },
   'YAPE/PLIN': { bg: 'EDE9FE', font: '4C1D95' },
   'TARJETA':   { bg: 'DBEAFE', font: '1E3A8A' },
+  'MIXTO':     { bg: 'FEF3C7', font: '92400E' },
 };
 const DEFAULT_PAYMENT = { bg: 'F3F4F6', font: '374151' };
 const getPaymentColor = (method: string | null) => PAYMENT_COLORS[method ?? ''] ?? DEFAULT_PAYMENT;
@@ -95,8 +97,9 @@ export const exportLoncheritasToExcel = (orders: LoncheritasOrder[], tipo: 'toda
   const now   = new Date();
   const fecha = formatDateForDisplay(now);
 
-  const COLS  = ['Fecha','Hora','N° Orden','Grado','Sección','Alumno','Teléfono','Pago','Total','Desayuno/Lonchera'];
-  const COL_W = [12, 8, 15, 25, 10, 35, 15, 14, 12, 60];
+  // Encabezados con NOTAS
+  const COLS  = ['Fecha','Hora','N° Orden','Grado','Sección','Alumno','Teléfono','Pago','Total','Desayuno/Lonchera','Notas'];
+  const COL_W = [12, 8, 15, 25, 10, 35, 15, 14, 12, 60, 40];
 
   const titleStyle  = { font:{bold:true,sz:13,name:'Arial',color:{rgb:'1A1A1A'}}, fill:fill('9FE1CB'), alignment:{horizontal:'center',vertical:'center'} };
   const headerStyle = { font:{bold:true,sz:11,name:'Arial',color:{rgb:'F1EFE8'}}, fill:fill('5F5E5A'), alignment:{horizontal:'center',vertical:'center'}, border:borderMedium };
@@ -104,7 +107,7 @@ export const exportLoncheritasToExcel = (orders: LoncheritasOrder[], tipo: 'toda
   const aoa: object[][] = [];
 
   // Fila 1: Título
-  aoa.push([mkCell(`PEDIDOS LONCHERITAS — ${fecha}`, titleStyle), ...Array(9).fill(emptyCell())]);
+  aoa.push([mkCell(`PEDIDOS LONCHERITAS — ${fecha}`, titleStyle), ...Array(10).fill(emptyCell())]);
 
   // Fila 2: Encabezados
   aoa.push(COLS.map(h => mkCell(h, headerStyle)));
@@ -133,23 +136,27 @@ export const exportLoncheritasToExcel = (orders: LoncheritasOrder[], tipo: 'toda
       mkCell(order.section, gradeStyle),
       mkCell(order.student_name, tS),
       mkCell(order.phone || '—', cS),
-      mkCell(order.payment_method === 'EFECTIVO' ? '💵 EFECTIVO' : order.payment_method === 'YAPE/PLIN' ? '📱 YAPE/PLIN' : order.payment_method === 'TARJETA' ? '💳 TARJETA' : order.payment_method === 'MIXTO' ? '🔀 MIXTO' : '— NO APLICA', payStyle),
+      mkCell(order.payment_method === 'EFECTIVO' ? '💵 EFECTIVO' : 
+             order.payment_method === 'YAPE/PLIN' ? '📱 YAPE/PLIN' : 
+             order.payment_method === 'TARJETA' ? '💳 TARJETA' : 
+             order.payment_method === 'MIXTO' ? '🔀 MIXTO' : '— NO APLICA', payStyle),
       mkCell(`S/ ${order.total.toFixed(2)}`, rS),
       mkCell(formatDesayunos(order.items), tS),
+      mkCell(order.notes || '', tS),
     ]);
   });
 
   // Total al pie
-  aoa.push(Array(10).fill(emptyCell()));
-  aoa.push(Array(10).fill(emptyCell()));
+  aoa.push(Array(11).fill(emptyCell()));
+  aoa.push(Array(11).fill(emptyCell()));
   aoa.push([
     mkCell(`Total de pedidos: ${orders.length}   |   Total ventas: S/ ${totalGeneral.toFixed(2)}`, {
       font: { italic:true, sz:10, name:'Arial', color:{rgb:'888780'} },
     }),
-    ...Array(9).fill(emptyCell()),
+    ...Array(10).fill(emptyCell()),
   ]);
 
-  const ws = buildStyledSheet(aoa, COL_W, [26, 20, ...sorted.map(()=>18)], [{s:{r:0,c:0},e:{r:0,c:9}}], 'A2:J2');
+  const ws = buildStyledSheet(aoa, COL_W, [26, 20, ...sorted.map(()=>18)], [{s:{r:0,c:0},e:{r:0,c:10}}], 'A2:K2');
   const wb = XLSXStyle.utils.book_new();
   XLSXStyle.utils.book_append_sheet(wb, ws, tipo === 'today' ? 'Pedidos del Día' : 'Todos los Pedidos');
   XLSXStyle.writeFile(wb, `loncheritas_${localStamp(now)}.xlsx`);
@@ -171,6 +178,7 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
   const totalEfectivo = filtered.filter(o => o.payment_method === 'EFECTIVO').reduce((s, o) => s + o.total, 0);
   const totalYape     = filtered.filter(o => o.payment_method === 'YAPE/PLIN').reduce((s, o) => s + o.total, 0);
   const totalTarjeta  = filtered.filter(o => o.payment_method === 'TARJETA').reduce((s, o) => s + o.total, 0);
+  const totalMixto    = filtered.filter(o => o.payment_method === 'MIXTO').reduce((s, o) => s + o.total, 0);
   const totalNoAplica = filtered.filter(o => !o.payment_method).reduce((s, o) => s + o.total, 0);
 
   const titleS = { font:{bold:true,sz:14,name:'Arial',color:{rgb:'1A1A1A'}}, fill:fill('9FE1CB'), alignment:{horizontal:'center',vertical:'center'} };
@@ -187,24 +195,25 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
     [emptyCell(), emptyCell(), emptyCell()],
     [mkCell('RESUMEN GENERAL', h2S), emptyCell(), emptyCell()],
     [mkCell('Total de pedidos', labelS), mkCell(filtered.length, valueS), emptyCell()],
-    [mkCell('Total ventas',     labelS), mkCell(`S/ ${totalVentas.toFixed(2)}`, valueS), emptyCell()],
+    [mkCell('Total ventas', labelS), mkCell(`S/ ${totalVentas.toFixed(2)}`, valueS), emptyCell()],
     [emptyCell(), emptyCell(), emptyCell()],
     [mkCell('VENTAS POR MÉTODO DE PAGO', h2S), emptyCell(), emptyCell()],
     [mkCell('💵 Efectivo',  labelS), mkCell(`S/ ${totalEfectivo.toFixed(2)}`, valueS), mkCell(totalVentas>0?`${((totalEfectivo/totalVentas)*100).toFixed(1)}%`:'0%', valueS)],
     [mkCell('📱 Yape/Plin', labelS), mkCell(`S/ ${totalYape.toFixed(2)}`,     valueS), mkCell(totalVentas>0?`${((totalYape/totalVentas)*100).toFixed(1)}%`:'0%', valueS)],
     [mkCell('💳 Tarjeta',   labelS), mkCell(`S/ ${totalTarjeta.toFixed(2)}`,  valueS), mkCell(totalVentas>0?`${((totalTarjeta/totalVentas)*100).toFixed(1)}%`:'0%', valueS)],
+    [mkCell('🔀 Mixto',     labelS), mkCell(`S/ ${totalMixto.toFixed(2)}`,    valueS), mkCell(totalVentas>0?`${((totalMixto/totalVentas)*100).toFixed(1)}%`:'0%', valueS)],
     [mkCell('— No aplica', labelS), mkCell(`S/ ${totalNoAplica.toFixed(2)}`, valueS), emptyCell()],
   ];
   const wsSummary = buildStyledSheet(summaryAoa, [35,20,12], Array(summaryAoa.length).fill(18), [{s:{r:0,c:0},e:{r:0,c:2}}]);
   XLSXStyle.utils.book_append_sheet(wb, wsSummary, 'Resumen');
 
-  // ── HOJA 2: DETALLE ───────────────────────────────────────────
-  const COLS  = ['Fecha','Hora','N° Orden','Grado','Sección','Alumno','Teléfono','Pago','Desayuno/Lonchera','Total'];
-  const COL_W = [12,8,15,25,10,35,15,14,70,12];
+  // ── HOJA 2: DETALLE CON NOTAS ───────────────────────────────────────────
+  const COLS = ['Fecha','Hora','N° Orden','Grado','Sección','Alumno','Teléfono','Pago','Desayuno/Lonchera','Notas','Total'];
+  const COL_W = [12,8,15,25,10,35,15,14,70,40,12];
   const headerStyle = { font:{bold:true,sz:11,name:'Arial',color:{rgb:'F1EFE8'}}, fill:fill('5F5E5A'), alignment:{horizontal:'center',vertical:'center'}, border:borderMedium };
 
   const detailAoa: object[][] = [
-    [mkCell(`DETALLE — ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`, {font:{bold:true,sz:13,name:'Arial',color:{rgb:'1A1A1A'}},fill:fill('9FE1CB'),alignment:{horizontal:'center',vertical:'center'}}), ...Array(9).fill(emptyCell())],
+    [mkCell(`DETALLE — ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`, {font:{bold:true,sz:13,name:'Arial',color:{rgb:'1A1A1A'}},fill:fill('9FE1CB'),alignment:{horizontal:'center',vertical:'center'}}), ...Array(10).fill(emptyCell())],
     COLS.map(h => mkCell(h, headerStyle)),
   ];
 
@@ -231,22 +240,26 @@ export const exportLoncheritasByDateRange = (orders: LoncheritasOrder[], startDa
       mkCell(order.section, gradeStyle),
       mkCell(order.student_name, tS),
       mkCell(order.phone || '—', cS),
-      mkCell(order.payment_method === 'EFECTIVO' ? '💵 EFECTIVO' : order.payment_method === 'YAPE/PLIN' ? '📱 YAPE/PLIN' : order.payment_method === 'TARJETA' ? '💳 TARJETA' : order.payment_method === 'MIXTO' ? '🔀 MIXTO' : '— NO APLICA', payStyle),
+      mkCell(order.payment_method === 'EFECTIVO' ? '💵 EFECTIVO' : 
+             order.payment_method === 'YAPE/PLIN' ? '📱 YAPE/PLIN' : 
+             order.payment_method === 'TARJETA' ? '💳 TARJETA' : 
+             order.payment_method === 'MIXTO' ? '🔀 MIXTO' : '— NO APLICA', payStyle),
       mkCell(formatDesayunos(order.items), tS),
+      mkCell(order.notes || '', tS),
       mkCell(`S/ ${order.total.toFixed(2)}`, rS),
     ]);
   });
 
-  detailAoa.push(Array(10).fill(emptyCell()));
-  detailAoa.push(Array(10).fill(emptyCell()));
+  detailAoa.push(Array(11).fill(emptyCell()));
+  detailAoa.push(Array(11).fill(emptyCell()));
   detailAoa.push([
     mkCell(`Total de pedidos: ${filtered.length}   |   Total ventas: S/ ${totalGeneral.toFixed(2)}`, {
       font: { italic:true, sz:10, name:'Arial', color:{rgb:'888780'} },
     }),
-    ...Array(9).fill(emptyCell()),
+    ...Array(10).fill(emptyCell()),
   ]);
 
-  const wsDetail = buildStyledSheet(detailAoa, COL_W, [26,20,...sorted.map(()=>18)], [{s:{r:0,c:0},e:{r:0,c:9}}], 'A2:J2');
+  const wsDetail = buildStyledSheet(detailAoa, COL_W, [26,20,...sorted.map(()=>18)], [{s:{r:0,c:0},e:{r:0,c:10}}], 'A2:K2');
   XLSXStyle.utils.book_append_sheet(wb, wsDetail, 'Detalle');
 
   // ── HOJA 3: TOP PRODUCTOS ─────────────────────────────────────
