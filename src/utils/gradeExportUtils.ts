@@ -1,6 +1,7 @@
 // ============================================
 // ARCHIVO: src/utils/gradeExportUtils.ts
 // Exportación por Grado/Sección — FullDay y Loncheritas
+// Incluye columna NOTAS
 // Usa xlsx-js-style (npm install xlsx-js-style)
 // ============================================
 
@@ -19,6 +20,7 @@ export interface GradeOrder {
   student_name: string;
   items: Array<{ id: string; name: string; quantity: number; price: number }>;
   created_at: string | Date;
+  notes?: string | null;
 }
 
 interface ProcessedRow {
@@ -28,6 +30,7 @@ interface ProcessedRow {
   entrada:      string;
   fondo:        string;
   bebida:       string;
+  notas:        string;
 }
 
 // ── Orden exacto de grados (igual que GRADES en student.ts) ─────
@@ -128,18 +131,14 @@ const loadCategoryMapBulk = async (orders: GradeOrder[]): Promise<Map<string, st
 };
 
 // ── Categorización Loncheritas (todos los items son "desayuno/lonchera") ──────
-// En Loncheritas no hay entrada/bebida — todos los productos van en "Plato de Fondo"
-
 const categorizeItemsLoncheritas = (items: GradeOrder['items']): { entrada: string; fondo: string; bebida: string } => ({
   entrada: '-',
   fondo:   items.map(i => `${i.quantity > 1 ? i.quantity + 'x ' : ''}${i.name}`).join(' + ') || '-',
   bebida:  '-',
 });
 
-// ── Construir y ordenar filas ────────────────────────────────────
-
-const buildRows = async (orders: GradeOrder[], mode: 'fullday' | 'loncheritas' = 'fullday'): Promise<ProcessedRow[]> => {
-  // UNA sola consulta para todos los pedidos
+// ── Construir filas ORDENADAS POR GRADO/SECCIÓN ────────────────────────────────────
+const buildRowsByGrade = async (orders: GradeOrder[], mode: 'fullday' | 'loncheritas' = 'fullday'): Promise<ProcessedRow[]> => {
   const categoryMap = mode === 'loncheritas'
     ? new Map<string, string>()
     : await loadCategoryMapBulk(orders);
@@ -148,6 +147,7 @@ const buildRows = async (orders: GradeOrder[], mode: 'fullday' | 'loncheritas' =
     grade:        order.grade,
     section:      order.section,
     student_name: order.student_name,
+    notas:        order.notes || '',
     ...(mode === 'loncheritas'
       ? categorizeItemsLoncheritas(order.items)
       : categorizeItemsWithMap(order.items, categoryMap)
@@ -164,8 +164,28 @@ const buildRows = async (orders: GradeOrder[], mode: 'fullday' | 'loncheritas' =
   });
 };
 
+// ── Construir filas ORDENADAS POR NOMBRE DE ALUMNO (A-Z) ────────────────────────────
+const buildRowsByStudentName = async (orders: GradeOrder[], mode: 'fullday' | 'loncheritas' = 'fullday'): Promise<ProcessedRow[]> => {
+  const categoryMap = mode === 'loncheritas'
+    ? new Map<string, string>()
+    : await loadCategoryMapBulk(orders);
+
+  const rows = orders.map(order => ({
+    grade:        order.grade,
+    section:      order.section,
+    student_name: order.student_name,
+    notas:        order.notes || '',
+    ...(mode === 'loncheritas'
+      ? categorizeItemsLoncheritas(order.items)
+      : categorizeItemsWithMap(order.items, categoryMap)
+    ),
+  }));
+
+  // Ordenar SOLO por nombre de alumno (alfabético A-Z)
+  return rows.sort((a, b) => a.student_name.localeCompare(b.student_name));
+};
+
 // ── Helpers de estilo ────────────────────────────────────────────
-// patternType: 'solid' es OBLIGATORIO en xlsx-js-style para colores
 
 const fill = (rgb: string) => ({
   patternType: 'solid',
@@ -190,198 +210,8 @@ const borderHair = {
 const mkCell = (value: string, s: object) => ({ v: value, t: 's', s });
 const emptyCell = () => ({ v: '', t: 's', s: {} });
 
-// ── Construir y descargar Excel ──────────────────────────────────
-
-const buildAndDownload = (
-  rows:      ProcessedRow[],
-  titleText: string,
-  titleBg:   string,
-  sheetName: string,
-  fileName:  string
-): void => {
-  const aoa: object[][] = [];
-
-  // ── Fila 1: Título ─────────────────────────────────────────
-  aoa.push([
-    mkCell(titleText, {
-      font:      { bold: true, sz: 13, name: 'Arial', color: { rgb: '1A1A1A' } },
-      fill:      fill(titleBg),
-      alignment: { horizontal: 'center', vertical: 'center' },
-    }),
-    emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(),
-  ]);
-
-  // ── Fila 2: Encabezados ────────────────────────────────────
-  const headerStyle = {
-    font:      { bold: true, sz: 11, name: 'Arial', color: { rgb: '1A1A1A' } },
-    fill:      fill('B4B2A9'),
-    alignment: { horizontal: 'center', vertical: 'center' },
-    border:    borderMedium,
-  };
-  aoa.push([
-    mkCell('Grado',          headerStyle),
-    mkCell('Sección',        headerStyle),
-    mkCell('Alumno',         headerStyle),
-    mkCell('Entrada',        headerStyle),
-    mkCell('Plato de Fondo', headerStyle),
-    mkCell('Bebida',         headerStyle),
-  ]);
-
-  // ── Filas de datos ─────────────────────────────────────────
-  for (const row of rows) {
-    const color = getGradeColor(row.grade);
-
-    const gradeStyle = {
-      font:      { bold: true, sz: 10, name: 'Arial', color: { rgb: color.font } },
-      fill:      fill(color.bg),
-      alignment: { horizontal: 'center', vertical: 'center' },
-      border:    borderHair,
-    };
-    const dataStyle = {
-      font:      { bold: true, sz: 10, name: 'Arial', color: { rgb: '1A1A1A' } },
-      fill:      fill('FFFFFF'),
-      alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
-      border:    borderHair,
-    };
-
-    aoa.push([
-      mkCell(row.grade,        gradeStyle),
-      mkCell(row.section,      gradeStyle),
-      mkCell(row.student_name, dataStyle),
-      mkCell(row.entrada,      dataStyle),
-      mkCell(row.fondo,        dataStyle),
-      mkCell(row.bebida,       dataStyle),
-    ]);
-  }
-
-  // ── Filas vacías + total ───────────────────────────────────
-  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
-  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
-  aoa.push([
-    mkCell(`Total de pedidos: ${rows.length}`, {
-      font: { italic: true, sz: 10, name: 'Arial', color: { rgb: '888780' } },
-    }),
-    emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(),
-  ]);
-
-  // ── Crear worksheet ────────────────────────────────────────
-  const ws = XLSXStyle.utils.aoa_to_sheet(aoa);
-
-  ws['!cols'] = [
-    { wch: 25 }, // Grado — más ancho porque el texto es largo
-    { wch: 10 }, // Sección
-    { wch: 38 }, // Alumno
-    { wch: 30 }, // Entrada
-    { wch: 30 }, // Plato de Fondo
-    { wch: 24 }, // Bebida
-  ];
-
-  ws['!rows'] = [
-    { hpt: 26 },
-    { hpt: 20 },
-    ...rows.map(() => ({ hpt: 18 })),
-  ];
-
-  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
-
-  ws['!autofilter'] = { ref: 'A2:F2' };
-
-  ws['!pageSetup'] = { paperSize: 9, orientation: 'landscape' };
-
-  const wb = XLSXStyle.utils.book_new();
-  XLSXStyle.utils.book_append_sheet(wb, ws, sheetName);
-  XLSXStyle.writeFile(wb, `${fileName}.xlsx`);
-};
-
-// ── Construir Excel para Loncheritas (4 columnas: Grado, Sección, Alumno, Desayuno) ──
-
-const buildAndDownloadLoncheritas = (
-  rows:      ProcessedRow[],
-  titleText: string,
-  fileName:  string
-): void => {
-  const aoa: object[][] = [];
-
-  // Fila 1: Título
-  aoa.push([
-    mkCell(titleText, {
-      font:      { bold: true, sz: 13, name: 'Arial', color: { rgb: '1A1A1A' } },
-      fill:      fill('9FE1CB'),
-      alignment: { horizontal: 'center', vertical: 'center' },
-    }),
-    emptyCell(), emptyCell(), emptyCell(),
-  ]);
-
-  // Fila 2: Encabezados
-  const headerStyle = {
-    font:      { bold: true, sz: 11, name: 'Arial', color: { rgb: '1A1A1A' } },
-    fill:      fill('B4B2A9'),
-    alignment: { horizontal: 'center', vertical: 'center' },
-    border:    borderMedium,
-  };
-  aoa.push([
-    mkCell('Grado',              headerStyle),
-    mkCell('Sección',            headerStyle),
-    mkCell('Alumno',             headerStyle),
-    mkCell('Desayuno/Lonchera',  headerStyle),
-  ]);
-
-  // Filas de datos
-  for (const row of rows) {
-    const color = getGradeColor(row.grade);
-    const gradeStyle = {
-      font:      { bold: true, sz: 10, name: 'Arial', color: { rgb: color.font } },
-      fill:      fill(color.bg),
-      alignment: { horizontal: 'center', vertical: 'center' },
-      border:    borderHair,
-    };
-    const dataStyle = {
-      font:      { bold: true, sz: 10, name: 'Arial', color: { rgb: '1A1A1A' } },
-      fill:      fill('FFFFFF'),
-      alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
-      border:    borderHair,
-    };
-    aoa.push([
-      mkCell(row.grade,        gradeStyle),
-      mkCell(row.section,      gradeStyle),
-      mkCell(row.student_name, dataStyle),
-      mkCell(row.fondo,        dataStyle),
-    ]);
-  }
-
-  // Pie
-  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
-  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
-  aoa.push([
-    mkCell(`Total de pedidos: ${rows.length}`, {
-      font: { italic: true, sz: 10, name: 'Arial', color: { rgb: '888780' } },
-    }),
-    emptyCell(), emptyCell(), emptyCell(),
-  ]);
-
-  const ws = XLSXStyle.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [
-    { wch: 25 }, // Grado
-    { wch: 10 }, // Sección
-    { wch: 38 }, // Alumno
-    { wch: 60 }, // Desayuno/Lonchera — más ancho porque pueden ser varios productos
-  ];
-  ws['!rows'] = [
-    { hpt: 26 },
-    { hpt: 20 },
-    ...rows.map(() => ({ hpt: 18 })),
-  ];
-  ws['!merges']    = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
-  ws['!autofilter'] = { ref: 'A2:D2' };
-  ws['!pageSetup'] = { paperSize: 9, orientation: 'landscape' };
-
-  const wb = XLSXStyle.utils.book_new();
-  XLSXStyle.utils.book_append_sheet(wb, ws, 'Loncheritas');
-  XLSXStyle.writeFile(wb, `${fileName}.xlsx`);
-};
-
 // ════════════════════════════════════════════════════════════════
-// EXPORTAR EXCEL — FullDay
+// EXPORTAR EXCEL — FullDay (POR GRADO/SECCIÓN) - ARCHIVO SEPARADO
 // ════════════════════════════════════════════════════════════════
 
 export const exportFullDayGradeExcel = async (
@@ -390,44 +220,213 @@ export const exportFullDayGradeExcel = async (
 ): Promise<void> => {
   if (orders.length === 0) { alert('No hay pedidos para exportar.'); return; }
 
-  const rows  = await buildRows(orders as unknown as GradeOrder[]);
-  const fecha = formatDateForDisplay(selectedDate ?? new Date());
   const d = selectedDate ?? new Date();
   const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const fecha = formatDateForDisplay(selectedDate ?? new Date());
 
-  buildAndDownload(rows, `PEDIDOS FULLDAY — ${fecha}`, 'D3D1C7', 'FullDay', `fullday_listas_${stamp}`);
+  // Convertir FullDayOrder a GradeOrder con notas
+  const gradeOrders: GradeOrder[] = orders.map(o => ({
+    ...o,
+    student_name: o.student_name,
+    items: o.items,
+    notes: o.notes,
+  }));
+
+  const rows = await buildRowsByGrade(gradeOrders);
+
+  const aoa: object[][] = [];
+
+  // Título
+  aoa.push([
+    mkCell(`PEDIDOS FULLDAY — ${fecha} (Por Grado/Sección)`, {
+      font: { bold: true, sz: 13, name: 'Arial', color: { rgb: '1A1A1A' } },
+      fill: fill('D3D1C7'),
+      alignment: { horizontal: 'center', vertical: 'center' },
+    }),
+    emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(),
+  ]);
+
+  // Encabezados
+  const headerStyle = {
+    font: { bold: true, sz: 11, name: 'Arial', color: { rgb: '1A1A1A' } },
+    fill: fill('B4B2A9'),
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: borderMedium,
+  };
+  aoa.push([
+    mkCell('Grado', headerStyle),
+    mkCell('Sección', headerStyle),
+    mkCell('Alumno', headerStyle),
+    mkCell('Entrada', headerStyle),
+    mkCell('Plato de Fondo', headerStyle),
+    mkCell('Bebida', headerStyle),
+    mkCell('Notas', headerStyle),
+  ]);
+
+  // Datos ordenados por grado
+  for (const row of rows) {
+    const color = getGradeColor(row.grade);
+    const gradeStyle = {
+      font: { bold: true, sz: 10, name: 'Arial', color: { rgb: color.font } },
+      fill: fill(color.bg),
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: borderHair,
+    };
+    const dataStyle = {
+      font: { bold: true, sz: 10, name: 'Arial', color: { rgb: '1A1A1A' } },
+      fill: fill('FFFFFF'),
+      alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
+      border: borderHair,
+    };
+    aoa.push([
+      mkCell(row.grade, gradeStyle),
+      mkCell(row.section, gradeStyle),
+      mkCell(row.student_name, dataStyle),
+      mkCell(row.entrada, dataStyle),
+      mkCell(row.fondo, dataStyle),
+      mkCell(row.bebida, dataStyle),
+      mkCell(row.notas || '', dataStyle),
+    ]);
+  }
+
+  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
+  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
+  aoa.push([
+    mkCell(`Total de pedidos: ${rows.length}`, {
+      font: { italic: true, sz: 10, name: 'Arial', color: { rgb: '888780' } },
+    }),
+    emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(),
+  ]);
+
+  const ws = XLSXStyle.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    { wch: 25 }, // Grado
+    { wch: 10 }, // Sección
+    { wch: 38 }, // Alumno
+    { wch: 30 }, // Entrada
+    { wch: 30 }, // Plato de Fondo
+    { wch: 24 }, // Bebida
+    { wch: 40 }, // Notas
+  ];
+  ws['!rows'] = [{ hpt: 26 }, { hpt: 20 }, ...rows.map(() => ({ hpt: 18 }))];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+  ws['!autofilter'] = { ref: 'A2:G2' };
+  ws['!pageSetup'] = { paperSize: 9, orientation: 'landscape' };
+
+  const wb = XLSXStyle.utils.book_new();
+  XLSXStyle.utils.book_append_sheet(wb, ws, 'Por Grado y Seccion');
+  XLSXStyle.writeFile(wb, `fullday_listas_gys_${stamp}.xlsx`);
 };
 
 // ════════════════════════════════════════════════════════════════
-// EXPORTAR CSV — FullDay
+// EXPORTAR EXCEL — FullDay (ORDEN ALFABÉTICO) - ARCHIVO SEPARADO
 // ════════════════════════════════════════════════════════════════
 
-export const exportFullDayGradeCSV = async (
+export const exportFullDayAlfabeticoExcel = async (
   orders: FullDayOrder[],
   selectedDate?: Date
 ): Promise<void> => {
   if (orders.length === 0) { alert('No hay pedidos para exportar.'); return; }
 
-  const rows  = await buildRows(orders as unknown as GradeOrder[]);
   const d = selectedDate ?? new Date();
   const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const fecha = formatDateForDisplay(selectedDate ?? new Date());
 
-  const lines = [
-    ['Grado','Sección','Alumno','Entrada','Plato de Fondo','Bebida'].join(','),
-    ...rows.map(r =>
-      [r.grade, r.section, `"${r.student_name}"`, `"${r.entrada}"`, `"${r.fondo}"`, `"${r.bebida}"`].join(',')
-    ),
+  const gradeOrders: GradeOrder[] = orders.map(o => ({
+    ...o,
+    student_name: o.student_name,
+    items: o.items,
+    notes: o.notes,
+  }));
+
+  const rows = await buildRowsByStudentName(gradeOrders);
+
+  const aoa: object[][] = [];
+
+  // Título
+  aoa.push([
+    mkCell(`PEDIDOS FULLDAY — ${fecha} (Orden Alfabético)`, {
+      font: { bold: true, sz: 13, name: 'Arial', color: { rgb: '1A1A1A' } },
+      fill: fill('C9E2F5'),
+      alignment: { horizontal: 'center', vertical: 'center' },
+    }),
+    emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(),
+  ]);
+
+  // Encabezados
+  const headerStyle = {
+    font: { bold: true, sz: 11, name: 'Arial', color: { rgb: '1A1A1A' } },
+    fill: fill('B4B2A9'),
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: borderMedium,
+  };
+  aoa.push([
+    mkCell('Grado', headerStyle),
+    mkCell('Sección', headerStyle),
+    mkCell('Alumno', headerStyle),
+    mkCell('Entrada', headerStyle),
+    mkCell('Plato de Fondo', headerStyle),
+    mkCell('Bebida', headerStyle),
+    mkCell('Notas', headerStyle),
+  ]);
+
+  // Datos ordenados alfabéticamente
+  for (const row of rows) {
+    const color = getGradeColor(row.grade);
+    const gradeStyle = {
+      font: { bold: true, sz: 10, name: 'Arial', color: { rgb: color.font } },
+      fill: fill(color.bg),
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: borderHair,
+    };
+    const dataStyle = {
+      font: { bold: true, sz: 10, name: 'Arial', color: { rgb: '1A1A1A' } },
+      fill: fill('FFFFFF'),
+      alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
+      border: borderHair,
+    };
+    aoa.push([
+      mkCell(row.grade, gradeStyle),
+      mkCell(row.section, gradeStyle),
+      mkCell(row.student_name, dataStyle),
+      mkCell(row.entrada, dataStyle),
+      mkCell(row.fondo, dataStyle),
+      mkCell(row.bebida, dataStyle),
+      mkCell(row.notas || '', dataStyle),
+    ]);
+  }
+
+  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
+  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
+  aoa.push([
+    mkCell(`Total de pedidos: ${rows.length}`, {
+      font: { italic: true, sz: 10, name: 'Arial', color: { rgb: '888780' } },
+    }),
+    emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(),
+  ]);
+
+  const ws = XLSXStyle.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    { wch: 25 }, // Grado
+    { wch: 10 }, // Sección
+    { wch: 38 }, // Alumno
+    { wch: 30 }, // Entrada
+    { wch: 30 }, // Plato de Fondo
+    { wch: 24 }, // Bebida
+    { wch: 40 }, // Notas
   ];
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = `fullday_listas_${stamp}.csv`;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
+  ws['!rows'] = [{ hpt: 26 }, { hpt: 20 }, ...rows.map(() => ({ hpt: 18 }))];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+  ws['!autofilter'] = { ref: 'A2:G2' };
+  ws['!pageSetup'] = { paperSize: 9, orientation: 'landscape' };
+
+  const wb = XLSXStyle.utils.book_new();
+  XLSXStyle.utils.book_append_sheet(wb, ws, 'Orden Alfabetico');
+  XLSXStyle.writeFile(wb, `fullday_listas_alfabetico_${stamp}.xlsx`);
 };
 
 // ════════════════════════════════════════════════════════════════
-// EXPORTAR EXCEL — Loncheritas
+// EXPORTAR EXCEL — Loncheritas (POR GRADO/SECCIÓN) - ARCHIVO SEPARADO
 // ════════════════════════════════════════════════════════════════
 
 export const exportLoncheritasGradeExcel = async (
@@ -436,17 +435,232 @@ export const exportLoncheritasGradeExcel = async (
 ): Promise<void> => {
   if (orders.length === 0) { alert('No hay pedidos para exportar.'); return; }
 
-  const rows  = await buildRows(orders as unknown as GradeOrder[]);
-  const fecha = formatDateForDisplay(selectedDate ?? new Date());
   const d = selectedDate ?? new Date();
   const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const fecha = formatDateForDisplay(selectedDate ?? new Date());
 
-  buildAndDownloadLoncheritas(rows, `PEDIDOS LONCHERITAS — ${fecha}`, `loncheritas_listas_${stamp}`);
+  const gradeOrders: GradeOrder[] = orders.map(o => ({
+    ...o,
+    student_name: o.student_name,
+    items: o.items,
+    notes: o.notes,
+  }));
+
+  const rows = await buildRowsByGrade(gradeOrders, 'loncheritas');
+
+  const aoa: object[][] = [];
+
+  // Título
+  aoa.push([
+    mkCell(`PEDIDOS LONCHERITAS — ${fecha} (Por Grado/Sección)`, {
+      font: { bold: true, sz: 13, name: 'Arial', color: { rgb: '1A1A1A' } },
+      fill: fill('9FE1CB'),
+      alignment: { horizontal: 'center', vertical: 'center' },
+    }),
+    emptyCell(), emptyCell(), emptyCell(), emptyCell(),
+  ]);
+
+  // Encabezados
+  const headerStyle = {
+    font: { bold: true, sz: 11, name: 'Arial', color: { rgb: '1A1A1A' } },
+    fill: fill('B4B2A9'),
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: borderMedium,
+  };
+  aoa.push([
+    mkCell('Grado', headerStyle),
+    mkCell('Sección', headerStyle),
+    mkCell('Alumno', headerStyle),
+    mkCell('Desayuno/Lonchera', headerStyle),
+    mkCell('Notas', headerStyle),
+  ]);
+
+  // Datos ordenados por grado
+  for (const row of rows) {
+    const color = getGradeColor(row.grade);
+    const gradeStyle = {
+      font: { bold: true, sz: 10, name: 'Arial', color: { rgb: color.font } },
+      fill: fill(color.bg),
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: borderHair,
+    };
+    const dataStyle = {
+      font: { bold: true, sz: 10, name: 'Arial', color: { rgb: '1A1A1A' } },
+      fill: fill('FFFFFF'),
+      alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
+      border: borderHair,
+    };
+    aoa.push([
+      mkCell(row.grade, gradeStyle),
+      mkCell(row.section, gradeStyle),
+      mkCell(row.student_name, dataStyle),
+      mkCell(row.fondo, dataStyle),
+      mkCell(row.notas || '', dataStyle),
+    ]);
+  }
+
+  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
+  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
+  aoa.push([
+    mkCell(`Total de pedidos: ${rows.length}`, {
+      font: { italic: true, sz: 10, name: 'Arial', color: { rgb: '888780' } },
+    }),
+    emptyCell(), emptyCell(), emptyCell(), emptyCell(),
+  ]);
+
+  const ws = XLSXStyle.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    { wch: 25 }, // Grado
+    { wch: 10 }, // Sección
+    { wch: 38 }, // Alumno
+    { wch: 60 }, // Desayuno/Lonchera
+    { wch: 40 }, // Notas
+  ];
+  ws['!rows'] = [{ hpt: 26 }, { hpt: 20 }, ...rows.map(() => ({ hpt: 18 }))];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+  ws['!autofilter'] = { ref: 'A2:E2' };
+  ws['!pageSetup'] = { paperSize: 9, orientation: 'landscape' };
+
+  const wb = XLSXStyle.utils.book_new();
+  XLSXStyle.utils.book_append_sheet(wb, ws, 'Por Grado y Seccion');
+  XLSXStyle.writeFile(wb, `loncheritas_listas_gys_${stamp}.xlsx`);
 };
 
 // ════════════════════════════════════════════════════════════════
-// EXPORTAR CSV — Loncheritas
+// EXPORTAR EXCEL — Loncheritas (ORDEN ALFABÉTICO) - ARCHIVO SEPARADO
 // ════════════════════════════════════════════════════════════════
+
+export const exportLoncheritasAlfabeticoExcel = async (
+  orders: LoncheritasOrder[],
+  selectedDate?: Date
+): Promise<void> => {
+  if (orders.length === 0) { alert('No hay pedidos para exportar.'); return; }
+
+  const d = selectedDate ?? new Date();
+  const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const fecha = formatDateForDisplay(selectedDate ?? new Date());
+
+  const gradeOrders: GradeOrder[] = orders.map(o => ({
+    ...o,
+    student_name: o.student_name,
+    items: o.items,
+    notes: o.notes,
+  }));
+
+  const rows = await buildRowsByStudentName(gradeOrders, 'loncheritas');
+
+  const aoa: object[][] = [];
+
+  // Título
+  aoa.push([
+    mkCell(`PEDIDOS LONCHERITAS — ${fecha} (Orden Alfabético)`, {
+      font: { bold: true, sz: 13, name: 'Arial', color: { rgb: '1A1A1A' } },
+      fill: fill('B8E4D0'),
+      alignment: { horizontal: 'center', vertical: 'center' },
+    }),
+    emptyCell(), emptyCell(), emptyCell(), emptyCell(),
+  ]);
+
+  // Encabezados
+  const headerStyle = {
+    font: { bold: true, sz: 11, name: 'Arial', color: { rgb: '1A1A1A' } },
+    fill: fill('B4B2A9'),
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: borderMedium,
+  };
+  aoa.push([
+    mkCell('Grado', headerStyle),
+    mkCell('Sección', headerStyle),
+    mkCell('Alumno', headerStyle),
+    mkCell('Desayuno/Lonchera', headerStyle),
+    mkCell('Notas', headerStyle),
+  ]);
+
+  // Datos ordenados alfabéticamente
+  for (const row of rows) {
+    const color = getGradeColor(row.grade);
+    const gradeStyle = {
+      font: { bold: true, sz: 10, name: 'Arial', color: { rgb: color.font } },
+      fill: fill(color.bg),
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: borderHair,
+    };
+    const dataStyle = {
+      font: { bold: true, sz: 10, name: 'Arial', color: { rgb: '1A1A1A' } },
+      fill: fill('FFFFFF'),
+      alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
+      border: borderHair,
+    };
+    aoa.push([
+      mkCell(row.grade, gradeStyle),
+      mkCell(row.section, gradeStyle),
+      mkCell(row.student_name, dataStyle),
+      mkCell(row.fondo, dataStyle),
+      mkCell(row.notas || '', dataStyle),
+    ]);
+  }
+
+  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
+  aoa.push([emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()]);
+  aoa.push([
+    mkCell(`Total de pedidos: ${rows.length}`, {
+      font: { italic: true, sz: 10, name: 'Arial', color: { rgb: '888780' } },
+    }),
+    emptyCell(), emptyCell(), emptyCell(), emptyCell(),
+  ]);
+
+  const ws = XLSXStyle.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    { wch: 25 }, // Grado
+    { wch: 10 }, // Sección
+    { wch: 38 }, // Alumno
+    { wch: 60 }, // Desayuno/Lonchera
+    { wch: 40 }, // Notas
+  ];
+  ws['!rows'] = [{ hpt: 26 }, { hpt: 20 }, ...rows.map(() => ({ hpt: 18 }))];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+  ws['!autofilter'] = { ref: 'A2:E2' };
+  ws['!pageSetup'] = { paperSize: 9, orientation: 'landscape' };
+
+  const wb = XLSXStyle.utils.book_new();
+  XLSXStyle.utils.book_append_sheet(wb, ws, 'Orden Alfabetico');
+  XLSXStyle.writeFile(wb, `loncheritas_listas_alfabetico_${stamp}.xlsx`);
+};
+
+// ════════════════════════════════════════════════════════════════
+// EXPORTAR CSV (mantener compatibilidad)
+// ════════════════════════════════════════════════════════════════
+
+export const exportFullDayGradeCSV = async (
+  orders: FullDayOrder[],
+  selectedDate?: Date
+): Promise<void> => {
+  if (orders.length === 0) { alert('No hay pedidos para exportar.'); return; }
+
+  const gradeOrders: GradeOrder[] = orders.map(o => ({
+    ...o,
+    student_name: o.student_name,
+    items: o.items,
+    notes: o.notes,
+  }));
+
+  const rows = await buildRowsByGrade(gradeOrders);
+  const d = selectedDate ?? new Date();
+  const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+  const lines = [
+    ['Grado','Sección','Alumno','Entrada','Plato de Fondo','Bebida','Notas'].join(','),
+    ...rows.map(r =>
+      [r.grade, r.section, `"${r.student_name}"`, `"${r.entrada}"`, `"${r.fondo}"`, `"${r.bebida}"`, `"${r.notas}"`].join(',')
+    ),
+  ];
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `fullday_listas_gys_${stamp}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+};
 
 export const exportLoncheritasGradeCSV = async (
   orders: LoncheritasOrder[],
@@ -454,20 +668,27 @@ export const exportLoncheritasGradeCSV = async (
 ): Promise<void> => {
   if (orders.length === 0) { alert('No hay pedidos para exportar.'); return; }
 
-  const rows  = await buildRows(orders as unknown as GradeOrder[]);
+  const gradeOrders: GradeOrder[] = orders.map(o => ({
+    ...o,
+    student_name: o.student_name,
+    items: o.items,
+    notes: o.notes,
+  }));
+
+  const rows = await buildRowsByGrade(gradeOrders, 'loncheritas');
   const d = selectedDate ?? new Date();
   const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
   const lines = [
-    ['Grado','Sección','Alumno','Entrada','Plato de Fondo','Bebida'].join(','),
+    ['Grado','Sección','Alumno','Entrada','Plato de Fondo','Bebida','Notas'].join(','),
     ...rows.map(r =>
-      [r.grade, r.section, `"${r.student_name}"`, `"${r.entrada}"`, `"${r.fondo}"`, `"${r.bebida}"`].join(',')
+      [r.grade, r.section, `"${r.student_name}"`, `"${r.entrada}"`, `"${r.fondo}"`, `"${r.bebida}"`, `"${r.notas}"`].join(',')
     ),
   ];
   const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = `loncheritas_listas_${stamp}.csv`;
+  a.href = url; a.download = `loncheritas_listas_gys_${stamp}.csv`;
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(url);
 };
