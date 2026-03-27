@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO: src/components/orders/QuickMenuManager.tsx
-// GESTIÓN RÁPIDA DE MENÚ - Con scrollbar y colores consistentes
+// GESTIÓN RÁPIDA DE MENÚ - Sin doble scrollbar
 // ============================================
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useMenu } from '../../hooks/useMenu';
 import { useCategories } from '../../hooks/useCategories';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { ToastNotification } from '../ui/ToastNotification';
 
 interface QuickMenuManagerProps {
   isOpen: boolean;
@@ -335,7 +337,30 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
 
-  const { getAllItems, createItem, updateItem, refreshMenu } = useMenu();
+  // Estado para notificaciones toast
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  } | null>(null);
+
+  // Estado para el modal de confirmación personalizado
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'warning' | 'danger' | 'info' | 'success';
+    confirmText?: string;
+    loading?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'warning',
+  });
+
+  const { getAllItems, createItem, updateItem, deleteItem, refreshMenu } = useMenu();
   const { categories: dbCategories, refreshCategories } = useCategories();
 
   const allItems = useMemo(() => getAllItems(), [getAllItems, isOpen]);
@@ -441,90 +466,131 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
   const handleRemoveSelectedFromToday = async () => {
     if (selectedItems.size === 0) return;
     
-    const confirmMsg = `¿Quitar ${selectedItems.size} producto(s) del menú de hoy?`;
-    if (!window.confirm(confirmMsg)) return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Quitar productos del día',
+      message: `¿Estás seguro de quitar ${selectedItems.size} producto(s) del menú de hoy?`,
+      type: 'danger',
+      confirmText: 'Sí, quitar',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
+        setLoading(true);
+        setProgressMessage(`Quitando ${selectedItems.size} productos...`);
+        
+        const itemsToRemove = Array.from(selectedItems);
+        const { success, errors } = await executeParallel(
+          itemsToRemove,
+          async (id) => {
+            const result = await updateItem(id, { isDailySpecial: false });
+            return result.success;
+          },
+          (completed, total) => {
+            setProgressMessage(`Procesando... ${completed} de ${total}`);
+          }
+        );
 
-    setLoading(true);
-    setProgressMessage(`Quitando ${selectedItems.size} productos...`);
-    
-    const itemsToRemove = Array.from(selectedItems);
-    const { success, errors } = await executeParallel(
-      itemsToRemove,
-      async (id) => {
-        const result = await updateItem(id, { isDailySpecial: false });
-        return result.success;
+        setSelectedItems(new Set());
+        setSelectMode(false);
+        onRefresh();
+        setLoading(false);
+        setProgressMessage(null);
+        
+        if (success > 0) {
+          setToast({
+            message: `${success} producto(s) quitados del día${errors > 0 ? `, ${errors} error(es)` : ''}`,
+            type: errors > 0 ? 'warning' : 'success',
+          });
+        }
       },
-      (completed, total) => {
-        setProgressMessage(`Procesando... ${completed} de ${total}`);
-      }
-    );
-
-    setSelectedItems(new Set());
-    setSelectMode(false);
-    onRefresh();
-    setLoading(false);
-    setProgressMessage(null);
-    
-    alert(`✅ ${success} producto(s) quitados del día\n${errors > 0 ? `❌ ${errors} error(es)` : ''}`);
+    });
   };
 
   // ── Acciones masivas en Inventario (agregar a Hoy) ─────────────
   const handleAddSelectedToToday = async () => {
     if (selectedItems.size === 0) return;
     
-    const confirmMsg = `¿Agregar ${selectedItems.size} producto(s) al menú de hoy?`;
-    if (!window.confirm(confirmMsg)) return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Agregar productos al día',
+      message: `¿Agregar ${selectedItems.size} producto(s) al menú de hoy?`,
+      type: 'info',
+      confirmText: 'Sí, agregar',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
+        setLoading(true);
+        setProgressMessage(`Agregando ${selectedItems.size} productos...`);
+        
+        const itemsToAdd = Array.from(selectedItems);
+        const { success, errors } = await executeParallel(
+          itemsToAdd,
+          async (id) => {
+            const result = await updateItem(id, { isDailySpecial: true });
+            return result.success;
+          },
+          (completed, total) => {
+            setProgressMessage(`Procesando... ${completed} de ${total}`);
+          }
+        );
 
-    setLoading(true);
-    setProgressMessage(`Agregando ${selectedItems.size} productos...`);
-    
-    const itemsToAdd = Array.from(selectedItems);
-    const { success, errors } = await executeParallel(
-      itemsToAdd,
-      async (id) => {
-        const result = await updateItem(id, { isDailySpecial: true });
-        return result.success;
+        setSelectedItems(new Set());
+        setSelectMode(false);
+        onRefresh();
+        setLoading(false);
+        setProgressMessage(null);
+        
+        if (success > 0) {
+          setToast({
+            message: `${success} producto(s) agregados al menú de hoy${errors > 0 ? `, ${errors} error(es)` : ''}`,
+            type: errors > 0 ? 'warning' : 'success',
+          });
+        }
       },
-      (completed, total) => {
-        setProgressMessage(`Procesando... ${completed} de ${total}`);
-      }
-    );
-
-    setSelectedItems(new Set());
-    setSelectMode(false);
-    onRefresh();
-    setLoading(false);
-    setProgressMessage(null);
-    
-    alert(`✅ ${success} producto(s) agregados al menú de hoy\n${errors > 0 ? `❌ ${errors} error(es)` : ''}`);
+    });
   };
 
   // ── Quitar todos los productos de Hoy ──────────────────────────
   const handleRemoveAllFromToday = async () => {
     if (todayItems.length === 0) return;
-    if (!window.confirm(`¿Quitar TODOS los ${todayItems.length} productos del menú de hoy?`)) return;
-
-    setLoading(true);
-    setProgressMessage(`Quitando ${todayItems.length} productos...`);
     
-    const { success, errors } = await executeParallel(
-      todayItems,
-      async (item) => {
-        const result = await updateItem(item.id, { isDailySpecial: false });
-        return result.success;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Quitar todos los productos',
+      message: `¿Quitar TODOS los ${todayItems.length} productos del menú de hoy?`,
+      type: 'danger',
+      confirmText: 'Sí, quitar todos',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
+        setLoading(true);
+        setProgressMessage(`Quitando ${todayItems.length} productos...`);
+        
+        const { success, errors } = await executeParallel(
+          todayItems,
+          async (item) => {
+            const result = await updateItem(item.id, { isDailySpecial: false });
+            return result.success;
+          },
+          (completed, total) => {
+            setProgressMessage(`Procesando... ${completed} de ${total}`);
+          }
+        );
+
+        setSelectedItems(new Set());
+        setSelectMode(false);
+        onRefresh();
+        setLoading(false);
+        setProgressMessage(null);
+        
+        if (success > 0) {
+          setToast({
+            message: `${success} producto(s) quitados del día${errors > 0 ? `, ${errors} error(es)` : ''}`,
+            type: errors > 0 ? 'warning' : 'success',
+          });
+        }
       },
-      (completed, total) => {
-        setProgressMessage(`Procesando... ${completed} de ${total}`);
-      }
-    );
-
-    setSelectedItems(new Set());
-    setSelectMode(false);
-    onRefresh();
-    setLoading(false);
-    setProgressMessage(null);
-    
-    alert(`✅ ${success} producto(s) quitados del día\n${errors > 0 ? `❌ ${errors} error(es)` : ''}`);
+    });
   };
 
   // ── Seleccionar todos los productos filtrados ──────────────────
@@ -559,6 +625,10 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
         newSet.delete(itemId);
         return newSet;
       });
+      setToast({
+        message: 'Producto quitado del menú de hoy',
+        type: 'success',
+      });
     }
     setLoading(false);
   };
@@ -566,18 +636,72 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
   const handleAddToToday = async (itemId: string) => {
     setLoading(true);
     const result = await updateItem(itemId, { isDailySpecial: true });
-    if (result.success) onRefresh();
+    if (result.success) {
+      onRefresh();
+      setToast({
+        message: 'Producto agregado al menú de hoy',
+        type: 'success',
+      });
+    }
     setLoading(false);
+  };
+
+  // ── Eliminar producto permanentemente ─────────────────────────────
+  const handleDeletePermanently = (itemId: string, itemName: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar producto',
+      message: `¿Estás seguro de eliminar permanentemente "${itemName}"? Esta acción no se puede deshacer.`,
+      type: 'danger',
+      confirmText: 'Sí, eliminar',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setLoading(true);
+        
+        const result = await deleteItem(itemId);
+        
+        if (result.success) {
+          onRefresh();
+          setSelectedItems(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(itemId);
+            return newSet;
+          });
+          setToast({
+            message: `Producto "${itemName}" eliminado permanentemente`,
+            type: 'success',
+          });
+        } else {
+          setToast({
+            message: `Error al eliminar "${itemName}"`,
+            type: 'error',
+          });
+        }
+        setLoading(false);
+      },
+    });
   };
 
   const handleUpdatePrice = async (itemId: string, newPrice: number) => {
     const result = await updateItem(itemId, { price: newPrice });
-    if (result.success) onRefresh();
+    if (result.success) {
+      onRefresh();
+      setToast({
+        message: 'Precio actualizado correctamente',
+        type: 'success',
+      });
+    }
   };
 
   const handleUpdateName = async (itemId: string, newName: string) => {
     const result = await updateItem(itemId, { name: newName });
-    if (result.success) onRefresh();
+    if (result.success) {
+      onRefresh();
+      setToast({
+        message: 'Nombre actualizado correctamente',
+        type: 'success',
+      });
+    }
   };
 
   const handleCreateProduct = async (e: React.FormEvent) => {
@@ -605,6 +729,15 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
       });
       setShowNewProductForm(false);
       onRefresh();
+      setToast({
+        message: `Producto "${newProduct.name}" creado exitosamente`,
+        type: 'success',
+      });
+    } else {
+      setToast({
+        message: 'Error al crear el producto',
+        type: 'error',
+      });
     }
     setLoading(false);
   };
@@ -714,7 +847,7 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
             </div>
           )}
 
-          {/* Contenido con scroll */}
+          {/* Contenido con scroll - SOLO UN SCROLLBAR */}
           <div className="flex-1 overflow-y-auto p-5">
             
             {/* Formulario nuevo producto */}
@@ -938,8 +1071,8 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
               )}
             </div>
 
-            {/* Lista de productos con scroll */}
-            <div className="space-y-2 max-h-[calc(100vh-480px)] min-h-[300px] overflow-y-auto pr-1">
+            {/* Lista de productos - SIN SCROLLBAR INTERNO */}
+            <div className="space-y-2">
               {loading && !progressMessage && (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
@@ -1023,7 +1156,7 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
                           </div>
                         </div>
                         <div className="flex items-center space-x-1 ml-2">
-                          {!selectMode && activeTab === 'today' && (
+                          {!selectMode && activeTab === 'today' ? (
                             <button
                               onClick={() => handleRemoveFromToday(item.id)}
                               className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
@@ -1031,14 +1164,26 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
                             >
                               <Minus size={14} />
                             </button>
-                          )}
-                          {!selectMode && activeTab === 'inventory' && (
+                          ) : !selectMode && activeTab === 'inventory' ? (
                             <button
                               onClick={() => handleAddToToday(item.id)}
                               className="p-1.5 bg-gradient-to-r from-red-500 to-amber-500 text-white rounded-lg hover:shadow-md transition-all"
                               title="Agregar al menú de hoy"
                             >
                               <Star size={14} />
+                            </button>
+                          ) : null}
+                          {/* Botón eliminar permanente - visible en ambas pestañas cuando no está en modo selección */}
+                          {!selectMode && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePermanently(item.id, item.name);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Eliminar producto permanentemente"
+                            >
+                              <Trash2 size={14} />
                             </button>
                           )}
                         </div>
@@ -1073,7 +1218,28 @@ export const QuickMenuManager: React.FC<QuickMenuManagerProps> = ({
         </div>
       </div>
 
-      {/* Modal de categorías con colores rojo/ámbar */}
+      {/* Toast de notificación */}
+      {toast && (
+        <ToastNotification
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Modal de confirmación personalizado */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        loading={confirmModal.loading}
+      />
+
+      {/* Modal de categorías */}
       <CategoryManagerModal
         isOpen={showCategoryManager}
         onClose={() => setShowCategoryManager(false)}
