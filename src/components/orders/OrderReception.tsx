@@ -37,24 +37,6 @@ const styles = `
     to   { transform: translateX(0);    opacity: 1; }
   }
   .animate-slide-in { animation: slideIn 0.3s ease-out; }
-
-  /* Counter badge sobre producto */
-  .product-counter {
-    position: absolute;
-    top: -8px; right: -8px;
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-    border-radius: 9999px;
-    min-width: 24px; height: 24px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: bold;
-    border: 2px solid white;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,.1);
-    z-index: 20;
-    animation: popIn 0.2s ease-out;
-  }
-  @keyframes popIn {
-    0%   { transform: scale(0.5); opacity: 0; }
     100% { transform: scale(1);   opacity: 1; }
   }
 
@@ -67,7 +49,6 @@ const styles = `
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(0,0,0,.1);
   }
-  .product-card:hover .product-counter { transform: scale(1.1); }
 
   /* Categorías */
   .categories-container {
@@ -167,6 +148,12 @@ const styles = `
   }
 
   /* Animación de entrada de sección móvil */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+
   @keyframes fadeSlideUp {
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -353,7 +340,6 @@ const MenuProduct: React.FC<{
 
   return (
     <div className="bg-white rounded-xl p-3 border border-gray-100 product-card group">
-      {quantityInCart > 0 && <div className="product-counter">{quantityInCart}</div>}
       <div className="mb-2">
         <div className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2 min-h-[2.5rem]">{item.name}</div>
         <div className="font-bold text-red-600 text-base">S/ {item.price.toFixed(2)}</div>
@@ -405,10 +391,19 @@ const OrderReception: React.FC = React.memo(() => {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'YAPE/PLIN' | 'TARJETA'>('EFECTIVO');
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [showClearCartModal, setShowClearCartModal] = useState(false);
   const [showMenuManager, setShowMenuManager] = useState(false);
 
   // ── Tab móvil activa (NUEVA) ───────────────────────────────────────────────
-  const [mobileTab, setMobileTab] = useState<'client' | 'menu' | 'cart'>('client');
+  const [mobileTab, setMobileTabRaw] = useState<'client' | 'menu' | 'cart'>('client');
+  const setMobileTab = useCallback((tab: 'client' | 'menu' | 'cart') => {
+    setMobileTabRaw(tab);
+    setTimeout(() => {
+      if (tab === 'menu') menuTopRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' });
+      else if (tab === 'cart') cartTopRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' });
+      else window.scrollTo({ top: 0, behavior: 'instant' });
+    }, 30);
+  }, []);
 
   // ── Autocompletar clientes ─────────────────────────────────────────────────
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
@@ -429,6 +424,9 @@ const OrderReception: React.FC = React.memo(() => {
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const studentSuggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const menuTopRef = useRef<HTMLDivElement>(null);
+  const cartTopRef = useRef<HTMLDivElement>(null);
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { user } = useAuth();
@@ -572,11 +570,14 @@ const OrderReception: React.FC = React.memo(() => {
   const totalItems = useMemo(() => cart.reduce((t, i) => t + i.quantity, 0), [cart]);
 
   const clearCart = useCallback(() => {
-    if (cart.length > 0 && window.confirm('¿Vaciar carrito?')) {
-      setCart([]);
-      showToast('Carrito vaciado', 'info');
-    }
-  }, [cart.length, showToast]);
+    if (cart.length > 0) setShowClearCartModal(true);
+  }, [cart.length]);
+
+  const confirmClearCart = useCallback(() => {
+    setCart([]);
+    setShowClearCartModal(false);
+    showToast('Carrito vaciado', 'info');
+  }, [showToast]);
 
   const handleCategoryChange = useCallback((cat: string) => setActiveCategory(cat), []);
   const handleSearchChange   = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value), []);
@@ -1003,12 +1004,48 @@ const OrderReception: React.FC = React.memo(() => {
           onRefresh={() => { refreshMenu(); refreshCategories(); }}
         />
 
+        {/* ── Modal confirmar vaciar carrito ─────────────────────── */}
+        {showClearCartModal && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowClearCartModal(false)}
+            />
+            {/* Card */}
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 flex flex-col items-center gap-4 animate-fade-in">
+              {/* Icono */}
+              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 size={26} className="text-red-500" />
+              </div>
+              {/* Texto */}
+              <div className="text-center">
+                <h3 className="text-base font-bold text-gray-900 mb-1">¿Vaciar carrito?</h3>
+                <p className="text-sm text-gray-500">Se eliminarán todos los productos del pedido actual.</p>
+              </div>
+              {/* Botones */}
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setShowClearCartModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmClearCart}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors">
+                  Vaciar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
 
           {/* ═══════════════════════════════════════════════════════════
               MÓVIL: Tab Bar + contenido por tab
           ═══════════════════════════════════════════════════════════ */}
-          <div className="lg:hidden">
+          <div className="lg:hidden" ref={mobileScrollRef}>
 
             {/* Header compacto — solo muestra el total cuando hay items */}
             {totalItems > 0 && (
@@ -1052,7 +1089,7 @@ const OrderReception: React.FC = React.memo(() => {
             {mobileTab === 'menu' && (
               <div className="px-4 pt-4 pb-24 mobile-section-enter">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-4">
+                  <div ref={menuTopRef} className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-bold text-gray-900">Menú del Día</h3>
                     {isAdmin && (
                       <button onClick={() => setShowMenuManager(true)}
@@ -1095,7 +1132,7 @@ const OrderReception: React.FC = React.memo(() => {
                 ) : (
                   <>
                     {/* Resumen de datos */}
-                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3">
+                    <div ref={cartTopRef} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3">
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                           {(activeTab === 'fullDay' || activeTab === 'loncheritas') ? 'Alumno' : 'Cliente'}
