@@ -1,8 +1,6 @@
 // ============================================
 // ARCHIVO: src/components/layout/DashboardLayout.tsx
-// ACTUALIZADO: Sidebar colapsable en desktop + Drawer en móvil
-//              + padding inferior en móvil para la Bottom Tab Bar
-//                de OrderReception
+// ACTUALIZADO: Menú hamburguesa con animación suave CORREGIDA
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -24,10 +22,10 @@ const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void; userN
   onConfirm, onCancel, userName
 }) => (
   <>
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={onCancel} />
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-200"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm pointer-events-auto animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex flex-col items-center pt-8 pb-5 px-6">
@@ -44,6 +42,7 @@ const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void; userN
             Se cerrará tu sesión y tendrás que volver a iniciarla para acceder al sistema.
           </p>
         </div>
+
         <div className="flex flex-col sm:flex-row gap-2 px-6 pb-6">
           <button
             onClick={onCancel}
@@ -89,11 +88,25 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   // Cerrar drawer al hacer resize a desktop
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) setDrawerOpen(false);
+      if (window.innerWidth >= 1024 && drawerOpen) {
+        setDrawerOpen(false);
+      }
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [drawerOpen]);
+
+  // Bloquear scroll del body cuando el drawer está abierto
+  useEffect(() => {
+    if (drawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [drawerOpen]);
 
   // ── Extraer emoji e texto del nombre del tab ──────────────────────────────
   const getTabParts = (name: string) => {
@@ -105,13 +118,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   // ── Sidebar content (compartido entre desktop y drawer móvil) ─────────────
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <div className="flex flex-col h-full">
-
       {/* Logo */}
       <div className={`flex items-center px-3 py-4 border-b border-white/20 ${
         collapsed && !mobile ? 'justify-center' : 'space-x-3'
       }`}>
         <div className="relative flex-shrink-0">
-          <img src="/logo_marys.png" alt="Mary's" className="w-10 h-10 object-contain" />
+          <img
+            src="/logo_marys.png"
+            alt="Mary's"
+            className="w-10 h-10 object-contain"
+          />
           <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
             <Sparkles className="h-1.5 w-1.5 text-white" />
           </div>
@@ -137,8 +153,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               onClick={() => handleTabChange(tab.id)}
               title={collapsed && !mobile ? label : undefined}
               className={`
-                w-full flex items-center rounded-xl transition-all duration-200 group
-                ${collapsed && !mobile ? 'justify-center px-2 py-2.5' : 'space-x-3 px-3 py-2.5'}
+                w-full flex items-center rounded-xl transition-all duration-200
+                ${collapsed && !mobile
+                  ? 'justify-center px-2 py-2.5'
+                  : 'space-x-3 px-3 py-2.5'
+                }
                 ${isActive
                   ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
                   : 'text-gray-600 hover:bg-white/60 hover:text-red-600'
@@ -158,7 +177,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <div className={`border-t border-white/20 p-3 ${
         collapsed && !mobile ? 'flex flex-col items-center space-y-2' : 'space-y-2'
       }`}>
-        <div className={`flex items-center ${collapsed && !mobile ? 'justify-center' : 'space-x-2 px-1'}`}>
+        <div className={`flex items-center ${
+          collapsed && !mobile ? 'justify-center' : 'space-x-2 px-1'
+        }`}>
           <div className="w-7 h-7 bg-gradient-to-r from-red-500 to-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
             <User className="h-3.5 w-3.5 text-white" />
           </div>
@@ -169,12 +190,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </div>
           )}
         </div>
+
         <button
           onClick={() => setShowLogoutModal(true)}
           title={collapsed && !mobile ? 'Cerrar Sesión' : undefined}
           className={`
             flex items-center rounded-lg text-red-600 hover:bg-red-50 transition-colors text-xs font-medium
-            ${collapsed && !mobile ? 'justify-center w-full p-2' : 'space-x-2 w-full px-2 py-1.5'}
+            ${collapsed && !mobile
+              ? 'justify-center w-full p-2'
+              : 'space-x-2 w-full px-2 py-1.5'
+            }
           `}
         >
           <LogOut size={15} className="flex-shrink-0" />
@@ -203,6 +228,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         ${collapsed ? 'w-16' : 'w-52'}
       `}>
         <SidebarContent />
+
         <button
           onClick={() => setCollapsed(prev => !prev)}
           className="absolute -right-3 top-20 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors z-10"
@@ -214,26 +240,43 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         </button>
       </aside>
 
-      {/* ── DRAWER MÓVIL ── */}
-      {drawerOpen && (
-        <>
-          <div
-            className="lg:hidden fixed inset-0 bg-black/40 z-40"
-            onClick={() => setDrawerOpen(false)}
-          />
-          <div className="lg:hidden fixed left-0 top-0 bottom-0 w-64 bg-white/95 backdrop-blur-lg z-50 shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <span className="text-sm font-bold text-gray-700">Menú</span>
-              <button onClick={() => setDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <SidebarContent mobile />
-            </div>
+      {/* ─── DRAWER MÓVIL CON ANIMACIÓN SUAVE CORREGIDA ─── */}
+      <>
+        {/* Overlay con fade suave */}
+        <div
+          className={`
+            lg:hidden fixed inset-0 bg-black/30 z-40
+            transition-opacity duration-300 ease-out
+            ${drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+          `}
+          onClick={() => setDrawerOpen(false)}
+        />
+        
+        {/* Drawer con slide suave */}
+        <div
+          className={`
+            lg:hidden fixed left-0 top-0 bottom-0 w-64 bg-white z-50 shadow-xl
+            transition-transform duration-300 ease-out
+            ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
+          `}
+          style={{
+            transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)',
+          }}
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <span className="text-sm font-bold text-gray-700">Menú</span>
+            <button
+              onClick={() => setDrawerOpen(false)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+            >
+              <X size={18} />
+            </button>
           </div>
-        </>
-      )}
+          <div className="flex-1 overflow-y-auto h-[calc(100%-60px)]">
+            <SidebarContent mobile />
+          </div>
+        </div>
+      </>
 
       {/* ── CONTENIDO PRINCIPAL ── */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -241,20 +284,24 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         {/* Header compacto */}
         <header className="bg-white/80 backdrop-blur-lg border-b border-white/30 flex-shrink-0">
           <div className="flex items-center justify-between px-4 py-2.5">
+
+            {/* Izquierda: hamburguesa (móvil) + tab activo */}
             <div className="flex items-center space-x-3">
-              {/* Botón hamburguesa solo en móvil */}
               <button
                 onClick={() => setDrawerOpen(true)}
                 className="lg:hidden p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <Menu size={20} />
               </button>
+
               <div>
                 <h1 className="text-base font-bold text-gray-900">
                   {tabs.find(t => t.id === activeTab)?.name || 'Dashboard'}
                 </h1>
               </div>
             </div>
+
+            {/* Derecha: usuario + bell (desktop) */}
             <div className="flex items-center space-x-2">
               <button className="relative p-2 text-gray-500 hover:text-red-600 transition-colors">
                 <Bell size={18} />
@@ -270,15 +317,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </div>
         </header>
 
-        {/* Contenido
-            En móvil, cuando la tab activa es 'reception', OrderReception maneja su propio
-            padding inferior (pb-24) para no quedar tapado por su Bottom Tab Bar.
-            Para el resto de secciones se aplica padding normal. */}
-        <main className={`flex-1 overflow-auto ${
-          activeTab === 'reception'
-            ? 'p-0'                          // OrderReception gestiona su propio padding
-            : 'p-4 sm:p-5 lg:p-6'
-        }`}>
+        {/* Contenido */}
+        <main className="flex-1 overflow-auto p-4 sm:p-5 lg:p-6">
           {children}
         </main>
 
