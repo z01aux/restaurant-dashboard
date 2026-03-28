@@ -77,16 +77,11 @@ const styles = `
     box-shadow: 0 1px 3px rgba(0,0,0,.1);
     margin-bottom: 16px;
   }
-  .categories-scroll {
-    display: flex; gap: 8px;
-    overflow-x: auto; padding-bottom: 4px;
-    scrollbar-width: thin;
-    scrollbar-color: #f97316 #fee2e2;
+  .categories-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
   }
-  .categories-scroll::-webkit-scrollbar { height: 6px; }
-  .categories-scroll::-webkit-scrollbar-track { background: #fee2e2; border-radius: 20px; }
-  .categories-scroll::-webkit-scrollbar-thumb { background: #f97316; border-radius: 20px; }
-  .categories-scroll::-webkit-scrollbar-thumb:hover { background: #ea580c; }
 
   .category-button {
     flex: 0 0 auto;
@@ -182,6 +177,52 @@ const styles = `
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// GRADE BADGE (mismo diseño que StudentManager)
+// ─────────────────────────────────────────────────────────────────────────────
+const GRADE_COLORS: Record<string, { bg: string; text: string }> = {
+  'RED ROOM':              { bg: 'bg-red-500',     text: 'text-white' },
+  'YELLOW ROOM':           { bg: 'bg-yellow-400',  text: 'text-gray-800' },
+  'GREEN ROOM':            { bg: 'bg-green-500',   text: 'text-white' },
+  'PRIMERO DE PRIMARIA':   { bg: 'bg-blue-500',    text: 'text-white' },
+  'SEGUNDO DE PRIMARIA':   { bg: 'bg-indigo-500',  text: 'text-white' },
+  'TERCERO DE PRIMARIA':   { bg: 'bg-purple-500',  text: 'text-white' },
+  'CUARTO DE PRIMARIA':    { bg: 'bg-pink-500',    text: 'text-white' },
+  'QUINTO DE PRIMARIA':    { bg: 'bg-orange-500',  text: 'text-white' },
+  'SEXTO DE PRIMARIA':     { bg: 'bg-amber-600',   text: 'text-white' },
+  'PRIMERO DE SECUNDARIA': { bg: 'bg-cyan-500',    text: 'text-white' },
+  'SEGUNDO DE SECUNDARIA': { bg: 'bg-teal-500',    text: 'text-white' },
+  'TERCERO DE SECUNDARIA': { bg: 'bg-emerald-500', text: 'text-white' },
+  'CUARTO DE SECUNDARIA':  { bg: 'bg-violet-500',  text: 'text-white' },
+  'QUINTO DE SECUNDARIA':  { bg: 'bg-fuchsia-500', text: 'text-white' },
+};
+
+// Apellidos en bold: en Perú el formato es "APELLIDO1 APELLIDO2 Nombre(s)"
+// Las primeras 2 palabras son apellidos → bold; el resto es el nombre → normal
+const StudentName: React.FC<{ fullName: string }> = ({ fullName }) => {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 2) return <span className="font-bold">{fullName}</span>;
+  const apellidos = parts.slice(0, 2).join(' ');
+  const nombres   = parts.slice(2).join(' ');
+  return (
+    <span>
+      <span className="font-bold">{apellidos}</span>
+      {' '}
+      <span className="font-normal">{nombres}</span>
+    </span>
+  );
+};
+
+const GradeBadge: React.FC<{ grade: string; section: string; size?: 'sm' | 'md' }> = ({ grade, section, size = 'md' }) => {
+  const colors = GRADE_COLORS[grade] || { bg: 'bg-gray-500', text: 'text-white' };
+  const padding = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-xs';
+  return (
+    <span className={`inline-flex items-center rounded-full font-semibold shadow-sm ${colors.bg} ${colors.text} ${padding}`}>
+      {grade} • {section}
+    </span>
+  );
+};
+
 const getCategoryBadge = (category: string): { label: string; color: string; bg: string } => {
   const c = category.toLowerCase();
   if (c.includes('loncheritas')) return { label: '🍱 Loncheritas', color: 'text-orange-700', bg: 'bg-orange-100 border-orange-200' };
@@ -328,13 +369,13 @@ const MenuProduct: React.FC<{
             <Minus size={14} />
           </button>
           <span className="w-8 text-center font-bold text-red-600 text-sm">{quantityInCart}</span>
-          <button onClick={handleIncrement} className="flex-1 py-2 bg-gradient-to-r from-red-500 to-amber-500 text-white rounded-lg flex items-center justify-center transition-all">
+          <button onClick={handleIncrement} className="flex-1 py-2 bg-red-500 text-white rounded-lg flex items-center justify-center transition-all">
             <Plus size={14} />
           </button>
         </div>
       ) : (
         <button onClick={handleAddClick}
-          className="w-full mt-2 bg-gradient-to-r from-red-500 to-amber-500 text-white py-2 rounded-lg flex items-center justify-center space-x-1 text-sm font-medium hover:shadow-md transition-all">
+          className="w-full mt-2 bg-red-500 text-white py-2 rounded-lg flex items-center justify-center space-x-1 text-sm font-medium hover:shadow-md transition-all">
           <Plus size={14} /><span>Agregar</span>
         </button>
       )}
@@ -451,7 +492,6 @@ const OrderReception: React.FC = React.memo(() => {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) setShowSuggestions(false);
-      if (studentSuggestionsRef.current && !studentSuggestionsRef.current.contains(e.target as Node)) setShowStudentSuggestions(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -791,39 +831,68 @@ const OrderReception: React.FC = React.memo(() => {
     <div className={compact ? 'space-y-3' : 'space-y-4'}>
       {(activeTab === 'fullDay' || activeTab === 'loncheritas') ? (
         <>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Grado y Sección *</label>
-            <div className="grid grid-cols-2 gap-2">
-              <select value={selectedGrade} onChange={e => setSelectedGrade(e.target.value as Grade)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-              <select value={selectedSection} onChange={e => setSelectedSection(e.target.value as Section)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                {SECTIONS.map(s => <option key={s} value={s}>Sección "{s}"</option>)}
-              </select>
-            </div>
-          </div>
+          {/* Buscador */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar alumno</label>
-            <input type="text" value={studentSearchTerm} onChange={handleStudentSearchChange}
+            <input
+              type="text"
+              value={studentSearchTerm}
+              onChange={handleStudentSearchChange}
+              onBlur={() => setTimeout(() => setShowStudentSuggestions(false), 150)}
+              onFocus={() => { if (studentSearchResults.length > 0) setShowStudentSuggestions(true); }}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-              placeholder="Buscar por nombre..." />
+              placeholder="Buscar por nombre..."
+            />
             {showStudentSuggestions && studentSearchResults.length > 0 && (
-              <div ref={studentSuggestionsRef} className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <div
+                ref={studentSuggestionsRef}
+                onMouseDown={e => e.preventDefault()}
+                className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+              >
                 {studentSearchResults.map(s => (
-                  <div key={s.id} onMouseDown={() => selectStudent(s)} className="p-3 hover:bg-purple-50 cursor-pointer border-b border-gray-100">
-                    <div className="font-medium text-gray-900 text-sm">{s.full_name}</div>
-                    <div className="text-gray-500 text-xs">{s.grade} "{s.section}" — {s.guardian_name}</div>
+                  <div
+                    key={s.id}
+                    onMouseDown={() => selectStudent(s)}
+                    className="px-3 py-2.5 hover:bg-purple-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                  >
+                    <p className="text-sm text-gray-900"><StudentName fullName={s.full_name} /></p>
+                    <div className="my-1">
+                      <GradeBadge grade={s.grade} section={s.section} size="sm" />
+                    </div>
+                    <p className="text-xs text-gray-500">{s.guardian_name}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
-          <input type="text" value={studentName} onChange={e => setStudentName(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50"
-            placeholder="Nombre del alumno *" readOnly />
-          <input type="text" value={guardianName} onChange={e => setGuardianName(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-            placeholder="Nombre del apoderado *" />
+          {/* Campo Alumno → Badge → Apoderado */}
+          <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+            {/* Nombre alumno */}
+            <div className="px-3 py-2 border-b border-gray-200">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Alumno</p>
+              <p className="text-sm font-medium text-gray-800 min-h-[20px]">
+                {studentName || <span className="text-gray-400 font-normal">—</span>}
+              </p>
+            </div>
+            {/* Badge grado/sección */}
+            <div className="px-3 py-2 border-b border-gray-200 bg-white">
+              {selectedStudentId && selectedGrade && selectedSection
+                ? <GradeBadge grade={selectedGrade} section={selectedSection} />
+                : <span className="text-xs text-gray-400">Sin grado asignado</span>
+              }
+            </div>
+            {/* Apoderado editable */}
+            <div className="px-3 py-2">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Apoderado</p>
+              <input
+                type="text"
+                value={guardianName}
+                onChange={e => setGuardianName(e.target.value)}
+                className="w-full text-sm text-gray-800 bg-transparent border-none outline-none placeholder-gray-400"
+                placeholder="Nombre del apoderado *"
+              />
+            </div>
+          </div>
           <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             placeholder="Teléfono (opcional)" />
@@ -881,7 +950,7 @@ const OrderReception: React.FC = React.memo(() => {
         placeholder="Buscar productos..." />
       {!searchTerm && categories.length > 0 && (
         <div className="categories-container">
-          <div className="categories-scroll">
+          <div className="categories-grid">
             {categories.map(cat => (
               <button key={cat} onClick={() => handleCategoryChange(cat)}
                 className={`category-button ${activeCategory === cat ? 'category-button-active' : 'category-button-inactive'}`}>
@@ -941,26 +1010,16 @@ const OrderReception: React.FC = React.memo(() => {
           ═══════════════════════════════════════════════════════════ */}
           <div className="lg:hidden">
 
-            {/* Header compacto */}
-            <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-lg border-b border-red-100 px-4 py-3 flex items-center justify-between">
-              <h1 className="text-lg font-bold text-gray-900">Recepción</h1>
-              <div className="flex items-center gap-2">
-                {isAdmin && (
-                  <button onClick={() => setShowMenuManager(true)}
-                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
-                    <Settings size={16} className="text-gray-600" />
-                  </button>
-                )}
-                {/* Indicador de total cuando hay items */}
-                {totalItems > 0 && (
-                  <button onClick={() => setMobileTab('cart')}
-                    className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md">
-                    <ShoppingBag size={14} />
-                    <span>S/ {getTotal().toFixed(2)}</span>
-                  </button>
-                )}
+            {/* Header compacto — solo muestra el total cuando hay items */}
+            {totalItems > 0 && (
+              <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-lg border-b border-red-100 px-4 py-3 flex justify-end">
+                <button onClick={() => setMobileTab('cart')}
+                  className="bg-red-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md">
+                  <ShoppingBag size={14} />
+                  <span>S/ {getTotal().toFixed(2)}</span>
+                </button>
               </div>
-            </div>
+            )}
 
             {/* ── TAB: CLIENTE ───────────────────────────────────────── */}
             {mobileTab === 'client' && (
@@ -981,7 +1040,7 @@ const OrderReception: React.FC = React.memo(() => {
 
                 {/* Botón: ir al menú */}
                 <button onClick={() => setMobileTab('menu')}
-                  className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-4 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-[0.98]">
+                  className="w-full bg-red-500 text-white py-4 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-[0.98]">
                   <UtensilsCrossed size={18} />
                   <span>Ir al Menú</span>
                   <ChevronRight size={16} />
@@ -997,7 +1056,7 @@ const OrderReception: React.FC = React.memo(() => {
                     <h3 className="text-base font-bold text-gray-900">Menú del Día</h3>
                     {isAdmin && (
                       <button onClick={() => setShowMenuManager(true)}
-                        className="text-xs bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-1">
+                        className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-1">
                         <Settings size={12} /><span>Gestionar</span>
                       </button>
                     )}
@@ -1009,7 +1068,7 @@ const OrderReception: React.FC = React.memo(() => {
                 {totalItems > 0 && (
                   <div className="fixed bottom-16 left-4 right-4 z-40">
                     <button onClick={() => setMobileTab('cart')}
-                      className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-4 rounded-2xl font-semibold text-sm flex items-center justify-between px-5 shadow-2xl active:scale-[0.98] transition-all">
+                      className="w-full bg-red-500 text-white py-4 rounded-2xl font-semibold text-sm flex items-center justify-between px-5 shadow-2xl active:scale-[0.98] transition-all">
                       <span className="flex items-center gap-2">
                         <ShoppingBag size={18} />
                         <span>Ver Pedido ({totalItems} item{totalItems > 1 ? 's' : ''})</span>
@@ -1049,7 +1108,13 @@ const OrderReception: React.FC = React.memo(() => {
                           : (customerName || <span className="text-gray-400">Sin nombre (solo cocina)</span>)
                         }
                       </p>
-                      {phone && <p className="text-xs text-gray-500">📞 {phone}</p>}
+                      {/* Badge de grado y sección para fullDay y loncheritas */}
+                      {(activeTab === 'fullDay' || activeTab === 'loncheritas') && selectedStudentId && selectedGrade && selectedSection && (
+                        <div className="mt-1.5">
+                          <GradeBadge grade={selectedGrade} section={selectedSection} size="sm" />
+                        </div>
+                      )}
+                      {phone && <p className="text-xs text-gray-500 mt-1">📞 {phone}</p>}
                     </div>
 
                     {/* Items del carrito */}
@@ -1089,7 +1154,7 @@ const OrderReception: React.FC = React.memo(() => {
                         Vaciar carrito
                       </button>
                       <button onClick={handleCreateOrder} disabled={!isFormValid || isCreatingOrder}
-                        className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-4 rounded-2xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                        className="w-full bg-red-500 text-white py-4 rounded-2xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2">
                         {isCreatingOrder
                           ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Guardando...</span></>
                           : <><Check size={18} /><span>Confirmar Pedido</span></>
@@ -1169,7 +1234,7 @@ const OrderReception: React.FC = React.memo(() => {
                     <h2 className="text-xl font-bold text-gray-900">Menú</h2>
                     {isAdmin && (
                       <button onClick={() => setShowMenuManager(true)}
-                        className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-1.5 rounded-lg text-sm flex items-center space-x-1">
+                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm flex items-center space-x-1">
                         <Settings size={14} /><span>Gestionar</span>
                       </button>
                     )}
@@ -1213,7 +1278,7 @@ const OrderReception: React.FC = React.memo(() => {
                           Vaciar
                         </button>
                         <button onClick={handleCreateOrder} disabled={!isFormValid || isCreatingOrder}
-                          className="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 font-semibold transition-all flex items-center justify-center gap-2">
+                          className="w-full bg-red-500 text-white py-3 rounded-lg hover:shadow-md disabled:opacity-50 font-semibold transition-all flex items-center justify-center gap-2">
                           {isCreatingOrder
                             ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Guardando...</span></>
                             : 'Confirmar'
