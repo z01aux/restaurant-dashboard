@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, FileText, Receipt } from 'lucide-react';
+import { Search, Pencil, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, Receipt, ChevronDown } from 'lucide-react';
 import { Order, PaymentMethod, SplitPaymentDetails } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -715,20 +715,10 @@ const OrdersManager: React.FC = () => {
   }, [cashModalType, openCashRegister, closeCashRegister, regularOrders]);
 
   const handleToggleHistory = useCallback(() => setShowHistory(prev => !prev), []);
-  const handleClearFilters = useCallback(() => {
-    setPaymentFilter('');
-    setSearchTerm('');
-  }, []);
+  // handleClearFilters removed (unused)
 
-  const hasActiveFilters = paymentFilter !== '' || searchTerm !== '';
   const isAnyExporting   = exporting || exportingPDF;
 
-  const sortOptions = [
-    { value: 'created-desc', label: '🕐 Más recientes' },
-    { value: 'created-asc',  label: '🕐 Más antiguos' },
-    { value: 'total-desc',   label: '💰 Mayor monto' },
-    { value: 'total-asc',    label: '💰 Menor monto' },
-  ];
 
   return (
     <div className="space-y-4 sm:space-y-6">

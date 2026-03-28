@@ -6,7 +6,7 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, FileText, Receipt } from 'lucide-react';
+import { Search, Pencil, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, FileText, Receipt, ChevronDown } from 'lucide-react';
 import { useOEPOrders } from '../../hooks/useOEPOrders';
 import { useOEPSalesClosure } from '../../hooks/useOEPSalesClosure';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,7 +20,7 @@ import OEPTicket from './OEPTicket';
 import { EmitirComprobanteModal } from '../billing/EmitirComprobanteModal';
 import { PreviewBottomSheet } from '../ui/PreviewBottomSheet';
 import { ConfirmModal } from '../ui/ConfirmModal';
-import { OEPOrder, OEPPaymentMethod, OEPOrderStatus } from '../../types/oep';
+import { OEPOrder, OEPPaymentMethod } from '../../types/oep';
 import { exportOEPToExcel, exportOEPByDateRange } from '../../utils/oepExportUtils';
 import { generateOEPTicketSummary, printOEPResumenTicket } from '../../utils/oepTicketUtils';
 import { supabase } from '../../lib/supabase';
@@ -104,15 +104,6 @@ const OEPPreviewPanel: React.FC<{
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 }> = ({ order, comprobante, onMouseEnter, onMouseLeave }) => {
-  const getPaymentText = (method?: string | null) => {
-    const map: Record<string, string> = {
-      'EFECTIVO': 'EFECTIVO',
-      'YAPE/PLIN': 'YAPE/PLIN',
-      'TARJETA': 'TARJETA',
-    };
-    return method ? map[method] || 'NO APLICA' : 'NO APLICA';
-  };
-
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
       <div
@@ -213,7 +204,7 @@ const OEPOrderRow = React.memo(({
             {getPaymentText(order.payment_method)}
           </span>
         </div>
-       </td>
+        </td>
       <td className="px-3 py-3">
         <div className="text-xs text-gray-900 font-medium">
           {new Date(order.created_at).toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit'})}
@@ -221,11 +212,11 @@ const OEPOrderRow = React.memo(({
         <div className="text-xs text-gray-500">
           {new Date(order.created_at).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}
         </div>
-       </td>
+        </td>
       <td className="px-3 py-3">
         <div className="text-xs text-gray-900 font-medium">{order.items.length} ítem(s)</div>
         <div className="text-xs text-gray-500 truncate max-w-[180px]">{order.items.map(i=>i.name).join(', ')}</div>
-       </td>
+        </td>
       <td className="px-3 py-3" onMouseEnter={onActionsMouseEnter}>
         <div className="flex items-center space-x-1">
           <OEPTicket order={order} />
@@ -245,8 +236,8 @@ const OEPOrderRow = React.memo(({
             </button>
           )}
         </div>
-       </td>
-     </tr>
+        </td>
+       </tr>
   );
 });
 
@@ -428,13 +419,15 @@ export const OEPOrdersManager: React.FC = () => {
     let efectivo = 0, yape = 0, tarjeta = 0;
     day.forEach(o => {
       const sp = (o as any).split_payment;
-      if (o.payment_method === 'MIXTO' && sp) {
+      if (o.payment_method === 'EFECTIVO') efectivo += o.total;
+      else if (o.payment_method === 'YAPE/PLIN') yape += o.total;
+      else if (o.payment_method === 'TARJETA') tarjeta += o.total;
+      // Check for MIXTO - usando comparación directa porque el valor existe en la BD
+      else if (o.payment_method === 'MIXTO' && sp) {
         efectivo += sp.efectivo || 0;
         yape += sp.yapePlin || 0;
         tarjeta += sp.tarjeta || 0;
-      } else if (o.payment_method === 'EFECTIVO') efectivo += o.total;
-      else if (o.payment_method === 'YAPE/PLIN') yape += o.total;
-      else if (o.payment_method === 'TARJETA') tarjeta += o.total;
+      }
     });
     return { efectivo, yape, tarjeta, totalGeneral: day.reduce((s,o) => s + o.total, 0) };
   }, [orders, selectedDate]);
@@ -492,21 +485,24 @@ export const OEPOrdersManager: React.FC = () => {
 
   const handleSavePaymentMethod = useCallback(async (orderId: string, paymentMethod: OEPPaymentMethod | 'MIXTO' | null, splitDetails?: OEPSplitPaymentDetails) => {
     try {
-      if (paymentMethod === 'MIXTO' && splitDetails) {
-        const r = await updateOrderPayment(orderId, paymentMethod);
-        if (r.success) await supabase.from('oep').update({ split_payment: splitDetails, updated_at: new Date().toISOString() }).eq('id', orderId);
-        else alert('❌ ' + r.error);
+      // Convertir 'MIXTO' a null para la función updateOrderPayment (ya que no acepta MIXTO)
+      const methodForUpdate = (paymentMethod === 'MIXTO' ? null : paymentMethod) as OEPPaymentMethod | null;
+      const r = await updateOrderPayment(orderId, methodForUpdate);
+      if (r.success) {
+        if (paymentMethod === 'MIXTO' && splitDetails) {
+          await supabase.from('oep').update({ split_payment: splitDetails, updated_at: new Date().toISOString() }).eq('id', orderId);
+        } else {
+          await supabase.from('oep').update({ split_payment: null, updated_at: new Date().toISOString() }).eq('id', orderId);
+        }
+        setLocalOrders(prev => prev.map(o => {
+          if (o.id !== orderId) return o;
+          const u = { ...o, payment_method: paymentMethod as OEPPaymentMethod | null };
+          (u as any).split_payment = (paymentMethod === 'MIXTO' && splitDetails) ? splitDetails : null;
+          return u;
+        }));
       } else {
-        const r = await updateOrderPayment(orderId, paymentMethod);
-        if (r.success) await supabase.from('oep').update({ split_payment: null, updated_at: new Date().toISOString() }).eq('id', orderId);
-        else alert('❌ ' + r.error);
+        alert('❌ ' + r.error);
       }
-      setLocalOrders(prev => prev.map(o => {
-        if (o.id !== orderId) return o;
-        const u = { ...o, payment_method: paymentMethod as OEPPaymentMethod | null };
-        (u as any).split_payment = (paymentMethod === 'MIXTO' && splitDetails) ? splitDetails : null;
-        return u;
-      }));
     } catch (err: any) { alert('❌ Error: ' + err.message); }
   }, [updateOrderPayment]);
 
@@ -573,12 +569,6 @@ export const OEPOrdersManager: React.FC = () => {
     'MIXTO': 'MIXTO'
   }[m || ''] || 'NO APLICA'), []);
 
-  const sortOptions = [
-    { value: 'created-desc', label: '🕐 Más recientes' },
-    { value: 'created-asc',  label: '🕐 Más antiguos' },
-    { value: 'total-desc',   label: '💰 Mayor monto' },
-    { value: 'total-asc',    label: '💰 Menor monto' },
-  ];
   const isAdmin = user?.role === 'admin';
 
   return (

@@ -225,7 +225,7 @@ const FullDayOrderRow = React.memo(({
             {getPaymentText(order.payment_method)}
           </span>
         </div>
-      </td>
+       </td>
       <td className="px-3 py-3">
         <div className="text-xs text-gray-900 font-medium">
           {new Date(order.created_at).toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit'})}
@@ -233,11 +233,11 @@ const FullDayOrderRow = React.memo(({
         <div className="text-xs text-gray-500">
           {new Date(order.created_at).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}
         </div>
-      </td>
+       </td>
       <td className="px-3 py-3">
         <div className="text-xs text-gray-900 font-medium">{order.items.length} ítem(s)</div>
         <div className="text-xs text-gray-500 truncate max-w-[180px]">{order.items.map(i=>i.name).join(', ')}</div>
-      </td>
+       </td>
       <td className="px-3 py-3" onMouseEnter={onActionsMouseEnter}>
         <div className="flex items-center space-x-1">
           <FullDayTicket order={order} />
@@ -257,8 +257,8 @@ const FullDayOrderRow = React.memo(({
             </button>
           )}
         </div>
-      </td>
-    </tr>
+       </td>
+     </tr>
   );
 });
 
@@ -602,12 +602,6 @@ export const FullDayOrdersManager: React.FC = () => {
   const getPaymentColor  = useCallback((m?:string|null)=>({'EFECTIVO':'bg-green-100 text-green-800 border-green-200','YAPE/PLIN':'bg-purple-100 text-purple-800 border-purple-200','TARJETA':'bg-blue-100 text-blue-800 border-blue-200','MIXTO':'bg-orange-100 text-orange-800 border-orange-200'}[m||'']||'bg-gray-100 text-gray-800 border-gray-200'),[]);
   const getPaymentText   = useCallback((m?:string|null)=>({'EFECTIVO':'EFECTIVO','YAPE/PLIN':'YAPE/PLIN','TARJETA':'TARJETA','MIXTO':'MIXTO'}[m||'']||'NO APLICA'),[]);
 
-  const sortOptions = [
-    { value: 'created-desc', label: '🕐 Más recientes' },
-    { value: 'created-asc',  label: '🕐 Más antiguos' },
-    { value: 'total-desc',   label: '💰 Mayor monto' },
-    { value: 'total-asc',    label: '💰 Menor monto' },
-  ];
   const isAdmin = user?.role==='admin';
 
   return (
@@ -872,7 +866,7 @@ export const FullDayOrdersManager: React.FC = () => {
                 <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide w-20">Fecha</th>
                 <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Productos</th>
                 <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide w-28">Acciones</th>
-              </tr>
+               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {pagination.currentItems.map(order=>(
