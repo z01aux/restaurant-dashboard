@@ -5,7 +5,6 @@
 @tailwind utilities;
 
 @layer base {
-
   html {
     scroll-behavior: smooth;
   }
@@ -28,16 +27,57 @@
     color: #9a3412;
   }
 
-  :focus-visible {
-    outline: 2px solid #f97316;
-    outline-offset: 2px;
-    border-radius: 4px;
+  /* ELIMINAR COMPLETAMENTE CUALQUIER CONTORNO EN TODOS LOS ELEMENTOS */
+  *:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    ring: none !important;
+    -webkit-tap-highlight-color: transparent !important;
   }
 
-  button, a, input, select, textarea, [role="button"] {
+  *:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    ring: none !important;
+  }
+
+  /* Para inputs, textareas y selects - mantener borde normal sin resaltado */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    ring: none !important;
+    border-color: #e5e7eb !important;
+  }
+
+  /* Para botones - sin resaltado al focus */
+  button:focus,
+  [role="button"]:focus,
+  a:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    ring: none !important;
+  }
+
+  /* Para tarjetas y elementos clickeables */
+  .product-card:focus,
+  .category-button:focus,
+  .menu-item-card:focus,
+  [tabindex]:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    ring: none !important;
+  }
+
+  /* Eliminar el resaltado azul en móviles al tocar elementos */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, a, input, select, textarea, [role="button"], .product-card, .category-button {
     transition: opacity 0.15s ease, background-color 0.15s ease,
-                border-color 0.15s ease, box-shadow 0.15s ease,
-                transform 0.15s ease;
+                border-color 0.15s ease, transform 0.15s ease;
   }
 }
 
