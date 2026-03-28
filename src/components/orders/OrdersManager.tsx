@@ -1,9 +1,10 @@
 // ARCHIVO: src/components/orders/OrdersManager.tsx
-// ACTUALIZADO: Botón 🧾 Comprobante en cada fila y card
+// ACTUALIZADO: Eliminado selector de ordenamiento duplicado en móvil
+// Solo se mantiene el dropdown minimalista entre filtro de pago y buscador
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Search, Pencil, Download, ChevronLeft, ChevronRight, FileText, ChevronDown, Receipt } from 'lucide-react';
+import { Search, Pencil, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, FileText, Receipt } from 'lucide-react';
 import { Order, PaymentMethod, SplitPaymentDetails } from '../../types';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -23,7 +24,7 @@ import { PaymentFilter } from '../ui/PaymentFilter';
 import { OrdersDateFilter } from './OrdersDateFilter';
 import { DateRangeModal } from './DateRangeModal';
 import { EmitirComprobanteModal } from '../billing/EmitirComprobanteModal';
-
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 // ============================================
 // COMPONENTE MEMOIZADO PARA CADA FILA DE ORDEN
@@ -80,7 +81,6 @@ const OrderRow = React.memo(({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {/* ── Cliente / Monto / Área / Pago (todo en una celda) ── */}
       <td className="px-3 py-3">
         <div className="flex items-center space-x-1.5 mb-0.5">
           <span className={`text-xs font-semibold ${
@@ -104,9 +104,8 @@ const OrderRow = React.memo(({
             {getPaymentText(order.paymentMethod)}
           </span>
         </div>
-      </td>
+       </td>
 
-      {/* ── Fecha ── */}
       <td className="px-3 py-3">
         <div className="text-xs text-gray-900 font-medium">
           {new Date(order.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })}
@@ -116,7 +115,6 @@ const OrderRow = React.memo(({
         </div>
       </td>
 
-      {/* ── Productos ── */}
       <td className="px-3 py-3">
         <div className="text-xs text-gray-900 font-medium">{order.items.length} ítem(s)</div>
         <div className="text-xs text-gray-500 truncate max-w-[180px]">
@@ -124,14 +122,10 @@ const OrderRow = React.memo(({
         </div>
       </td>
 
-      {/* ── Acciones — solo iconos con tooltip ── */}
       <td className="px-3 py-3" onMouseEnter={onActionsMouseEnter}>
         <div className="flex items-center space-x-1">
-
-          {/* Ticket imprimir */}
           <OrderTicket order={order} />
 
-          {/* Editar pago */}
           {(user?.role === 'admin' || user?.role === 'manager' || user?.role === 'employee') && (
             <button
               onClick={handleEditClick}
@@ -142,7 +136,6 @@ const OrderRow = React.memo(({
             </button>
           )}
 
-          {/* Comprobante CPE */}
           <button
             onClick={handleComprobanteClick}
             title={tieneComprobante ? 'Comprobante ya emitido' : 'Emitir comprobante electrónico'}
@@ -158,7 +151,6 @@ const OrderRow = React.memo(({
             }
           </button>
 
-          {/* Eliminar (solo admin) */}
           {user?.role === 'admin' && (
             <button
               onClick={() => onDelete(order.id, displayNumber)}
@@ -174,8 +166,7 @@ const OrderRow = React.memo(({
   );
 });
 
-
-// ── TARJETA MÓVIL ÓRDENES ─────────────────────────────────────────────
+// ─── TARJETA MÓVIL ÓRDENES ─────────────────────────────────────────────
 const OrderCard = React.memo(({
   order, onEditPayment, onDelete, onTapPreview, onEmitirComprobante,
   tieneComprobante,
@@ -239,7 +230,6 @@ const OrderCard = React.memo(({
         <div className="flex items-center space-x-2">
           <OrderTicket order={order} />
 
-          {/* ── Botón Comprobante (móvil) ── */}
           <button
             onClick={(e) => { e.stopPropagation(); onEmitirComprobante(order); }}
             title={tieneComprobante ? 'Ya tiene comprobante' : 'Emitir comprobante'}
@@ -273,10 +263,9 @@ const OrderCard = React.memo(({
 // ============================================
 const OrdersManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [areaFilter, setAreaFilter] = useState<string>('');
   const [paymentFilter, setPaymentFilter] = useState<string>('');
   const [itemsPerPage, setItemsPerPage] = useState(20);
-  const [currentSort, setCurrentSort] = useState('status-time');
+  const [currentSort, setCurrentSort] = useState('created-desc');
   const [deletedOrder, setDeletedOrder] = useState<{id: string, number: string} | null>(null);
   const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
   const hoverTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -290,7 +279,6 @@ const OrdersManager: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
 
-  // ── Estado para el modal de comprobante ───────────────────────────────────
   const [showComprobanteModal, setShowComprobanteModal] = useState(false);
   const [orderParaComprobante, setOrderParaComprobante] = useState<Order | null>(null);
 
@@ -299,6 +287,22 @@ const OrdersManager: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
 
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'warning' | 'danger' | 'info' | 'success';
+    confirmText?: string;
+    loading?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger',
+  });
+
   const { user } = useAuth();
   const {
     orders,
@@ -306,7 +310,6 @@ const OrdersManager: React.FC = () => {
     deleteOrder,
     updateOrderPayment,
     updateOrderSplitPayment,
-    exportOrdersToCSV,
     getTodayOrders,
     fetchOrders,
     getRegularOrders
@@ -319,7 +322,6 @@ const OrdersManager: React.FC = () => {
     closeCashRegister,
   } = useSalesClosure();
 
-  // ── Hook de comprobantes ───────────────────────────────────────────────────
   const {
     comprobantes,
     orderIdsConComprobante,
@@ -352,7 +354,6 @@ const OrdersManager: React.FC = () => {
     return () => window.removeEventListener('newOrderCreated', handleNewOrder as EventListener);
   }, [fetchOrders]);
 
-  // ── Escuchar evento de orden eliminada (desde anulación de comprobante) ────
   useEffect(() => {
     const handleOrderDeleted = (event: CustomEvent) => {
       const { orderId } = event.detail;
@@ -377,15 +378,6 @@ const OrdersManager: React.FC = () => {
     }
   }, [regularOrders]);
 
-  const sortOptions = useMemo(() => [
-    { value: 'status-time',       label: '🔄 Estado + Tiempo' },
-    { value: 'waiting-time',      label: '⏱️ Tiempo Espera' },
-    { value: 'delivery-priority', label: '🚚 Delivery Priority' },
-    { value: 'total-desc',        label: '💰 Mayor Monto' },
-    { value: 'created-desc',      label: '📅 Más Recientes' },
-    { value: 'created-asc',       label: '📅 Más Antiguas' },
-  ], []);
-
   const dateFilteredOrders = useMemo(() => {
     const startOfDay = new Date(selectedDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -397,52 +389,49 @@ const OrdersManager: React.FC = () => {
     });
   }, [localOrders, selectedDate]);
 
-  const filteredAndSortedOrders = useMemo(() => {
-    if (!dateFilteredOrders.length) return [];
-    let filtered = dateFilteredOrders;
-
-    if (areaFilter) {
-      filtered = filtered.filter(o => o.source.type === areaFilter);
-    }
-
-    if (searchTerm) {
+  // Filtrado por búsqueda unificada
+  const filteredOrders = useMemo(() => {
+    let f = dateFilteredOrders;
+    
+    if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(o =>
+      f = f.filter(o =>
         o.customerName?.toLowerCase().includes(term) ||
         o.orderNumber?.toLowerCase().includes(term) ||
         o.kitchenNumber?.toLowerCase().includes(term) ||
         o.phone?.includes(term)
       );
     }
+    
+    return f;
+  }, [dateFilteredOrders, searchTerm]);
 
+  // Ordenamiento
+  const sortedOrders = useMemo(() => {
+    let f = [...filteredOrders];
+    
+    switch(currentSort) {
+      case 'created-desc':
+        return f.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      case 'created-asc':
+        return f.sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      case 'total-desc':
+        return f.sort((a,b) => b.total - a.total);
+      case 'total-asc':
+        return f.sort((a,b) => a.total - b.total);
+      default:
+        return f.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  }, [filteredOrders, currentSort]);
+
+  // Aplicar filtro de pago después del ordenamiento
+  const filteredAndSortedOrders = useMemo(() => {
+    let f = sortedOrders;
     if (paymentFilter) {
-      filtered = filtered.filter(o => o.paymentMethod === paymentFilter);
+      f = f.filter(o => paymentFilter === 'NO_APLICA' ? !o.paymentMethod : o.paymentMethod === paymentFilter);
     }
-
-    if (filtered.length > 1) {
-      filtered = [...filtered].sort((a, b) => {
-        switch (currentSort) {
-          case 'status-time': {
-            const so: Record<string, number> = { pending: 1, preparing: 2, ready: 3, delivered: 4, cancelled: 5 };
-            if (so[a.status] !== so[b.status]) return so[a.status] - so[b.status];
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          }
-          case 'waiting-time':
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          case 'delivery-priority': {
-            const to: Record<string, number> = { delivery: 1, phone: 2, 'walk-in': 3 };
-            return to[a.source.type] - to[b.source.type];
-          }
-          case 'total-desc':   return b.total - a.total;
-          case 'created-desc': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          case 'created-asc':  return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          default: return 0;
-        }
-      });
-    }
-
-    return filtered;
-  }, [dateFilteredOrders, searchTerm, areaFilter, paymentFilter, currentSort]);
+    return f;
+  }, [sortedOrders, paymentFilter]);
 
   const paymentTotals = useMemo(() => {
     let efectivo = 0, yape = 0, tarjeta = 0;
@@ -464,13 +453,11 @@ const OrdersManager: React.FC = () => {
     itemsPerPage,
     mobileBreakpoint: 768
   });
-
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
 
   useEffect(() => {
     pagination.resetPagination();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, areaFilter, paymentFilter, selectedDate, currentSort]);
+  }, [searchTerm, paymentFilter, selectedDate, currentSort]);
 
   const getDisplayNumber = useCallback((order: Order) => {
     if (order.source.type === 'phone') return order.kitchenNumber || `COM-${order.id.slice(-8).toUpperCase()}`;
@@ -501,17 +488,14 @@ const OrdersManager: React.FC = () => {
     return texts[m || ''] || 'NO APLICA';
   }, []);
 
-  // Hover sobre fila → actualiza el preview inmediatamente
   const handleRowMouseEnter = useCallback((order: Order) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
     setPreviewOrder(order);
   }, []);
 
-  // Salir de la fila → no hace nada
   const handleRowMouseLeave = useCallback(() => {}, []);
 
-  // Salir de la tabla → cierra con delay para permitir click en "Ver PDF"
   const handleTableMouseLeave = useCallback(() => {
     if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
     closeTimerRef.current = setTimeout(() => {
@@ -519,19 +503,16 @@ const OrdersManager: React.FC = () => {
     }, 300);
   }, []);
 
-  // Mouse entra al panel del preview → cancela el cierre
   const handlePreviewMouseEnter = useCallback(() => {
     if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
   }, []);
 
-  // Mouse sale del panel del preview → cierra
   const handlePreviewMouseLeave = useCallback(() => {
     closeTimerRef.current = setTimeout(() => {
       setPreviewOrder(null);
     }, 100);
   }, []);
 
-  // Zona Acciones → cancela apertura
   const handleActionsMouseEnter = useCallback(() => {
     if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
   }, []);
@@ -540,29 +521,39 @@ const OrdersManager: React.FC = () => {
     setPreviewOrder(order);
   }, []);
 
-  const handleDeleteOrder = useCallback(async (orderId: string, orderNumber: string) => {
-    if (window.confirm(`¿Estás seguro de eliminar la orden ${orderNumber}?`)) {
-      setLocalOrders(prev => prev.filter(o => o.id !== orderId));
-      const result = await deleteOrder(orderId);
-      if (result.success) {
-        setDeletedOrder({ id: orderId, number: orderNumber });
-        setTimeout(() => setDeletedOrder(null), 3000);
-      }
-    }
-  }, [deleteOrder]);
+  const handleDeleteClick = useCallback((orderId: string, orderNumber: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Orden',
+      message: `¿Estás seguro de eliminar la orden "${orderNumber}"? Esta acción no se puede deshacer.`,
+      type: 'danger',
+      confirmText: 'Sí, eliminar',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        setLocalOrders(prev => prev.filter(o => o.id !== orderId));
+        const result = await deleteOrder(orderId);
+        if (result.success) {
+          setDeletedOrder({ id: orderId, number: orderNumber });
+          setConfirmModal(prev => ({ ...prev, isOpen: false, loading: false }));
+        } else {
+          alert('❌ Error al eliminar: ' + result.error);
+          setLocalOrders(orders);
+          setConfirmModal(prev => ({ ...prev, isOpen: false, loading: false }));
+        }
+      },
+    });
+  }, [deleteOrder, orders]);
 
   const handleEditPayment = useCallback((order: Order) => {
     setSelectedOrder(order);
     setShowPaymentModal(true);
   }, []);
 
-  // ── Handler: abrir modal de comprobante ───────────────────────────────────
   const handleEmitirComprobante = useCallback((order: Order) => {
     setOrderParaComprobante(order);
     setShowComprobanteModal(true);
   }, []);
 
-  // ── Handler: comprobante emitido exitosamente ──────────────────────────────
   const handleComprobanteEmitido = useCallback(async (
     respuesta: any,
     _tipo: 'boleta' | 'factura',
@@ -633,7 +624,6 @@ const OrdersManager: React.FC = () => {
     }
   }, [updateOrderPayment, updateOrderSplitPayment, localOrders, fetchOrders]);
 
-  // ── HANDLER EXCEL ──
   const handleExportExcel = useCallback(async (startDate: Date, endDate: Date) => {
     if (exporting) return;
     setExporting(true);
@@ -660,7 +650,6 @@ const OrdersManager: React.FC = () => {
     }
   }, [regularOrders, exporting]);
 
-  // ── HANDLER PDF ──
   const handleExportPDF = useCallback(async (startDate: Date, endDate: Date) => {
     if (exportingPDF) return;
     setExportingPDF(true);
@@ -671,7 +660,7 @@ const OrdersManager: React.FC = () => {
     try {
       await generateSalesReportPDF(regularOrders, startDate, endDate);
       const ok = document.createElement('div');
-      ok.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full';
+      ok.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
       ok.innerHTML = '<div>✅ PDF generado correctamente</div>';
       document.body.appendChild(ok);
       setTimeout(() => { if (document.body.contains(ok)) document.body.removeChild(ok); }, 3000);
@@ -698,10 +687,8 @@ const OrdersManager: React.FC = () => {
     printResumenTicket(generateTicketSummary(filtered, startDate, endDate), startDate, endDate);
   }, [regularOrders]);
 
-  const handleExportTodayCSV   = useCallback(() => exportOrdersToCSV(getTodayOrders().filter(o => o.orderType !== 'fullday')), [getTodayOrders, exportOrdersToCSV]);
-  const handleExportAllCSV     = useCallback(() => exportOrdersToCSV(regularOrders), [regularOrders, exportOrdersToCSV]);
   const handleExportTodayExcel = useCallback(() => exportOrdersToExcel(getTodayOrders().filter(o => o.orderType !== 'fullday'), 'today'), [getTodayOrders]);
-  const handleExportAllExcel   = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
+  const handleExportAllExcel = useCallback(() => exportOrdersToExcel(regularOrders, 'all'), [regularOrders]);
 
   const handleOpenCashRegister  = useCallback(() => { setCashModalType('open');  setShowCashModal(true); }, []);
   const handleCloseCashRegister = useCallback(() => { setCashModalType('close'); setShowCashModal(true); }, []);
@@ -729,22 +716,39 @@ const OrdersManager: React.FC = () => {
 
   const handleToggleHistory = useCallback(() => setShowHistory(prev => !prev), []);
   const handleClearFilters = useCallback(() => {
-    setAreaFilter('');
     setPaymentFilter('');
     setSearchTerm('');
   }, []);
 
-  const hasActiveFilters = areaFilter !== '' || paymentFilter !== '' || searchTerm !== '';
+  const hasActiveFilters = paymentFilter !== '' || searchTerm !== '';
   const isAnyExporting   = exporting || exportingPDF;
+
+  const sortOptions = [
+    { value: 'created-desc', label: '🕐 Más recientes' },
+    { value: 'created-asc',  label: '🕐 Más antiguos' },
+    { value: 'total-desc',   label: '💰 Mayor monto' },
+    { value: 'total-asc',    label: '💰 Menor monto' },
+  ];
 
   return (
     <div className="space-y-4 sm:space-y-6">
 
       {deletedOrder && (
         <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full">
-          <span>Orden {deletedOrder.number} eliminada</span>
+          Orden {deletedOrder.number} eliminada
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+      />
 
       {previewOrder && !pagination.isMobile && (
         <OrderPreview
@@ -805,7 +809,6 @@ const OrdersManager: React.FC = () => {
         onSave={handleSavePaymentMethod}
       />
 
-      {/* ── Modal de emisión de comprobante ── */}
       <EmitirComprobanteModal
         isOpen={showComprobanteModal}
         onClose={() => { setShowComprobanteModal(false); setOrderParaComprobante(null); }}
@@ -855,34 +858,21 @@ const OrdersManager: React.FC = () => {
         totalOrders={filteredAndSortedOrders.length}
       />
 
-      {/* ── BOTONES DE ACCIÓN ── */}
+      {/* Botones exportación */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={handleExportTodayCSV} disabled={isAnyExporting}
-          className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-600 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>CSV Hoy</span>
-        </button>
-        <button onClick={handleExportAllCSV} disabled={isAnyExporting}
-          className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>CSV Todo</span>
-        </button>
         <button onClick={handleExportTodayExcel} disabled={isAnyExporting}
           className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-700 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>Excel Hoy</span>
+          <FileSpreadsheet size={15} /><span>Excel Hoy</span>
         </button>
         <button onClick={handleExportAllExcel} disabled={isAnyExporting}
           className="bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-emerald-800 flex items-center space-x-1 disabled:opacity-50">
-          <Download size={16} /><span>Excel Todo</span>
+          <FileSpreadsheet size={15} /><span>Excel Todo</span>
         </button>
         <button onClick={() => setShowDateRangeModal(true)} disabled={isAnyExporting}
-          className="bg-gradient-to-r from-red-600 to-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:from-red-700 hover:to-amber-600 flex items-center space-x-2 disabled:opacity-50 shadow-sm font-medium">
-          <FileText size={16} />
+          className="bg-gradient-to-r from-red-600 to-amber-500 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2 disabled:opacity-50 shadow-sm font-medium">
+          <FileText size={15} />
           <span>Reportes por Fechas</span>
           {isAnyExporting && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />}
-        </button>
-        <button onClick={() => { window.location.hash = '#reception'; }}
-          className="bg-gradient-to-r from-red-500 to-amber-500 text-white px-3 py-2 rounded-lg text-sm hover:from-red-600 hover:to-amber-600 flex items-center space-x-1"
-          disabled={isAnyExporting}>
-          <span>➕</span><span>Nueva Orden</span>
         </button>
       </div>
 
@@ -898,56 +888,7 @@ const OrdersManager: React.FC = () => {
 
       {showHistory && <SalesHistory />}
 
-      {/* ── FILTROS ── */}
-      <div className="bg-white rounded-lg p-4 shadow-sm border">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por cliente, teléfono..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
-              disabled={isAnyExporting}
-            />
-          </div>
-          <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}
-            className="px-3 py-2 border rounded-lg text-sm min-w-[140px]" disabled={isAnyExporting}>
-            <option value="">📋 Todas las áreas</option>
-            <option value="phone">🍳 Cocina</option>
-            <option value="walk-in">👤 Local</option>
-            <option value="delivery">🚚 Delivery</option>
-          </select>
-        </div>
-
-        {hasActiveFilters && (
-          <div className="mt-3 flex items-center justify-between">
-            <div className="flex flex-wrap gap-2">
-              {areaFilter && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  📋 Área: {areaFilter === 'phone' ? 'Cocina' : areaFilter === 'walk-in' ? 'Local' : 'Delivery'}
-                </span>
-              )}
-              {paymentFilter && (
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPaymentColor(paymentFilter)}`}>
-                  {getPaymentText(paymentFilter)}
-                </span>
-              )}
-              {searchTerm && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  🔍 Búsqueda: "{searchTerm}"
-                </span>
-              )}
-            </div>
-            <button onClick={handleClearFilters} className="text-xs text-red-600 hover:text-red-800 font-medium">
-              Limpiar filtros
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ── FILTRO DE PAGO CON MONTOS ── */}
+      {/* ─── FILTRO DE PAGO CON MONTOS ─── */}
       <div className="mb-4">
         <PaymentFilter
           paymentFilter={paymentFilter}
@@ -960,9 +901,50 @@ const OrdersManager: React.FC = () => {
         />
       </div>
 
-      {/* ── CONTROLES DESKTOP ── */}
-      {!pagination.isMobile && (
-        <div className="bg-white/80 backdrop-blur-lg rounded-lg p-4 border border-gray-200 mb-4">
+      {/* ─── SORTING CONTROLS (DROPDOWN MINIMALISTA) ─── */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-500">Ordenar por:</span>
+          <select
+            value={currentSort}
+            onChange={(e) => setCurrentSort(e.target.value)}
+            className="text-sm bg-transparent border-none focus:ring-0 text-gray-700 font-medium cursor-pointer"
+          >
+            <option value="created-desc">🕐 Más recientes</option>
+            <option value="created-asc">🕐 Más antiguos</option>
+            <option value="total-desc">💰 Mayor monto</option>
+            <option value="total-asc">💰 Menor monto</option>
+          </select>
+        </div>
+        
+        {/* Contador de resultados */}
+        <div className="text-xs text-gray-400">
+          {filteredAndSortedOrders.length} orden{filteredAndSortedOrders.length !== 1 ? 'es' : ''}
+        </div>
+      </div>
+
+      {/* ─── BUSCADOR UNIFICADO (entre sorting controls y pedidos) ─── */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16}/>
+          <input 
+            type="text" 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Buscar por cliente, teléfono, número de orden..."
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm bg-white"
+          />
+        </div>
+        {searchTerm && filteredAndSortedOrders.length === 0 && (
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            No se encontraron órdenes para "{searchTerm}"
+          </p>
+        )}
+      </div>
+
+      {/* ─── CONTROLES DESKTOP ─── */}
+      {!pagination.isMobile && filteredAndSortedOrders.length > 0 && (
+        <div className="bg-white/80 rounded-lg p-4 border mb-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
             <div className="text-sm text-gray-600">
               Mostrando {((pagination.currentPage - 1) * itemsPerPage) + 1}–{Math.min(pagination.currentPage * itemsPerPage, filteredAndSortedOrders.length)} de{' '}
@@ -971,9 +953,6 @@ const OrdersManager: React.FC = () => {
             <div className="flex items-center space-x-4">
               <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 text-sm">
                 {[10, 20, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={currentSort} onChange={(e) => setCurrentSort(e.target.value)} className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 text-sm">
-                {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <div className="flex items-center space-x-1">
                 <button onClick={pagination.prevPage} disabled={pagination.currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronLeft size={16} /></button>
@@ -985,17 +964,10 @@ const OrdersManager: React.FC = () => {
         </div>
       )}
 
-      {/* ── ORDENAMIENTO MÓVIL ── */}
-      {pagination.isMobile && (
-        <div className="flex items-center justify-between bg-white rounded-lg px-4 py-2 border shadow-sm mb-3">
-          <span className="text-xs text-gray-500 font-medium">{filteredAndSortedOrders.length} órdenes</span>
-          <select value={currentSort} onChange={(e) => setCurrentSort(e.target.value)} className="text-xs border-0 bg-transparent text-gray-700 font-medium focus:ring-0">
-            {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </div>
-      )}
+      {/* ─── ORDENAMIENTO MÓVIL ELIMINADO ─── */}
+      {/* Ya no hay selector duplicado aquí */}
 
-      {/* ── TABLA / TARJETAS ── */}
+      {/* ─── TABLA / TARJETAS ─── */}
       {loading && !isInitialized ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
@@ -1003,9 +975,7 @@ const OrdersManager: React.FC = () => {
         </div>
       ) : pagination.currentItems.length === 0 ? (
         <div className="text-center py-12 text-gray-500 bg-white rounded-lg border">
-          {hasActiveFilters
-            ? 'No se encontraron órdenes con los filtros aplicados'
-            : `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`}
+          {searchTerm ? `No se encontraron órdenes para "${searchTerm}"` : `No hay órdenes para el ${selectedDate.toLocaleDateString('es-PE')}`}
         </div>
       ) : pagination.isMobile ? (
         <div className="space-y-3">
@@ -1014,7 +984,7 @@ const OrdersManager: React.FC = () => {
               key={order.id}
               order={order}
               onEditPayment={handleEditPayment}
-              onDelete={handleDeleteOrder}
+              onDelete={handleDeleteClick}
               onTapPreview={handleTapPreview}
               onEmitirComprobante={handleEmitirComprobante}
               tieneComprobante={orderIdsConComprobante.has(order.id)}
@@ -1055,7 +1025,7 @@ const OrdersManager: React.FC = () => {
                     onMouseEnter={() => handleRowMouseEnter(order)}
                     onMouseLeave={handleRowMouseLeave}
                     onActionsMouseEnter={handleActionsMouseEnter}
-                    onDelete={handleDeleteOrder}
+                    onDelete={handleDeleteClick}
                     onEditPayment={handleEditPayment}
                     onEmitirComprobante={handleEmitirComprobante}
                     tieneComprobante={orderIdsConComprobante.has(order.id)}
@@ -1091,5 +1061,3 @@ const OrdersManager: React.FC = () => {
 };
 
 export default OrdersManager;
-
-

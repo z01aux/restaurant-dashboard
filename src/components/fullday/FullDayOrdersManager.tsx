@@ -1,7 +1,6 @@
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
-// ACTUALIZADO: Tabla compacta, botones icono, CPE, preview centrado
-//              + Exportación por Grado/Sección (Excel y CSV)
-//              + Modal de confirmación estilizado para eliminación
+// ACTUALIZADO: Buscador entre sorting controls y pedidos
+// Sorting controls como dropdown minimalista
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -209,7 +208,6 @@ const FullDayOrderRow = React.memo(({
   const displayNumber = getDisplayNumber(order);
   return (
     <tr className="hover:bg-gray-50 cursor-pointer" onMouseEnter={onMouseEnter}>
-      {/* Cliente / Pago */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5 mb-0.5">
           <span className="text-xs font-semibold text-purple-600">{displayNumber}</span>
@@ -228,7 +226,6 @@ const FullDayOrderRow = React.memo(({
           </span>
         </div>
       </td>
-      {/* Fecha */}
       <td className="px-3 py-3">
         <div className="text-xs text-gray-900 font-medium">
           {new Date(order.created_at).toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit'})}
@@ -237,12 +234,10 @@ const FullDayOrderRow = React.memo(({
           {new Date(order.created_at).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}
         </div>
       </td>
-      {/* Productos */}
       <td className="px-3 py-3">
         <div className="text-xs text-gray-900 font-medium">{order.items.length} ítem(s)</div>
         <div className="text-xs text-gray-500 truncate max-w-[180px]">{order.items.map(i=>i.name).join(', ')}</div>
       </td>
-      {/* Acciones */}
       <td className="px-3 py-3" onMouseEnter={onActionsMouseEnter}>
         <div className="flex items-center space-x-1">
           <FullDayTicket order={order} />
@@ -347,7 +342,7 @@ export const FullDayOrdersManager: React.FC = () => {
   const [searchTerm,       setSearchTerm]       = useState('');
   const [paymentFilter,    setPaymentFilter]     = useState('');
   const [itemsPerPage,     setItemsPerPage]      = useState(20);
-  const [currentSort,      setCurrentSort]       = useState('status-time');
+  const [currentSort,      setCurrentSort]       = useState('created-desc');
   const [previewOrder,     setPreviewOrder]      = useState<FullDayOrder | null>(null);
   const [showCashModal,    setShowCashModal]     = useState(false);
   const [cashModalType,    setCashModalType]     = useState<'open'|'close'>('open');
@@ -361,7 +356,6 @@ export const FullDayOrdersManager: React.FC = () => {
   const [showComprobanteModal, setShowComprobanteModal] = useState(false);
   const [orderParaComprobante, setOrderParaComprobante] = useState<FullDayOrder | null>(null);
   
-  // Estado para el modal de confirmación estilizado
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -378,10 +372,8 @@ export const FullDayOrdersManager: React.FC = () => {
     type: 'danger',
   });
   
-  // Estado para el toast de eliminación
   const [deletedOrder, setDeletedOrder] = useState<{id:string;number:string}|null>(null);
 
-  // Preview hover timers
   const hoverTimerRef = React.useRef<ReturnType<typeof setTimeout>|null>(null);
   const closeTimerRef = React.useRef<ReturnType<typeof setTimeout>|null>(null);
 
@@ -405,7 +397,6 @@ export const FullDayOrdersManager: React.FC = () => {
     const e=new Date(selectedDate); e.setHours(23,59,59,999);
     const day=orders.filter(o=>{const d=new Date(o.created_at);return d>=s&&d<=e;});
     let efectivo=0,yape=0,tarjeta=0;
-    // Solo contar pedidos cobrados en los totales de métodos de pago
     const cobrados = day.filter(o => (o as any).cobrado !== false);
     cobrados.forEach(o=>{
       if(o.payment_method==='MIXTO'&&o.split_payment){efectivo+=o.split_payment.efectivo||0;yape+=o.split_payment.yapePlin||0;tarjeta+=o.split_payment.tarjeta||0;}
@@ -422,35 +413,53 @@ export const FullDayOrdersManager: React.FC = () => {
     return localOrders.filter(o=>{const d=new Date(o.created_at);return d>=s&&d<=e;});
   },[localOrders,selectedDate]);
 
-  const filteredAndSortedOrders = useMemo(()=>{
-    let f=dateFilteredOrders;
-    if(searchTerm.trim()){
-      const t=searchTerm.toLowerCase();
-      f=f.filter(o=>o.student_name?.toLowerCase().includes(t)||o.grade?.toLowerCase().includes(t)||o.section?.toLowerCase().includes(t)||o.order_number?.toLowerCase().includes(t));
+  // Filtrado por búsqueda de alumno
+  const filteredOrders = useMemo(() => {
+    let f = dateFilteredOrders;
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      f = f.filter(o => 
+        o.student_name?.toLowerCase().includes(term) ||
+        o.grade?.toLowerCase().includes(term) ||
+        o.section?.toLowerCase().includes(term) ||
+        o.order_number?.toLowerCase().includes(term)
+      );
     }
-    if(paymentFilter) f=f.filter(o=>paymentFilter==='NO_APLICA'?!o.payment_method:o.payment_method===paymentFilter);
-    return [...f].sort((a,b)=>{
-      switch(currentSort){
-        case 'status-time':{
-          const so:Record<string,number>={pending:1,preparing:2,ready:3,delivered:4,cancelled:5};
-          if(so[a.status]!==so[b.status]) return so[a.status]-so[b.status];
-          return new Date(a.created_at).getTime()-new Date(b.created_at).getTime();
-        }
-        case 'waiting-time': return new Date(a.created_at).getTime()-new Date(b.created_at).getTime();
-        case 'total-desc':   return b.total-a.total;
-        case 'created-desc': return new Date(b.created_at).getTime()-new Date(a.created_at).getTime();
-        case 'created-asc':  return new Date(a.created_at).getTime()-new Date(b.created_at).getTime();
-        default: return 0;
-      }
-    });
-  },[dateFilteredOrders,searchTerm,paymentFilter,currentSort]);
+    return f;
+  }, [dateFilteredOrders, searchTerm]);
+
+  // Ordenamiento
+  const sortedOrders = useMemo(() => {
+    let f = [...filteredOrders];
+    
+    switch(currentSort) {
+      case 'created-desc':
+        return f.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      case 'created-asc':
+        return f.sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      case 'total-desc':
+        return f.sort((a,b) => b.total - a.total);
+      case 'total-asc':
+        return f.sort((a,b) => a.total - b.total);
+      default:
+        return f.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+  }, [filteredOrders, currentSort]);
+
+  // Aplicar filtro de pago después del ordenamiento
+  const filteredAndSortedOrders = useMemo(() => {
+    let f = sortedOrders;
+    if (paymentFilter) {
+      f = f.filter(o => paymentFilter === 'NO_APLICA' ? !o.payment_method : o.payment_method === paymentFilter);
+    }
+    return f;
+  }, [sortedOrders, paymentFilter]);
 
   const pagination = usePagination({items:filteredAndSortedOrders,itemsPerPage,mobileBreakpoint:768});
   const totalPages = Math.ceil(filteredAndSortedOrders.length/itemsPerPage);
 
-  useEffect(()=>{pagination.resetPagination();},[searchTerm,paymentFilter,selectedDate,currentSort]); // eslint-disable-line
+  useEffect(()=>{pagination.resetPagination();},[searchTerm,paymentFilter,selectedDate,currentSort]);
 
-  // ── Handlers preview ──────────────────────────────────────────────────────
   const handleRowMouseEnter   = useCallback((order:FullDayOrder)=>{
     if(hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     if(closeTimerRef.current){clearTimeout(closeTimerRef.current);closeTimerRef.current=null;}
@@ -471,7 +480,6 @@ export const FullDayOrdersManager: React.FC = () => {
   },[]);
   const handleTapPreview = useCallback((order:FullDayOrder)=>setPreviewOrder(order),[]);
 
-  // ── Handler de eliminación con modal estilizado ───────────────────────────────────────
   const handleDeleteClick = useCallback((orderId: string, orderNumber: string) => {
     setConfirmModal({
       isOpen: true,
@@ -517,7 +525,6 @@ export const FullDayOrdersManager: React.FC = () => {
     }catch(err:any){alert('❌ Error: '+err.message);}
   },[updateOrderPayment]);
 
-  // ── Handlers CPE ──────────────────────────────────────────────────────────
   const handleEmitirComprobante = useCallback((order:FullDayOrder)=>{
     setOrderParaComprobante(order);
     setShowComprobanteModal(true);
@@ -525,7 +532,6 @@ export const FullDayOrdersManager: React.FC = () => {
 
   const handleComprobanteEmitido = useCallback(async(respuesta:NubefactRespuestaComprobante,_tipo:'boleta'|'factura')=>{
     if(orderParaComprobante){
-      // Adaptar FullDayOrder al tipo Order que espera guardarComprobante
       const orderAdapted = {
         id: orderParaComprobante.id,
         total: orderParaComprobante.total,
@@ -544,7 +550,6 @@ export const FullDayOrdersManager: React.FC = () => {
     setOrderParaComprobante(null);
   },[orderParaComprobante,guardarComprobante]);
 
-  // ── Handlers exportación ──────────────────────────────────────────────────
   const handleExcelRango   = useCallback((s:Date,e:Date)=>exportFullDayByDateRange(orders,s,e),[orders]);
   const handlePDFRango     = useCallback(async(s:Date,e:Date)=>{
     if(exportingPDF) return;
@@ -597,20 +602,23 @@ export const FullDayOrdersManager: React.FC = () => {
   const getPaymentColor  = useCallback((m?:string|null)=>({'EFECTIVO':'bg-green-100 text-green-800 border-green-200','YAPE/PLIN':'bg-purple-100 text-purple-800 border-purple-200','TARJETA':'bg-blue-100 text-blue-800 border-blue-200','MIXTO':'bg-orange-100 text-orange-800 border-orange-200'}[m||'']||'bg-gray-100 text-gray-800 border-gray-200'),[]);
   const getPaymentText   = useCallback((m?:string|null)=>({'EFECTIVO':'EFECTIVO','YAPE/PLIN':'YAPE/PLIN','TARJETA':'TARJETA','MIXTO':'MIXTO'}[m||'']||'NO APLICA'),[]);
 
-  const sortOptions = [{value:'status-time',label:'🔄 Estado + Tiempo'},{value:'waiting-time',label:'⏱️ Tiempo Espera'},{value:'total-desc',label:'💰 Mayor Monto'},{value:'created-desc',label:'📅 Más Recientes'},{value:'created-asc',label:'📅 Más Antiguas'}];
+  const sortOptions = [
+    { value: 'created-desc', label: '🕐 Más recientes' },
+    { value: 'created-asc',  label: '🕐 Más antiguos' },
+    { value: 'total-desc',   label: '💰 Mayor monto' },
+    { value: 'total-asc',    label: '💰 Menor monto' },
+  ];
   const isAdmin = user?.role==='admin';
 
   return (
     <div className="space-y-4 sm:space-y-6">
 
-      {/* Toast de eliminación */}
       {deletedOrder && (
         <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full">
           Pedido {deletedOrder.number} eliminado
         </div>
       )}
 
-      {/* Modal de confirmación estilizado */}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
@@ -750,33 +758,68 @@ export const FullDayOrdersManager: React.FC = () => {
           <FileText size={15}/><span>Reportes por Fechas</span>
           {exportingPDF&&<div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"/>}
         </button>
-        {/* Excel/CSV por Grado — pedidos del día seleccionado */}
         <FullDayGradeExportButton
           orders={dateFilteredOrders}
           selectedDate={selectedDate}
         />
       </div>
 
-      {/* Filtros */}
-      <div className="bg-white rounded-lg p-4 shadow-sm border">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16}/>
-            <input type="text" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}
-              placeholder="Buscar por alumno, grado, número de orden..."
-              className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm"/>
-          </div>
+      {/* Filtro de pago */}
+      <div className="mb-4">
+        <PaymentFilter 
+          paymentFilter={paymentFilter} 
+          setPaymentFilter={setPaymentFilter}
+          totalEfectivo={paymentTotals.efectivo} 
+          totalYape={paymentTotals.yape}
+          totalTarjeta={paymentTotals.tarjeta} 
+          totalGeneral={paymentTotals.totalGeneral} 
+          showAmounts={true}
+        />
+      </div>
+
+      {/* ─── SORTING CONTROLS (DROPDOWN MINIMALISTA) ─── */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-500">Ordenar por:</span>
+          <select
+            value={currentSort}
+            onChange={(e) => setCurrentSort(e.target.value)}
+            className="text-sm bg-transparent border-none focus:ring-0 text-gray-700 font-medium cursor-pointer"
+          >
+            <option value="created-desc">🕐 Más recientes</option>
+            <option value="created-asc">🕐 Más antiguos</option>
+            <option value="total-desc">💰 Mayor monto</option>
+            <option value="total-asc">💰 Menor monto</option>
+          </select>
+        </div>
+        
+        {/* Contador de resultados */}
+        <div className="text-xs text-gray-400">
+          {filteredAndSortedOrders.length} pedido{filteredAndSortedOrders.length !== 1 ? 's' : ''}
         </div>
       </div>
 
+      {/* ─── BUSCADOR DE ALUMNOS (entre sorting controls y pedidos) ─── */}
       <div className="mb-4">
-        <PaymentFilter paymentFilter={paymentFilter} setPaymentFilter={setPaymentFilter}
-          totalEfectivo={paymentTotals.efectivo} totalYape={paymentTotals.yape}
-          totalTarjeta={paymentTotals.tarjeta} totalGeneral={paymentTotals.totalGeneral} showAmounts={true}/>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16}/>
+          <input 
+            type="text" 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Buscar por alumno, grado, sección o número de orden..."
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm bg-white"
+          />
+        </div>
+        {searchTerm && filteredAndSortedOrders.length === 0 && (
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            No se encontraron pedidos para "{searchTerm}"
+          </p>
+        )}
       </div>
 
-      {/* Controles desktop */}
-      {!pagination.isMobile && (
+      {/* Controles desktop (paginación) */}
+      {!pagination.isMobile && filteredAndSortedOrders.length > 0 && (
         <div className="bg-white/80 rounded-lg p-4 border mb-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
             <div className="text-sm text-gray-600">
@@ -785,9 +828,6 @@ export const FullDayOrdersManager: React.FC = () => {
             <div className="flex items-center space-x-4">
               <select value={itemsPerPage} onChange={e=>setItemsPerPage(Number(e.target.value))} className="px-3 py-1 border rounded text-sm">
                 {[10,20,50,100].map(v=><option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={currentSort} onChange={e=>setCurrentSort(e.target.value)} className="px-3 py-1 border rounded text-sm">
-                {sortOptions.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <div className="flex items-center space-x-1">
                 <button onClick={pagination.prevPage} disabled={pagination.currentPage===1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronLeft size={16}/></button>
@@ -799,29 +839,15 @@ export const FullDayOrdersManager: React.FC = () => {
         </div>
       )}
 
-      {/* Tabla / Cards */}
+      {/* Tabla / Cards - LISTA DE PEDIDOS */}
       {loading&&!isInitialized ? (
         <div className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"/><p className="text-gray-600 mt-2">Cargando...</p></div>
-      ) : pagination.currentItems.length===0 ? (
-        <div className="text-center py-12 text-gray-500 bg-white rounded-lg border">No hay pedidos para este día</div>
+      ) : pagination.currentItems.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 bg-white rounded-lg border">
+          {searchTerm ? `No se encontraron pedidos para "${searchTerm}"` : 'No hay pedidos para este día'}
+        </div>
       ) : pagination.isMobile ? (
         <div className="space-y-3">
-          {/* Control de orden — solo móvil */}
-          <div className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-2.5 shadow-sm">
-            <span className="text-xs text-gray-500 font-medium">
-              {filteredAndSortedOrders.length} pedidos
-            </span>
-            <button
-              onClick={() => setCurrentSort(s => s === 'created-desc' ? 'created-asc' : 'created-desc')}
-              className="flex items-center gap-1.5 text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg active:scale-95 transition-transform">
-              {currentSort === 'created-desc' ? (
-                <><ChevronDown size={13}/> Más nuevos primero</>
-              ) : (
-                <><ChevronLeft size={13} className="rotate-90" /> Más antiguos primero</>
-              )}
-            </button>
-          </div>
-
           {pagination.currentItems.map(order=>(
             <FullDayOrderCard key={order.id} order={order}
               onEditPayment={handleEditPayment} onDelete={handleDeleteClick}
@@ -860,7 +886,7 @@ export const FullDayOrdersManager: React.FC = () => {
                   getPaymentText={getPaymentText} isAdmin={isAdmin}/>
               ))}
             </tbody>
-          </table>
+           </table>
         </div>
       )}
 
