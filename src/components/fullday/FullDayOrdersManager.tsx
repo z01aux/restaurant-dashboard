@@ -1,6 +1,7 @@
 // ARCHIVO: src/components/fullday/FullDayOrdersManager.tsx
 // ACTUALIZADO: Tabla compacta, botones icono, CPE, preview centrado
 //              + Exportación por Grado/Sección (Excel y CSV)
+//              + Modal de confirmación estilizado para eliminación
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -17,6 +18,7 @@ import { PaymentFilter } from '../ui/PaymentFilter';
 import FullDayTicket from './FullDayTicket';
 import { EmitirComprobanteModal } from '../billing/EmitirComprobanteModal';
 import { PreviewBottomSheet } from '../ui/PreviewBottomSheet';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { FullDayOrder, FullDayPaymentMethod, FullDaySplitPaymentDetails } from '../../types/fullday';
 import { exportFullDayToExcel, exportFullDayByDateRange } from '../../utils/fulldayExportUtils';
 import { generateFullDayTicketSummary, printFullDayResumenTicket } from '../../utils/fulldayTicketUtils';
@@ -355,13 +357,29 @@ export const FullDayOrdersManager: React.FC = () => {
   const [selectedDate,     setSelectedDate]      = useState<Date>(new Date());
   const [localOrders,      setLocalOrders]       = useState<FullDayOrder[]>([]);
   const [isInitialized,    setIsInitialized]     = useState(false);
-  const [deletedOrder,     setDeletedOrder]      = useState<{id:string;number:string}|null>(null);
   const [exportingPDF,     setExportingPDF]      = useState(false);
   const [showComprobanteModal, setShowComprobanteModal] = useState(false);
   const [orderParaComprobante, setOrderParaComprobante] = useState<FullDayOrder | null>(null);
-
-
-
+  
+  // Estado para el modal de confirmación estilizado
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'warning' | 'danger' | 'info' | 'success';
+    confirmText?: string;
+    loading?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger',
+  });
+  
+  // Estado para el toast de eliminación
+  const [deletedOrder, setDeletedOrder] = useState<{id:string;number:string}|null>(null);
 
   // Preview hover timers
   const hoverTimerRef = React.useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -453,15 +471,29 @@ export const FullDayOrdersManager: React.FC = () => {
   },[]);
   const handleTapPreview = useCallback((order:FullDayOrder)=>setPreviewOrder(order),[]);
 
-  // ── Handlers CRUD ─────────────────────────────────────────────────────────
-  const handleDeleteOrder = useCallback(async(orderId:string,orderNumber:string)=>{
-    if(window.confirm(`¿Eliminar pedido ${orderNumber}?`)){
-      setLocalOrders(prev=>prev.filter(o=>o.id!==orderId));
-      const r=await deleteOrder(orderId);
-      if(r.success) setDeletedOrder({id:orderId,number:orderNumber});
-      else{alert('❌ Error: '+r.error);setLocalOrders(orders);}
-    }
-  },[deleteOrder,orders]);
+  // ── Handler de eliminación con modal estilizado ───────────────────────────────────────
+  const handleDeleteClick = useCallback((orderId: string, orderNumber: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Pedido',
+      message: `¿Estás seguro de eliminar el pedido "${orderNumber}"? Esta acción no se puede deshacer.`,
+      type: 'danger',
+      confirmText: 'Sí, eliminar',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        setLocalOrders(prev=>prev.filter(o=>o.id!==orderId));
+        const r=await deleteOrder(orderId);
+        if(r.success) {
+          setDeletedOrder({id:orderId,number:orderNumber});
+          setConfirmModal(prev => ({ ...prev, isOpen: false, loading: false }));
+        } else {
+          alert('❌ Error al eliminar: ' + r.error);
+          setLocalOrders(orders);
+          setConfirmModal(prev => ({ ...prev, isOpen: false, loading: false }));
+        }
+      },
+    });
+  }, [deleteOrder, orders]);
 
   const handleEditPayment  = useCallback((order:FullDayOrder)=>{setSelectedOrder(order);setShowPaymentModal(true);},[]);
 
@@ -571,11 +603,24 @@ export const FullDayOrdersManager: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
 
+      {/* Toast de eliminación */}
       {deletedOrder && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-full">
           Pedido {deletedOrder.number} eliminado
         </div>
       )}
+
+      {/* Modal de confirmación estilizado */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+      />
 
       {previewOrder && !pagination.isMobile && (
         <FullDayPreviewPanel
@@ -712,9 +757,6 @@ export const FullDayOrdersManager: React.FC = () => {
         />
       </div>
 
-
-
-
       {/* Filtros */}
       <div className="bg-white rounded-lg p-4 shadow-sm border">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -724,7 +766,6 @@ export const FullDayOrdersManager: React.FC = () => {
               placeholder="Buscar por alumno, grado, número de orden..."
               className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm"/>
           </div>
-
         </div>
       </div>
 
@@ -771,9 +812,7 @@ export const FullDayOrdersManager: React.FC = () => {
               {filteredAndSortedOrders.length} pedidos
             </span>
             <button
-              onClick={() => setCurrentSort(s =>
-                s === 'created-desc' ? 'created-asc' : 'created-desc'
-              )}
+              onClick={() => setCurrentSort(s => s === 'created-desc' ? 'created-asc' : 'created-desc')}
               className="flex items-center gap-1.5 text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg active:scale-95 transition-transform">
               {currentSort === 'created-desc' ? (
                 <><ChevronDown size={13}/> Más nuevos primero</>
@@ -785,7 +824,7 @@ export const FullDayOrdersManager: React.FC = () => {
 
           {pagination.currentItems.map(order=>(
             <FullDayOrderCard key={order.id} order={order}
-              onEditPayment={handleEditPayment} onDelete={handleDeleteOrder}
+              onEditPayment={handleEditPayment} onDelete={handleDeleteClick}
               onTapPreview={handleTapPreview} onEmitirComprobante={handleEmitirComprobante}
               tieneComprobante={orderIdsConComprobante.has(order.id)}
               getDisplayNumber={getDisplayNumber} getPaymentColor={getPaymentColor}
@@ -814,7 +853,7 @@ export const FullDayOrdersManager: React.FC = () => {
                 <FullDayOrderRow key={order.id} order={order}
                   onMouseEnter={()=>handleRowMouseEnter(order)}
                   onActionsMouseEnter={handleActionsMouseEnter}
-                  onEditPayment={handleEditPayment} onDelete={handleDeleteOrder}
+                  onEditPayment={handleEditPayment} onDelete={handleDeleteClick}
                   onEmitirComprobante={handleEmitirComprobante}
                   tieneComprobante={orderIdsConComprobante.has(order.id)}
                   getDisplayNumber={getDisplayNumber} getPaymentColor={getPaymentColor}
