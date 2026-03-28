@@ -1,6 +1,8 @@
 // ============================================
 // ARCHIVO: src/components/layout/DashboardLayout.tsx
 // ACTUALIZADO: Sidebar colapsable en desktop + Drawer en móvil
+//              + padding inferior en móvil para la Bottom Tab Bar
+//                de OrderReception
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -28,7 +30,6 @@ const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void; userN
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
-        {/* Icono */}
         <div className="flex flex-col items-center pt-8 pb-5 px-6">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
             <WifiOff size={28} className="text-red-500" />
@@ -43,8 +44,6 @@ const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void; userN
             Se cerrará tu sesión y tendrás que volver a iniciarla para acceder al sistema.
           </p>
         </div>
-
-        {/* Botones */}
         <div className="flex flex-col sm:flex-row gap-2 px-6 pb-6">
           <button
             onClick={onCancel}
@@ -112,11 +111,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         collapsed && !mobile ? 'justify-center' : 'space-x-3'
       }`}>
         <div className="relative flex-shrink-0">
-          <img
-            src="/logo_marys.png"
-            alt="Mary's"
-            className="w-10 h-10 object-contain"
-          />
+          <img src="/logo_marys.png" alt="Mary's" className="w-10 h-10 object-contain" />
           <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
             <Sparkles className="h-1.5 w-1.5 text-white" />
           </div>
@@ -143,10 +138,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               title={collapsed && !mobile ? label : undefined}
               className={`
                 w-full flex items-center rounded-xl transition-all duration-200 group
-                ${collapsed && !mobile
-                  ? 'justify-center px-2 py-2.5'
-                  : 'space-x-3 px-3 py-2.5'
-                }
+                ${collapsed && !mobile ? 'justify-center px-2 py-2.5' : 'space-x-3 px-3 py-2.5'}
                 ${isActive
                   ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
                   : 'text-gray-600 hover:bg-white/60 hover:text-red-600'
@@ -166,10 +158,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <div className={`border-t border-white/20 p-3 ${
         collapsed && !mobile ? 'flex flex-col items-center space-y-2' : 'space-y-2'
       }`}>
-        {/* Info usuario */}
-        <div className={`flex items-center ${
-          collapsed && !mobile ? 'justify-center' : 'space-x-2 px-1'
-        }`}>
+        <div className={`flex items-center ${collapsed && !mobile ? 'justify-center' : 'space-x-2 px-1'}`}>
           <div className="w-7 h-7 bg-gradient-to-r from-red-500 to-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
             <User className="h-3.5 w-3.5 text-white" />
           </div>
@@ -180,17 +169,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </div>
           )}
         </div>
-
-        {/* Botón logout */}
         <button
           onClick={() => setShowLogoutModal(true)}
           title={collapsed && !mobile ? 'Cerrar Sesión' : undefined}
           className={`
             flex items-center rounded-lg text-red-600 hover:bg-red-50 transition-colors text-xs font-medium
-            ${collapsed && !mobile
-              ? 'justify-center w-full p-2'
-              : 'space-x-2 w-full px-2 py-1.5'
-            }
+            ${collapsed && !mobile ? 'justify-center w-full p-2' : 'space-x-2 w-full px-2 py-1.5'}
           `}
         >
           <LogOut size={15} className="flex-shrink-0" />
@@ -219,8 +203,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         ${collapsed ? 'w-16' : 'w-52'}
       `}>
         <SidebarContent />
-
-        {/* Botón colapsar */}
         <button
           onClick={() => setCollapsed(prev => !prev)}
           className="absolute -right-3 top-20 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors z-10"
@@ -235,19 +217,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       {/* ── DRAWER MÓVIL ── */}
       {drawerOpen && (
         <>
-          {/* Overlay */}
           <div
             className="lg:hidden fixed inset-0 bg-black/40 z-40"
             onClick={() => setDrawerOpen(false)}
           />
-          {/* Drawer */}
           <div className="lg:hidden fixed left-0 top-0 bottom-0 w-64 bg-white/95 backdrop-blur-lg z-50 shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <span className="text-sm font-bold text-gray-700">Menú</span>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
-              >
+              <button onClick={() => setDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
                 <X size={18} />
               </button>
             </div>
@@ -264,8 +241,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         {/* Header compacto */}
         <header className="bg-white/80 backdrop-blur-lg border-b border-white/30 flex-shrink-0">
           <div className="flex items-center justify-between px-4 py-2.5">
-
-            {/* Izquierda: hamburguesa (móvil) + tab activo */}
             <div className="flex items-center space-x-3">
               {/* Botón hamburguesa solo en móvil */}
               <button
@@ -274,22 +249,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               >
                 <Menu size={20} />
               </button>
-
-              {/* Título del tab activo */}
               <div>
                 <h1 className="text-base font-bold text-gray-900">
                   {tabs.find(t => t.id === activeTab)?.name || 'Dashboard'}
                 </h1>
               </div>
             </div>
-
-            {/* Derecha: usuario + bell (desktop) */}
             <div className="flex items-center space-x-2">
               <button className="relative p-2 text-gray-500 hover:text-red-600 transition-colors">
                 <Bell size={18} />
                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
               </button>
-              {/* Info usuario solo desktop — ya está en el sidebar */}
               <div className="hidden lg:flex items-center space-x-2 pl-2 border-l border-gray-200">
                 <div className="text-right">
                   <div className="text-xs font-semibold text-gray-900">{user?.name}</div>
@@ -300,8 +270,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </div>
         </header>
 
-        {/* Contenido */}
-        <main className="flex-1 overflow-auto p-4 sm:p-5 lg:p-6">
+        {/* Contenido
+            En móvil, cuando la tab activa es 'reception', OrderReception maneja su propio
+            padding inferior (pb-24) para no quedar tapado por su Bottom Tab Bar.
+            Para el resto de secciones se aplica padding normal. */}
+        <main className={`flex-1 overflow-auto ${
+          activeTab === 'reception'
+            ? 'p-0'                          // OrderReception gestiona su propio padding
+            : 'p-4 sm:p-5 lg:p-6'
+        }`}>
           {children}
         </main>
 
