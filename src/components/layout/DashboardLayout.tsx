@@ -1,11 +1,12 @@
 // ============================================
 // ARCHIVO: src/components/layout/DashboardLayout.tsx
-// ACTUALIZADO: Menú hamburguesa con animación suave CORREGIDA
+// ACTUALIZADO: Botón de logout en el header (reemplaza campana)
+// Drawer simplificado sin botón de logout
 // ============================================
 
 import React, { useState, useEffect } from 'react';
 import {
-  Bell, User, Sparkles, LogOut, ChevronLeft, ChevronRight,
+  User, Sparkles, LogOut, ChevronLeft, ChevronRight,
   Menu, X, WifiOff,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -173,39 +174,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         })}
       </nav>
 
-      {/* Usuario + Logout */}
-      <div className={`border-t border-white/20 p-3 ${
-        collapsed && !mobile ? 'flex flex-col items-center space-y-2' : 'space-y-2'
-      }`}>
-        <div className={`flex items-center ${
-          collapsed && !mobile ? 'justify-center' : 'space-x-2 px-1'
-        }`}>
-          <div className="w-7 h-7 bg-gradient-to-r from-red-500 to-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
-            <User className="h-3.5 w-3.5 text-white" />
-          </div>
-          {(!collapsed || mobile) && (
+      {/* Solo en desktop se muestra información del usuario */}
+      {!mobile && (
+        <div className="border-t border-white/20 p-3 space-y-2">
+          <div className="flex items-center space-x-2 px-1">
+            <div className="w-7 h-7 bg-gradient-to-r from-red-500 to-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="h-3.5 w-3.5 text-white" />
+            </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs font-semibold text-gray-900 truncate">{user?.name}</div>
               <div className="text-xs text-gray-500 capitalize">{user?.role}</div>
             </div>
-          )}
+          </div>
         </div>
-
-        <button
-          onClick={() => setShowLogoutModal(true)}
-          title={collapsed && !mobile ? 'Cerrar Sesión' : undefined}
-          className={`
-            flex items-center rounded-lg text-red-600 hover:bg-red-50 transition-colors text-xs font-medium
-            ${collapsed && !mobile
-              ? 'justify-center w-full p-2'
-              : 'space-x-2 w-full px-2 py-1.5'
-            }
-          `}
-        >
-          <LogOut size={15} className="flex-shrink-0" />
-          {(!collapsed || mobile) && <span>Cerrar Sesión</span>}
-        </button>
-      </div>
+      )}
     </div>
   );
 
@@ -240,7 +222,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         </button>
       </aside>
 
-      {/* ─── DRAWER MÓVIL CON ANIMACIÓN SUAVE CORREGIDA ─── */}
+      {/* ─── DRAWER MÓVIL CON ANIMACIÓN SUAVE ─── */}
       <>
         {/* Overlay con fade suave */}
         <div
@@ -301,19 +283,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               </div>
             </div>
 
-            {/* Derecha: usuario + bell (desktop) */}
-            <div className="flex items-center space-x-2">
-              <button className="relative p-2 text-gray-500 hover:text-red-600 transition-colors">
-                <Bell size={18} />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
-              </button>
-              <div className="hidden lg:flex items-center space-x-2 pl-2 border-l border-gray-200">
-                <div className="text-right">
-                  <div className="text-xs font-semibold text-gray-900">{user?.name}</div>
-                  <div className="text-xs text-gray-500 capitalize">{user?.role}</div>
-                </div>
-              </div>
-            </div>
+            {/* Derecha: botón de cerrar sesión (reemplaza la campana) */}
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              className="flex items-center gap-2 p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="Cerrar sesión"
+            >
+              <LogOut size={18} />
+              <span className="hidden sm:inline text-sm font-medium">Salir</span>
+            </button>
           </div>
         </header>
 
