@@ -1,8 +1,8 @@
 // ARCHIVO: src/components/ui/PaymentFilter.tsx
-// ✅ OPCIÓN 3 - Layout tipo dashboard con cards resaltadas
-// Diseño moderno con cards independientes, porcentajes y mini barras de progreso
+// ✅ VERSIÓN CORREGIDA - Porcentaje y texto cambian a blanco al seleccionar
 
 import React from 'react';
+import { CreditCard, Smartphone, Wallet, PieChart, X } from 'lucide-react';
 
 interface PaymentFilterProps {
   paymentFilter: string;
@@ -23,130 +23,160 @@ export const PaymentFilter: React.FC<PaymentFilterProps> = ({
   totalGeneral,
   showAmounts = true,
 }) => {
-  // Si se pasa totalGeneral úsalo; si no, suma los tres métodos (retrocompatible)
   const totalTodos = totalGeneral !== undefined
     ? totalGeneral
     : totalEfectivo + totalYape + totalTarjeta;
 
   const paymentOptions = [
     {
-      value:  '',
-      label:  'Todos',
-      icon:   '📋',
+      value: '',
+      label: 'Todos',
+      icon: PieChart,
       amount: totalTodos,
-      color:  'gray',
-      barColor: 'linear-gradient(90deg, #ef4444, #f97316)',
+      gradient: 'from-red-500 to-amber-500',
+      gradientLight: 'from-red-50 to-amber-50',
+      borderColor: 'border-red-200',
+      textColor: 'text-red-700',
+      barGradient: 'linear-gradient(90deg, #ef4444, #f97316)',
     },
     {
-      value:  'EFECTIVO',
-      label:  'Efectivo',
-      icon:   '💵',
+      value: 'EFECTIVO',
+      label: 'Efectivo',
+      icon: Wallet,
       amount: totalEfectivo,
-      color:  'green',
-      barColor: '#10b981',
+      gradient: 'from-emerald-500 to-green-600',
+      gradientLight: 'from-emerald-50 to-green-50',
+      borderColor: 'border-emerald-200',
+      textColor: 'text-emerald-700',
+      barGradient: 'linear-gradient(90deg, #10b981, #059669)',
     },
     {
-      value:  'YAPE/PLIN',
-      label:  'Yape/Plin',
-      icon:   '📱',
+      value: 'YAPE/PLIN',
+      label: 'Yape / Plin',
+      icon: Smartphone,
       amount: totalYape,
-      color:  'purple',
-      barColor: '#8b5cf6',
+      gradient: 'from-violet-500 to-purple-600',
+      gradientLight: 'from-violet-50 to-purple-50',
+      borderColor: 'border-violet-200',
+      textColor: 'text-violet-700',
+      barGradient: 'linear-gradient(90deg, #8b5cf6, #7c3aed)',
     },
     {
-      value:  'TARJETA',
-      label:  'Tarjeta',
-      icon:   '💳',
+      value: 'TARJETA',
+      label: 'Tarjeta',
+      icon: CreditCard,
       amount: totalTarjeta,
-      color:  'blue',
-      barColor: '#3b82f6',
+      gradient: 'from-blue-500 to-cyan-600',
+      gradientLight: 'from-blue-50 to-cyan-50',
+      borderColor: 'border-blue-200',
+      textColor: 'text-blue-700',
+      barGradient: 'linear-gradient(90deg, #3b82f6, #06b6d4)',
     },
   ];
 
   const formatAmount = (amount: number): string => `S/ ${amount.toFixed(2)}`;
 
-  // Calcular porcentaje para cada opción
   const getPercentage = (amount: number): number => {
     if (totalTodos === 0) return 0;
     return (amount / totalTodos) * 100;
   };
 
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-      {/* Header con total */}
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <span className="text-base">💰</span> Filtro por pago
+        <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+          <div className="w-1 h-4 bg-gradient-to-b from-red-500 to-amber-500 rounded-full" />
+          Métodos de pago
         </h3>
         <div className="flex items-center gap-2">
           {paymentFilter && (
             <button
               onClick={() => setPaymentFilter('')}
-              className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
+              className="text-xs text-gray-400 hover:text-red-500 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
             >
-              <span>✕</span> Limpiar
+              <X size={12} />
+              <span>Limpiar</span>
             </button>
           )}
-          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-            Total: {formatAmount(totalTodos)}
-          </span>
         </div>
       </div>
 
-      {/* Grid de cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Badges */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {paymentOptions.map((option) => {
           const isActive = paymentFilter === option.value;
           const porcentaje = getPercentage(option.amount);
+          const IconComponent = option.icon;
           
           return (
             <button
               key={option.value}
               onClick={() => setPaymentFilter(option.value)}
               className={`
-                rounded-xl p-3 transition-all duration-200 text-left
+                relative group rounded-xl p-3 transition-all duration-200 text-left
                 ${isActive 
-                  ? 'ring-2 ring-red-400 shadow-md' 
-                  : 'hover:shadow-md hover:border-gray-300'
+                  ? `bg-gradient-to-r ${option.gradient} text-white shadow-md` 
+                  : `bg-white border ${option.borderColor} hover:shadow-sm`
                 }
-                ${option.value === '' ? 'border-2 border-gray-200' : 'border border-gray-200'}
               `}
             >
-              {/* Icono y porcentaje */}
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-2xl">{option.icon}</span>
-                <span className={`text-xs font-bold ${isActive ? 'text-red-500' : 'text-gray-400'}`}>
-                  {porcentaje.toFixed(0)}%
+              {/* Indicador de selección */}
+              {isActive && (
+                <div className="absolute top-2 right-2">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                </div>
+              )}
+              
+              <div className="flex items-center gap-2 mb-2">
+                {/* Icono */}
+                <div className={`
+                  w-7 h-7 rounded-lg flex items-center justify-center transition-colors
+                  ${isActive 
+                    ? 'bg-white/20' 
+                    : `bg-gray-100 ${option.textColor}`
+                  }
+                `}>
+                  <IconComponent size={14} strokeWidth={1.5} />
+                </div>
+                {/* Label */}
+                <span className={`text-xs font-semibold ${isActive ? 'text-white' : 'text-gray-700'}`}>
+                  {option.label}
                 </span>
               </div>
               
-              {/* Label */}
-              <div className="text-sm font-semibold text-gray-800">{option.label}</div>
-              
               {/* Monto */}
               {showAmounts && (
-                <div className={`text-xs font-medium mt-1 ${isActive ? 'text-red-600' : 'text-gray-500'}`}>
+                <div className={`
+                  text-base font-bold tracking-tight transition-colors
+                  ${isActive ? 'text-white' : 'text-gray-900'}
+                `}>
                   {formatAmount(option.amount)}
                 </div>
               )}
               
-              {/* Mini barra de progreso */}
+              {/* Porcentaje - con color blanco cuando está activo */}
               {option.amount > 0 && (
-                <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{ 
-                      width: `${porcentaje}%`,
-                      background: option.barColor
-                    }}
-                  />
-                </div>
-              )}
-              
-              {/* Indicador visual de selección */}
-              {isActive && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-sm">
-                  <span className="text-[10px] text-white">✓</span>
+                <div className="mt-2">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className={`text-[10px] font-medium ${isActive ? 'text-white/80' : 'text-gray-400'}`}>
+                      {porcentaje.toFixed(0)}%
+                    </span>
+                    <span className={`text-[10px] font-medium ${isActive ? 'text-white/60' : 'text-gray-500'}`}>
+                      del total
+                    </span>
+                  </div>
+                  
+                  {/* Barra estática */}
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full rounded-full"
+                      style={{ 
+                        width: `${porcentaje}%`,
+                        background: option.barGradient
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </button>
@@ -154,25 +184,40 @@ export const PaymentFilter: React.FC<PaymentFilterProps> = ({
         })}
       </div>
 
-      {/* Leyenda de colores */}
-      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-center gap-4 text-xs text-gray-500">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span>Efectivo</span>
+      {/* Resumen visual de distribución */}
+      {totalTodos > 0 && (
+        <div className="mt-4 pt-3 border-t border-gray-100">
+          <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-100">
+            {paymentOptions.slice(1).map((option) => {
+              const width = getPercentage(option.amount);
+              if (width === 0) return null;
+              return (
+                <div
+                  key={option.value}
+                  className="h-full"
+                  style={{ 
+                    width: `${width}%`,
+                    background: option.barGradient
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div className="flex justify-center gap-3 mt-2">
+            {paymentOptions.slice(1).map((option) => (
+              <div key={option.value} className="flex items-center gap-1">
+                <div 
+                  className="w-2 h-2 rounded-full" 
+                  style={{ background: option.barGradient }}
+                />
+                <span className="text-[9px] text-gray-400">
+                  {option.label === 'YAPE/PLIN' ? 'Yape' : option.label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-purple-500" />
-          <span>Yape/Plin</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-blue-500" />
-          <span>Tarjeta</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-gradient-to-r from-red-500 to-amber-500" />
-          <span>Todos</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
