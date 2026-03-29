@@ -98,7 +98,7 @@ const styles = `
     -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid rgba(239,68,68,0.15);
     display: flex;
-    z-index: 50;
+    z-index: 30;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
   }
   .mobile-tab-item {
