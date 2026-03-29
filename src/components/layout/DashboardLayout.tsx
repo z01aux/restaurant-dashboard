@@ -1,15 +1,19 @@
 // ============================================
 // ARCHIVO: src/components/layout/DashboardLayout.tsx
-// ACTUALIZADO: Botón de logout en el header (reemplaza campana)
-// Drawer simplificado sin botón de logout
+// ACTUALIZADO:
+//   - Drawer móvil: scrollbar solo cuando se navega (overflow-y-auto condicional)
+//   - Desktop: versión visible en sidebar (parte inferior)
+//   - Versión dinámica desde package.json
+//   - Botón X con feedback táctil
 // ============================================
 
 import React, { useState, useEffect } from 'react';
 import {
   User, Sparkles, LogOut, ChevronLeft, ChevronRight,
-  Menu, X, WifiOff,
+  Menu, X, WifiOff, Info,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { loadVersion } from '../../version';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -72,9 +76,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
   const { user, signOut } = useAuth();
 
+  const [appVersion, setAppVersion] = useState<string>('2.3.0');
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Cargar versión al montar el componente
+  useEffect(() => {
+    const initVersion = async () => {
+      const version = await loadVersion();
+      setAppVersion(version);
+    };
+    initVersion();
+  }, []);
 
   const handleTabChange = (tabId: string) => {
     onTabChange(tabId);
@@ -117,66 +131,92 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   };
 
   // ── Sidebar content (compartido entre desktop y drawer móvil) ─────────────
-  const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className={`flex items-center px-3 py-4 border-b border-white/20 ${
-        collapsed && !mobile ? 'justify-center' : 'space-x-3'
-      }`}>
-        <div className="relative flex-shrink-0">
-          <img
-            src="/logo_marys.png"
-            alt="Mary's"
-            className="w-10 h-10 object-contain"
-          />
-          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-            <Sparkles className="h-1.5 w-1.5 text-white" />
-          </div>
-        </div>
-        {(!collapsed || mobile) && (
-          <div className="min-w-0">
-            <div className="text-sm font-black bg-gradient-to-r from-red-500 to-amber-500 bg-clip-text text-transparent leading-tight">
-              Mary's
+  const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => {
+    const [isScrolling, setIsScrolling] = useState(false);
+    const navRef = React.useRef<HTMLElement>(null);
+
+    // Detectar scroll para mostrar/ocultar scrollbar solo cuando se navega
+    const handleScroll = () => {
+      if (navRef.current) {
+        setIsScrolling(navRef.current.scrollTop > 0);
+      }
+    };
+
+    React.useEffect(() => {
+      const nav = navRef.current;
+      if (nav && mobile) {
+        nav.addEventListener('scroll', handleScroll);
+        return () => nav.removeEventListener('scroll', handleScroll);
+      }
+    }, [mobile]);
+
+    return (
+      <div className="flex flex-col h-full">
+        {/* Logo */}
+        <div className={`flex items-center px-3 py-4 border-b border-white/20 ${
+          collapsed && !mobile ? 'justify-center' : 'space-x-3'
+        }`}>
+          <div className="relative flex-shrink-0">
+            <img
+              src="/logo_marys.png"
+              alt="Mary's"
+              className="w-10 h-10 object-contain"
+            />
+            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+              <Sparkles className="h-1.5 w-1.5 text-white" />
             </div>
-            <div className="text-xs text-gray-500 truncate">Restaurant</div>
           </div>
-        )}
-      </div>
+          {(!collapsed || mobile) && (
+            <div className="min-w-0">
+              <div className="text-sm font-black bg-gradient-to-r from-red-500 to-amber-500 bg-clip-text text-transparent leading-tight">
+                Mary's
+              </div>
+              <div className="text-xs text-gray-500 truncate">Restaurant</div>
+            </div>
+          )}
+        </div>
 
-      {/* Navegación */}
-      <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
-        {tabs.map((tab) => {
-          const { icon, label } = getTabParts(tab.name);
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              title={collapsed && !mobile ? label : undefined}
-              className={`
-                w-full flex items-center rounded-xl transition-all duration-200
-                ${collapsed && !mobile
-                  ? 'justify-center px-2 py-2.5'
-                  : 'space-x-3 px-3 py-2.5'
-                }
-                ${isActive
-                  ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
-                  : 'text-gray-600 hover:bg-white/60 hover:text-red-600'
-                }
-              `}
-            >
-              <span className="text-base flex-shrink-0">{icon}</span>
-              {(!collapsed || mobile) && (
-                <span className="text-sm font-medium truncate">{label}</span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+        {/* Navegación - scroll solo cuando se navega (no siempre visible) */}
+        <nav
+          ref={navRef}
+          className={`
+            flex-1 py-3 space-y-0.5 px-2
+            ${mobile ? 'overflow-y-auto' : ''}
+            ${mobile && !isScrolling ? 'scrollbar-hide' : ''}
+          `}
+        >
+          {tabs.map((tab) => {
+            const { icon, label } = getTabParts(tab.name);
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                title={collapsed && !mobile ? label : undefined}
+                className={`
+                  w-full flex items-center rounded-xl transition-all duration-200
+                  ${collapsed && !mobile
+                    ? 'justify-center px-2 py-2.5'
+                    : 'space-x-3 px-3 py-2.5'
+                  }
+                  ${isActive
+                    ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-white/60 hover:text-red-600'
+                  }
+                `}
+              >
+                <span className="text-base flex-shrink-0">{icon}</span>
+                {(!collapsed || mobile) && (
+                  <span className="text-sm font-medium truncate">{label}</span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-      {/* Solo en desktop se muestra información del usuario */}
-      {!mobile && (
+        {/* Información del usuario y versión (siempre visible) */}
         <div className="border-t border-white/20 p-3 space-y-2">
+          {/* Usuario */}
           <div className="flex items-center space-x-2 px-1">
             <div className="w-7 h-7 bg-gradient-to-r from-red-500 to-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
               <User className="h-3.5 w-3.5 text-white" />
@@ -186,10 +226,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               <div className="text-xs text-gray-500 capitalize">{user?.role}</div>
             </div>
           </div>
+
+          {/* Versión (visible tanto en desktop como móvil) */}
+          {appVersion && (
+            <div className="flex items-center justify-center space-x-1 text-[10px] text-gray-400 pt-1 border-t border-gray-100 mt-1">
+              <Info size={10} />
+              <span>versión {appVersion}</span>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 flex">
@@ -249,12 +297,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             <span className="text-sm font-bold text-gray-700">Menú</span>
             <button
               onClick={() => setDrawerOpen(false)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              className="p-1.5 rounded-lg text-gray-500 active:scale-90 hover:bg-gray-100 transition-all duration-150 active:bg-gray-200"
+              style={{ touchAction: 'manipulation' }}
             >
               <X size={18} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto h-[calc(100%-60px)]">
+          <div className="h-[calc(100%-60px)]">
             <SidebarContent mobile />
           </div>
         </div>
@@ -271,7 +320,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setDrawerOpen(true)}
-                className="lg:hidden p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="lg:hidden p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors active:scale-95"
+                style={{ touchAction: 'manipulation' }}
               >
                 <Menu size={20} />
               </button>
@@ -283,10 +333,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               </div>
             </div>
 
-            {/* Derecha: botón de cerrar sesión (reemplaza la campana) */}
+            {/* Derecha: botón de cerrar sesión */}
             <button
               onClick={() => setShowLogoutModal(true)}
-              className="flex items-center gap-2 p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="flex items-center gap-2 p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors active:scale-95"
+              style={{ touchAction: 'manipulation' }}
               title="Cerrar sesión"
             >
               <LogOut size={18} />
